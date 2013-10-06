@@ -31,7 +31,7 @@ Passes:
 
 The codenames for these steps shall be:
 	1. Type Skimming (TS)
-	2. Type Pasing (TP)
+	2. Type Parsing (TP)
 	3. Type Content Skimming (TCS)
 	4. Type Content Parsing (TCP)
 	5. Code Parsing (CP)
@@ -52,7 +52,7 @@ Difficulties for each step:
 
 	General:
 	- Why doesn't GenericType inherit Type (and GenericFunction inherit Function)?
-		- Because generic types and function, by their very definition, are incomplete,
+		- Because generic types and functions, by their very definition, are incomplete,
 		  they are only abstract ideas. They need type parameters to become concrete types
 		  and functions. (unless you compile them using type erasure, but if you're even
 		  taking type erasure into consideration, I doubt you should be contributing to

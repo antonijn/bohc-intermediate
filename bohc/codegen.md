@@ -126,3 +126,32 @@ for (int32_t i = (temp = obj->vtable->someFunction(obj))->vtable->someOtherFunct
 	;
 ```
 
+Enums
+-----
+
+Enums are very easy to compile:
+
+1.1. #include guards, and #include all other headers in the project
+1.2. create the C enum with the appropriate enumerators
+1.3. declare the toString function for the enum
+1.4. close #include guards
+
+2.1. #include the appropriate header
+2.2. implement the toString function for the enum
+
+There aren't really any difficulties when dealing with enums
+
+Interfaces
+----------
+
+Interfaces are essentially just an object reference and a vtable, the vtable needs to be assigned to when casting an object instance to an interface instance.
+
+1.1. #include guards, and #include all other headers in the project
+1.2. declare the interface vtable struct
+1.3. declare the interface struct
+1.4. declare the interface constructor
+
+2.1. #include the appropriate header
+2.2. implement the constructor
+
+Step 2.2 is the most difficult one. The constructor essentially just takes an object reference, and a bunch of function pointers. These are then used to construct the interface object and the vtable.
