@@ -28,17 +28,17 @@ namespace bohc.typesys
 
 		private static readonly List<Class> instances = new List<Class>();
 
-		protected Class(Package package, string name)
-			: base(package, name)
+		protected Class(Package package, Modifiers modifiers, string name)
+			: base(package, modifiers, name)
 		{
 		}
 
-		public static Class get(Package package, string name)
+		public static Class get(Package package, Modifiers modifiers, string name)
 		{
 			Class c = instances.SingleOrDefault(x => (x.package == package && x.name == name));
 			if (c == default(Class))
 			{
-				Class newc = new Class(package, name);
+				Class newc = new Class(package, modifiers, name);
 				instances.Add(newc);
 				return newc;
 			}

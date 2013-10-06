@@ -16,10 +16,20 @@ namespace bohc.typesys
 
 		private Package(Package parent, string name)
 		{
-			boh.Exception.require<exceptions.ParserException>(typesys.Type.isValidName(name, false), name + " invalid package name");
+			boh.Exception.require<exceptions.ParserException>(typesys.Type.isValidName(name, false) || parent == null, name + " invalid package name");
 
 			this.parent = parent;
 			this.name = name;
+		}
+
+		public override string ToString()
+		{
+			if (parent != GLOBAL && parent != null)
+			{
+				return parent.ToString() + "." + name;
+			}
+
+			return name;
 		}
 
 		public static Package get(Package parent, string name)

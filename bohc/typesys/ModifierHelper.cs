@@ -66,21 +66,26 @@ namespace bohc.typesys
 			return result;
 		}
 
-		public static Modifiers getModifiersFromString(string str, bool classmember)
+		public static Modifiers getModifiersFromStrings(IEnumerable<string> strings)
 		{
 			Modifiers mods = Modifiers.NONE;
-			IEnumerable<string> split = str.Split(' ').Where(x => !string.IsNullOrWhiteSpace(x) && !string.IsNullOrEmpty(x));
 
-			foreach (string s in split)
+			foreach (string s in strings)
 			{
 				Modifiers mod = getModifierFromString(s);
 				boh.Exception.require<exceptions.ParserException>(!mods.HasFlag(mod), s + ": duplicate modifier");
 				mods |= mod;
 			}
 
-			boh.Exception.require<exceptions.ParserException>(areModifiersLegal(mods, classmember), str + ": illegal combination of modifiers");
-
 			return mods;
+		}
+
+		public static Modifiers getModifiersFromString(string str)
+		{
+			Modifiers mods = Modifiers.NONE;
+			IEnumerable<string> split = str.Split(' ').Where(x => !string.IsNullOrWhiteSpace(x) && !string.IsNullOrEmpty(x));
+
+			return getModifiersFromStrings(split);
 		}
 	}
 }

@@ -10,7 +10,7 @@ namespace bohc.typesys
 		public readonly int size;
 
 		public Primitive(string name, int size)
-			: base(Package.GLOBAL, name)
+			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, name)
 		{
 			this.size = size;
 		}

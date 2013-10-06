@@ -11,17 +11,17 @@ namespace bohc.typesys
 
 		private static readonly List<Interface> instances = new List<Interface>();
 
-		public Interface(Package package, string name)
-			: base(package, name)
+		public Interface(Package package, Modifiers modifiers, string name)
+			: base(package, modifiers, name)
 		{
 		}
 
-		public static Interface get(Package package, string name)
+		public static Interface get(Package package, Modifiers modifiers, string name)
 		{
 			Interface i = instances.SingleOrDefault(x => (x.package == package && x.name == name));
 			if (i == default(Interface))
 			{
-				Interface newi = new Interface(package, name);
+				Interface newi = new Interface(package, modifiers, name);
 				instances.Add(newi);
 				return newi;
 			}

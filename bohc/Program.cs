@@ -9,6 +9,15 @@ namespace bohc
 	{
 		public static void Main(string[] args)
 		{
+			parsing.ts.File f = Parser.parseFile(
+				@"
+package hey.hi;
+
+import boh.lang;
+import boh.lang.lala;
+
+public interface Class {");
+			Console.ReadKey();
 		}
 	}
 }
