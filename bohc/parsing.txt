@@ -1,0 +1,37 @@
+﻿PARSING
+=======
+
+Passes:
+
+1. First parse the outline of types (files), gathering stuff such as:
+	- type name (store in a central place, along with the package name, required for resolving types)
+	- imported packages (store as a file context, required for resolving return types for functions, and variable types)
+2. Then parse the outline of types (files), gathering stuff such as:
+	- super class
+	- implemented interfaces
+3. Then skim the stuff inside the types:
+	- for enums
+		- you can't parse some initial values, some of them might refer to static final integer fields...
+		- you CAN parse the enumerators
+	- for interfaces
+		- get method names, conclude their return types and parameter types and names (using file context)
+	- for classes
+		- get method names, conclude their return types and parameter types and names (using file context)
+			- is name == "this", it's a constructor, keep that in mind
+		- get fiels names, conclude their types (using file context)
+4. Then parse stuff such as:
+	- for enums
+		- the initial value for the enumerators
+	- for interfaces
+		- they're already done...
+	- for classes
+		- the initial values for variables and function parameters
+5. Then, for classes:
+	- carefully parse the bodies of functions
+
+The codenames for these steps shall be:
+	1. Type Skimming (TS)
+	2. Type Pasing (TP)
+	3. Type Content Skimming (TCS)
+	4. Type Content Parsing (TCP)
+	5. Code Parsing (CP)
