@@ -35,3 +35,25 @@ The codenames for these steps shall be:
 	3. Type Content Skimming (TCS)
 	4. Type Content Parsing (TCP)
 	5. Code Parsing (CP)
+
+Note that each pass can be done in parallel for each file, since the passes never depends on the same pass from a different file while still doing the pass.
+For example: the TS step for file1.boh and file2.boh can be performed in parallel, they don't depend on eachother.
+The same holds for every other step.
+
+Difficulties for each step:
+	1:
+	- Should generic type parameters be analysed?
+		- Yes. Yes they should.
+		  types should then generate GenericTypes instead of Types, very important
+	3:
+	- Should generic type parameters for functions be analyzed?
+		- Yes. Yes they should.
+		  functions will then be GenericFunction instead of function, very important once again
+
+	General:
+	- Why doesn't GenericType inherit Type (and GenericFunction inherit Function)?
+		- Because generic types and function, by their very definition, are incomplete,
+		  they are only abstract ideas. They need type parameters to become concrete types
+		  and functions. (unless you compile them using type erasure, but if you're even
+		  taking type erasure into consideration, I doubt you should be contributing to
+		  this project)
