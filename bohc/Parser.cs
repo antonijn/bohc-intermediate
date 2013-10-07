@@ -53,9 +53,9 @@ namespace bohc
 		}
 
 
-		#region Type Skimming
+		#region Type Skimming (TS)
 
-		public static File parseFile(string file)
+		public static File parseFileTS(string file)
 		{
 			int openCurly = file.IndexOf('{');
 			string beforeTypeBody = file.Substring(0, openCurly - 1);
@@ -89,21 +89,21 @@ namespace bohc
 			foreach (string headerPart in headerParts)
 			{
 				string[] parts = headerPart.Split(' ');
-				boh.Exception.require<exceptions.ParserException>(parts.Length == 2, "Invalid file header");
+				boh.Exception.require<ParserException>(parts.Length == 2, "Invalid file header");
 
 				string kw = parts[0];
 				string pack = parts[1];
 				switch (kw)
 				{
 					case "package":
-						boh.Exception.require<exceptions.ParserException>(package == Package.GLOBAL, "Cannot declare multiple package directives");
+						boh.Exception.require<ParserException>(package == Package.GLOBAL, "Cannot declare multiple package directives");
 						package = Package.getFromString(pack);
 						break;
 					case "import":
 						imports.Add(Package.getFromString(pack));
 						break;
 					default:
-						boh.Exception._throw<exceptions.ParserException>(kw + " invalid directive");
+						boh.Exception._throw<ParserException>(kw + " invalid directive");
 						break;
 				}
 			}
@@ -114,19 +114,28 @@ namespace bohc
 		private static void parseTypeStart(File file, string typedec)
 		{
 			typedec = typedec.Trim();
-			typedec = typedec.Substring(0, typedec.Length).TrimEnd();
 			typedec = remDupW(typedec);
 
 			string[] parts = typedec.Split(' ');
-			string name = parts[parts.Length - 1];
-			string type = parts[parts.Length - 2];
+			int idxExtImpl = parts.Length;
+			for (int i = parts.Length - 1; i >= 0; --i)
+			{
+				string part = parts[i];
+				if (part == "extends" || part == "implements")
+				{
+					idxExtImpl = i;
+				}
+			}
+			string name = parts[idxExtImpl - 1];
+			string type = parts[idxExtImpl - 2];
 
 			Modifiers mod = Modifiers.NONE;
 
-			if (parts.Length > 2)
+			if (idxExtImpl > 2)
 			{
-				IEnumerable<string> mods = parts.Take(parts.Length - 2);
+				IEnumerable<string> mods = parts.Take(idxExtImpl - 2);
 				mod = ModifierHelper.getModifiersFromStrings(mods);
+				boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegalForType(mod), "Illegal modifier for type");
 			}
 
 			switch (type)
@@ -135,13 +144,81 @@ namespace bohc
 					file.type = Class.get(file.package, mod, name);
 					break;
 				case "enum":
-					throw new NotImplementedException();
+					file.type = typesys.Enum.get(file.package, mod, name);
+					break;
 				case "interface":
 					file.type = Interface.get(file.package, mod, name);
 					break;
 				default:
-					boh.Exception._throw<exceptions.ParserException>("Invalid start of type detected");
+					boh.Exception._throw<ParserException>("Invalid start of type detected");
 					break;
+			}
+
+			file.type.file = file;
+		}
+
+		#endregion
+		
+		#region Type Parsing (TP)
+
+		public static void parseFileTP(File f, string file)
+		{
+			int openCurly = file.IndexOf('{');
+			string beforeTypeBody = file.Substring(0, openCurly - 1);
+			int lastSemicol = beforeTypeBody.LastIndexOf(';');
+			string typedec = remDupW(beforeTypeBody.Substring(lastSemicol + 1)).Trim();
+
+			if (f.type is Class)
+			{
+				Class c = f.type as Class;
+				c.super = parseExt(f, typedec);
+				boh.Exception.require<ParserException>(c.super != c, "Type cannot inherit itself");
+
+				foreach (Interface i in parseImpl(f, typedec))
+				{
+					c.implement(i);
+				}
+			}
+			else if (f.type is Interface)
+			{
+				Interface i = f.type as Interface;
+				i.implements = parseImpl(f, typedec).ToList();
+			}
+		}
+
+		private static Class parseExt(File file, string typedec)
+		{
+			string[] parts = typedec.Split(' ');
+			int idxExt = Array.IndexOf(parts, "extends");
+
+			if (idxExt != -1)
+			{
+				string super = parts[idxExt + 1];
+				Class superClass = typesys.Type.getExisting(file.getContext(), super) as Class;
+				boh.Exception.require<ParserException>(superClass != null, "Type was not a class: " + super);
+				return superClass;
+			}
+
+			// TODO: should be default super class (boh.lang.Object)
+			return null;
+		}
+
+		private static IEnumerable<Interface> parseImpl(File file, string typedec)
+		{
+			string[] parts = typedec.Split(' ');
+			int idxIpml = Array.IndexOf(parts, "implemnts");
+
+			if (idxIpml != -1)
+			{
+				IEnumerable<Package> fileContext = file.getContext();
+
+				for (int i = idxIpml + 1; i < parts.Length; ++i)
+				{
+					string ifacestr = parts[i].Replace(",", string.Empty);
+					Interface iface = typesys.Type.getExisting(fileContext, ifacestr) as Interface;
+					boh.Exception.require<ParserException>(iface != null, "Type was not an interface: " + ifacestr);
+					yield return iface;
+				}
 			}
 		}
 

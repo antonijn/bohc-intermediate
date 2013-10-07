@@ -18,15 +18,18 @@ namespace bohc.typesys
 
 		public static Interface get(Package package, Modifiers modifiers, string name)
 		{
-			Interface i = instances.SingleOrDefault(x => (x.package == package && x.name == name));
-			if (i == default(Interface))
+			lock (instances)
 			{
-				Interface newi = new Interface(package, modifiers, name);
-				instances.Add(newi);
-				return newi;
-			}
+				Interface i = instances.SingleOrDefault(x => (x.package == package && x.name == name));
+				if (i == default(Interface))
+				{
+					Interface newi = new Interface(package, modifiers, name);
+					instances.Add(newi);
+					return newi;
+				}
 
-			return i;
+				return i;
+			}
 		}
 	}
 }

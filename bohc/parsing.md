@@ -6,6 +6,7 @@ Passes:
 1. First parse the outline of types (files), gathering stuff such as:
 	- type name (store in a central place, along with the package name, required for resolving types)
 	- imported packages (store as a file context, required for resolving return types for functions, and variable types)
+	- generic type parameters
 2. Then parse the outline of types (files), gathering stuff such as:
 	- super class
 	- implemented interfaces
@@ -17,8 +18,9 @@ Passes:
 		- get method names, conclude their return types and parameter types and names (using file context)
 	- for classes
 		- get method names, conclude their return types and parameter types and names (using file context)
-			- is name == "this", it's a constructor, keep that in mind
-		- get fiels names, conclude their types (using file context)
+			- if name == "this", it's a constructor, keep that in mind
+			- parse generic type parameters
+		- get field names, conclude their types (using file context)
 4. Then parse stuff such as:
 	- for enums
 		- the initial value for the enumerators

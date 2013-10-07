@@ -35,15 +35,18 @@ namespace bohc.typesys
 
 		public static Class get(Package package, Modifiers modifiers, string name)
 		{
-			Class c = instances.SingleOrDefault(x => (x.package == package && x.name == name));
-			if (c == default(Class))
+			lock (instances)
 			{
-				Class newc = new Class(package, modifiers, name);
-				instances.Add(newc);
-				return newc;
-			}
+				Class c = instances.SingleOrDefault(x => (x.package == package && x.name == name));
+				if (c == default(Class))
+				{
+					Class newc = new Class(package, modifiers, name);
+					instances.Add(newc);
+					return newc;
+				}
 
-			return c;
+				return c;
+			}
 		}
 
 		public void implement(Interface iface)

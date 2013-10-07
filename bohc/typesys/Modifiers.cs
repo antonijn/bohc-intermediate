@@ -17,5 +17,7 @@ namespace bohc.typesys
 		ABSTRACT     = 0x0020,
 		VIRTUAL      = 0x0040,
 		OVERRIDE     = 0x0080,
+		NOCONTEXT    = 0x0100,
+		CVISIBLE     = 0x0200,
 	}
 }

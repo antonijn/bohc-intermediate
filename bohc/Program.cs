@@ -9,14 +9,22 @@ namespace bohc
 	{
 		public static void Main(string[] args)
 		{
-			parsing.ts.File f = Parser.parseFile(
-				@"
+			string file = @"
 package hey.hi;
 
 import boh.lang;
 import boh.lang.lala;
 
-public interface Class {");
+public class Class extends Hi {";
+			parsing.ts.File f0 = Parser.parseFileTS(file);
+
+			parsing.ts.File f1 = Parser.parseFileTS(
+				@"
+package hey.hi;
+
+public class Hi {");
+
+			Parser.parseFileTP(f0, file);
 			Console.ReadKey();
 		}
 	}

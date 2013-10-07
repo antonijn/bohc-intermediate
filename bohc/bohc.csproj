@@ -50,6 +50,8 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="typesys\Class.cs" />
+    <Compile Include="typesys\Enum.cs" />
+    <Compile Include="typesys\Enumerator.cs" />
     <Compile Include="typesys\Field.cs" />
     <Compile Include="parsing\ts\File.cs" />
     <Compile Include="typesys\Function.cs" />

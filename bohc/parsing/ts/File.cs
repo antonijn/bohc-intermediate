@@ -12,6 +12,11 @@ namespace bohc.parsing.ts
 		public readonly List<Package> imports = new List<Package>();
 		public readonly Package package;
 
+		public IEnumerable<Package> getContext()
+		{
+			return imports.Concat(new[] { package });
+		}
+
 		public typesys.Type type;
 
 		public File(List<Package> imports, Package package)

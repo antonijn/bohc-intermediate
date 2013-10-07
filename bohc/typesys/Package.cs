@@ -7,16 +7,16 @@ namespace bohc.typesys
 {
 	public class Package
 	{
-		public static readonly Package GLOBAL = new Package(null, string.Empty);
-
 		private static readonly List<Package> instances = new List<Package>();
+
+		public static readonly Package GLOBAL = new Package(null, string.Empty);
 
 		public readonly Package parent;
 		public readonly string name;
 
 		private Package(Package parent, string name)
 		{
-			boh.Exception.require<exceptions.ParserException>(typesys.Type.isValidName(name, false) || parent == null, name + " invalid package name");
+			boh.Exception.require<exceptions.ParserException>(parent == null || typesys.Type.isValidName(name, false), name + " invalid package name");
 
 			this.parent = parent;
 			this.name = name;
@@ -34,15 +34,18 @@ namespace bohc.typesys
 
 		public static Package get(Package parent, string name)
 		{
-			Package p = instances.SingleOrDefault(x => (x.parent == parent && x.name == name));
-			if (p == default(Package))
+			lock (instances)
 			{
-				Package newp = new Package(parent, name);
-				instances.Add(newp);
-				return newp;
-			}
+				Package p = instances.SingleOrDefault(x => (x.parent == parent && x.name == name));
+				if (p == default(Package))
+				{
+					Package newp = new Package(parent, name);
+					instances.Add(newp);
+					return newp;
+				}
 
-			return p;
+				return p;
+			}
 		}
 
 		public static Package getFromString(string str)

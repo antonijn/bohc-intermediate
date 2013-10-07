@@ -7,8 +7,13 @@ namespace bohc.typesys
 {
 	public static class ModifierHelper
 	{
-		public static bool areModifiersLegal(Modifiers mod, bool classmember)
+		public static bool isAccessLegal(Modifiers mod, bool classmember)
 		{
+			if (mod.HasFlag(Modifiers.CVISIBLE) && mod.HasFlag(Modifiers.PUBLIC))
+			{
+				return false;
+			}
+
 			int numAccess = 0;
 			if (mod.HasFlag(Modifiers.PUBLIC))
 			{
@@ -29,6 +34,27 @@ namespace bohc.typesys
 			}
 
 			if (classmember && numAccess == 0)
+			{
+				return false;
+			}
+
+			return true;
+		}
+
+		public static bool areModifiersLegalForType(Modifiers mod)
+		{
+			if (!isAccessLegal(mod, true))
+			{
+				return false;
+			}
+
+			return !(mod.HasFlag(Modifiers.OVERRIDE) || mod.HasFlag(Modifiers.VIRTUAL) ||
+				     mod.HasFlag(Modifiers.NOCONTEXT) || mod.HasFlag(Modifiers.PROTECTED));
+		}
+
+		public static bool areModifiersLegal(Modifiers mod, bool classmember)
+		{
+			if (!isAccessLegal(mod, classmember))
 			{
 				return false;
 			}
@@ -61,7 +87,7 @@ namespace bohc.typesys
 		public static Modifiers getModifierFromString(string str)
 		{
 			Modifiers result;
-			bool success = Enum.TryParse<Modifiers>(str.ToUpperInvariant(), out result);
+			bool success = System.Enum.TryParse<Modifiers>(str.ToUpperInvariant(), out result);
 			boh.Exception.require<exceptions.ParserException>(success, str + ": invalid modifier");
 			return result;
 		}
@@ -82,7 +108,6 @@ namespace bohc.typesys
 
 		public static Modifiers getModifiersFromString(string str)
 		{
-			Modifiers mods = Modifiers.NONE;
 			IEnumerable<string> split = str.Split(' ').Where(x => !string.IsNullOrWhiteSpace(x) && !string.IsNullOrEmpty(x));
 
 			return getModifiersFromStrings(split);

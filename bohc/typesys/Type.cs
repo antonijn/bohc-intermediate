@@ -45,6 +45,10 @@ namespace bohc.typesys
 		public readonly Modifiers modifiers;
 		public readonly string name;
 
+		public parsing.ts.File file;
+
+		private static readonly List<Type> types = new List<Type>();
+
 		public Type(Package package, Modifiers modifiers, string name)
 		{
 			boh.Exception.require<exceptions.ParserException>(isValidName(name, this is Primitive), name + " is not a valid typename");
@@ -52,6 +56,39 @@ namespace bohc.typesys
 			this.package = package;
 			this.modifiers = modifiers;
 			this.name = name;
+
+			lock (types)
+			{
+				boh.Exception.require<exceptions.ParserException>(!types.Any(x => x.package == package && x.name == name), "multiple definitions for " + package.ToString() + name);
+				types.Add(this);
+			}
+		}
+
+		/// <returns>null on failure</returns>
+		public static Type getExisting(Package package, string name)
+		{
+			lock (types)
+			{
+				return types.SingleOrDefault(x => x.package == package && x.name == name);
+			}
+		}
+
+		public static Type getExisting(IEnumerable<Package> packages, string name)
+		{
+			lock (types)
+			{
+				foreach (Package p in packages)
+				{
+					Type t = getExisting(p, name);
+					if (t != null)
+					{
+						return t;
+					}
+				}
+			}
+
+			boh.Exception._throw<exceptions.ParserException>("type not found: " + name);
+			return null;
 		}
 	}
 }
