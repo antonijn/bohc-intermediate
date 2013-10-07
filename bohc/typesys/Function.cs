@@ -5,7 +5,7 @@ using System.Text;
 
 namespace bohc.typesys
 {
-	public class Function : IMember
+	public class Function : IFunction
 	{
 		public readonly Modifiers modifiers;
 		public readonly typesys.Type returnType;

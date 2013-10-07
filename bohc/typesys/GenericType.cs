@@ -3,13 +3,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using bohc.parsing.ts;
+
 namespace bohc.typesys
 {
-	public abstract class GenericType
+	public abstract class GenericType : IType
 	{
-		private Dictionary<typesys.Type, typesys.Type> types = new Dictionary<typesys.Type, typesys.Type>();
+		File IType.getFile()
+		{
+			return file;
+		}
 
-		public typesys.Type getTypeFor(typesys.Type what)
+		void IType.setFile(File f)
+		{
+			file = f;
+		}
+
+		public File file;
+
+		private Dictionary<typesys.Type[], typesys.Type> types = new Dictionary<typesys.Type[], typesys.Type>();
+
+		public typesys.Type getTypeFor(typesys.Type[] what)
 		{
 			if (types.ContainsKey(what))
 			{
@@ -17,10 +31,10 @@ namespace bohc.typesys
 			}
 
 			typesys.Type newType = getNewTypeFor(what);
-			types[newType] = newType;
+			types[what] = newType;
 			return newType;
 		}
 
-		protected abstract typesys.Type getNewTypeFor(typesys.Type what);
+		protected abstract typesys.Type getNewTypeFor(typesys.Type[] what);
 	}
 }

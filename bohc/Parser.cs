@@ -18,7 +18,7 @@ namespace bohc
 			char startscope = str[first];
 			int scope = 0;
 			int i;
-			for (i = first + 1; scope != -1; i += step)
+			for (i = first + step; scope != -1; i += step)
 			{
 				char ch = str[i];
 				if (ch == startscope)
@@ -31,7 +31,7 @@ namespace bohc
 				}
 			}
 
-			return i;
+			return i - step;
 		}
 
 		public static int getMatchingBraceChar(string str, int first, char matches)
@@ -154,7 +154,7 @@ namespace bohc
 					break;
 			}
 
-			file.type.file = file;
+			file.type.setFile(file);
 		}
 
 		#endregion
@@ -220,6 +220,162 @@ namespace bohc
 					yield return iface;
 				}
 			}
+		}
+
+		#endregion
+
+		#region Type Content Skimming (TCS)
+
+		public static void parseFileTCS(File f, string file)
+		{
+			int typeStartCurly = file.IndexOf('{');
+			int typeStopCurly = file.LastIndexOf('}');
+
+			string content = file.Substring(typeStartCurly + 1, typeStopCurly - typeStartCurly - 1);
+
+			if (f.type is Class)
+			{
+				parseClassTCS(f, content);
+			}
+		}
+
+		private static void parseClassTCS(File f, string content)
+		{
+			int idxSemicol = content.IndexOf(';');
+			int idxCurly = content.IndexOf('{');
+
+			// TODO: take the following special cases into account:
+			// public void(int, double) field = (x, y) => { };
+			// public void function(int x = 1337) {
+			// public void function(void() f = () => { doSomething(); }) {
+
+			if ((idxSemicol > idxCurly || idxSemicol == -1) && idxCurly != -1)
+			{
+				// function
+				parseFunctionTCS(f, content.Substring(0, idxCurly));
+
+				int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
+				string after = content.Substring(closingCurly + 1);
+				parseClassTCS(f, after);
+			}
+			else if ((idxCurly > idxSemicol || idxCurly == -1) && idxSemicol != -1)
+			{
+				// field
+				parseFieldTCS(f, content.Substring(0, idxSemicol));		
+
+				string after = content.Substring(idxSemicol + 1);
+				parseClassTCS(f, after);
+			}
+		}
+
+		private static void parseFunctionTCS(File f, string fDec)
+		{
+			fDec = fDec.Trim();
+
+			Modifiers mods;
+			typesys.Type type;
+			string identifier;
+
+			parsePreFunctionParamsTCS(f, fDec, out mods, out type, out identifier);
+
+			List<Parameter> parameters = new List<Parameter>();
+			Function func = new Function(mods, type, identifier, parameters);
+
+			parseFunctionParamsTCS(f, fDec, func);
+
+			((Class)f.type).functions.Add(func);
+		}
+
+		private static void parsePreFunctionParamsTCS(File f, string fDec, out Modifiers mods, out typesys.Type type, out string identifier)
+		{
+			int idxClose = fDec.LastIndexOf(')');
+			int idxParent = getMatchingBraceCharBackwards(fDec, idxClose, '(');
+			fDec = remDupW(fDec.Substring(0, idxParent).Trim());
+
+			string[] parts = fDec.Split(' ');
+			boh.Exception.require<ParserException>(parts.Length >= 3, fDec + ": function access modifier and/or type expected");
+
+			identifier = parts[parts.Length - 1];
+			string typeName = parts[parts.Length - 2];
+			IEnumerable<string> modifiers = parts.Take(parts.Length - 2);
+
+			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
+
+			type = typesys.Type.getExisting(f.getContext(), typeName);
+			mods = ModifierHelper.getModifiersFromStrings(modifiers);
+		}
+
+		private static void parseFunctionParamsTCS(File f, string fDec, Function func)
+		{
+			int idxClose = fDec.LastIndexOf(')');
+			int idxParent = getMatchingBraceCharBackwards(fDec, idxClose, '(');
+
+			string paramString = remDupW(fDec.Substring(idxParent + 1, idxClose - idxParent - 1).Trim());
+
+			if (string.IsNullOrEmpty(paramString))
+			{
+				return;
+			}
+
+			// TODO: consider special cases:
+			// public void function(void() f = () => otherFunc(1, 2))
+
+			string[] parts = paramString.Split(',');
+			for (int i = 0; i < parts.Length; ++i)
+			{
+				parts[i] = parts[i].Trim();
+			}
+
+			foreach (string part in parts)
+			{
+				string[] paramParts = part.Split(' ');
+				boh.Exception.require<ParserException>(paramParts.Length >= 2, "Parameter type expected");
+				boh.Exception.require<ParserException>(paramParts.Length <= 3, "Parameters may only have one modifier");
+
+				string identifier = paramParts[paramParts.Length - 1];
+				string typeName = paramParts[paramParts.Length - 2];
+
+				Modifiers mods = Modifiers.NONE;
+				if (paramParts.Length > 2)
+				{
+					boh.Exception.require<ParserException>(paramParts.First() == "final", "'final' is the only legal modifier for parameters");
+					mods = Modifiers.FINAL;
+				}
+
+				typesys.Type type = typesys.Type.getExisting(f.getContext(), typeName);
+
+				Parameter param = new Parameter(func, mods, identifier, type);
+				func.parameters.Add(param);
+			}
+		}
+
+		private static void parseFieldTCS(File f, string fDec)
+		{
+			fDec = fDec.Trim();
+
+			int equals = fDec.IndexOf('=');
+			if (equals != -1)
+			{
+				fDec = fDec.Substring(0, equals - 1);
+			}
+
+			fDec = remDupW(fDec);
+
+			string[] parts = fDec.Split(' ');
+			boh.Exception.require<ParserException>(parts.Length >= 3, fDec + ": field access modifier and/or type expected");
+
+			string identifier = parts[parts.Length - 1];
+			string type = parts[parts.Length - 2];
+			IEnumerable<string> modifiers = parts.Take(parts.Length - 2);
+
+			typesys.Type actualType = typesys.Type.getExisting(f.getContext(), type);
+			Modifiers mods = ModifierHelper.getModifiersFromStrings(modifiers);
+
+			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
+			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true), mods.ToString() + ": invalid modifiers");
+
+			Field field = new Field(mods, identifier, actualType);
+			((Class)f.type).fields.Add(field);
 		}
 
 		#endregion

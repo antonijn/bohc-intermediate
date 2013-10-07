@@ -3,10 +3,22 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using bohc.parsing.ts;
+
 namespace bohc.typesys
 {
-	public class Type
+	public class Type : IType
 	{
+		File IType.getFile()
+		{
+			return file;
+		}
+
+		void IType.setFile(File f)
+		{
+			file = f;
+		}
+
 		public static bool isValidIdentifier(string name)
 		{
 			if (string.IsNullOrEmpty(name))

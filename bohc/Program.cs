@@ -15,16 +15,16 @@ package hey.hi;
 import boh.lang;
 import boh.lang.lala;
 
-public class Class extends Hi {";
+public class Class
+{
+	public static Class function(){}
+
+	private Class field;
+}";
 			parsing.ts.File f0 = Parser.parseFileTS(file);
-
-			parsing.ts.File f1 = Parser.parseFileTS(
-				@"
-package hey.hi;
-
-public class Hi {");
-
 			Parser.parseFileTP(f0, file);
+			Parser.parseFileTCS(f0, file);
+
 			Console.ReadKey();
 		}
 	}

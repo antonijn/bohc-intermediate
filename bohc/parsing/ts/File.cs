@@ -17,7 +17,7 @@ namespace bohc.parsing.ts
 			return imports.Concat(new[] { package });
 		}
 
-		public typesys.Type type;
+		public IType type;
 
 		public File(List<Package> imports, Package package)
 		{

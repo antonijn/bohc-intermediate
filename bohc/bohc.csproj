@@ -55,8 +55,10 @@
     <Compile Include="typesys\Field.cs" />
     <Compile Include="parsing\ts\File.cs" />
     <Compile Include="typesys\Function.cs" />
+    <Compile Include="typesys\IFunction.cs" />
     <Compile Include="typesys\IMember.cs" />
     <Compile Include="typesys\Interface.cs" />
+    <Compile Include="typesys\IType.cs" />
     <Compile Include="typesys\Modifiers.cs" />
     <Compile Include="typesys\ModifierHelper.cs" />
     <Compile Include="typesys\Package.cs" />
