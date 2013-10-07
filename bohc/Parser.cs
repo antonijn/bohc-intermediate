@@ -206,7 +206,7 @@ namespace bohc
 		private static IEnumerable<Interface> parseImpl(File file, string typedec)
 		{
 			string[] parts = typedec.Split(' ');
-			int idxIpml = Array.IndexOf(parts, "implemnts");
+			int idxIpml = Array.IndexOf(parts, "implements");
 
 			if (idxIpml != -1)
 			{
