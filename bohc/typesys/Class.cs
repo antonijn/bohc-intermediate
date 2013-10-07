@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using bohc.exceptions;
+
 namespace bohc.typesys
 {
 	public class Class : typesys.Type
@@ -56,6 +58,7 @@ namespace bohc.typesys
 				implement(other);
 			}
 
+			boh.Exception.require<ParserException>(!implements.Contains(iface), "Interfaces may not be implemented multiple times");
 			implements.Add(iface);
 		}
 	}
