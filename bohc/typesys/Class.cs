@@ -56,7 +56,7 @@ namespace bohc.typesys
 				implement(other);
 			}
 
-			implement(iface);
+			implements.Add(iface);
 		}
 	}
 }
