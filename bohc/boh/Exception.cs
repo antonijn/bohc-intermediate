@@ -26,5 +26,18 @@ namespace bohc.boh
 			exc.whatsWrong = msg;
 			throw exc;
 		}
+
+		public static void warn(string msg)
+		{
+			System.Console.Error.WriteLine("[{0}] {1}", System.DateTime.Now, msg);
+		}
+
+		public static void warnIf(bool cond, string msg)
+		{
+			if (cond)
+			{
+				warn(msg);
+			}
+		}
 	}
 }

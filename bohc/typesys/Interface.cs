@@ -8,6 +8,7 @@ namespace bohc.typesys
 	public class Interface : typesys.Type
 	{
 		public List<Interface> implements = new List<Interface>();
+		public readonly List<Function> functions = new List<Function>();
 
 		private static readonly List<Interface> instances = new List<Interface>();
 

@@ -237,6 +237,14 @@ namespace bohc
 			{
 				parseClassTCS(f, content);
 			}
+			else if (f.type is Interface)
+			{
+				parseInterfaceTCS(f, content);
+			}
+			else if (f.type is typesys.Enum)
+			{
+				parseEnumTCS(f, content);
+			}
 		}
 
 		private static void parseClassTCS(File f, string content)
@@ -252,7 +260,7 @@ namespace bohc
 			if ((idxSemicol > idxCurly || idxSemicol == -1) && idxCurly != -1)
 			{
 				// function
-				parseFunctionTCS(f, content.Substring(0, idxCurly));
+				((Class)f.type).functions.Add(parseFunctionTCS(f, content.Substring(0, idxCurly), true));
 
 				int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
 				string after = content.Substring(closingCurly + 1);
@@ -268,7 +276,19 @@ namespace bohc
 			}
 		}
 
-		private static void parseFunctionTCS(File f, string fDec)
+		private static void parseInterfaceTCS(File f, string content)
+		{
+			int semicol = content.IndexOf(';');
+			if (semicol == -1)
+			{
+				return;
+			}
+
+			string func = content.Substring(0, semicol);
+			((Interface)f.type).functions.Add(parseFunctionTCS(f, func, false));
+		}
+
+		private static Function parseFunctionTCS(File f, string fDec, bool requiresAccess)
 		{
 			fDec = fDec.Trim();
 
@@ -276,24 +296,24 @@ namespace bohc
 			typesys.Type type;
 			string identifier;
 
-			parsePreFunctionParamsTCS(f, fDec, out mods, out type, out identifier);
+			parsePreFunctionParamsTCS(f, fDec, requiresAccess, out mods, out type, out identifier);
 
 			List<Parameter> parameters = new List<Parameter>();
 			Function func = new Function(mods, type, identifier, parameters);
 
 			parseFunctionParamsTCS(f, fDec, func);
 
-			((Class)f.type).functions.Add(func);
+			return func;
 		}
 
-		private static void parsePreFunctionParamsTCS(File f, string fDec, out Modifiers mods, out typesys.Type type, out string identifier)
+		private static void parsePreFunctionParamsTCS(File f, string fDec, bool requiresAccess, out Modifiers mods, out typesys.Type type, out string identifier)
 		{
 			int idxClose = fDec.LastIndexOf(')');
 			int idxParent = getMatchingBraceCharBackwards(fDec, idxClose, '(');
 			fDec = remDupW(fDec.Substring(0, idxParent).Trim());
 
 			string[] parts = fDec.Split(' ');
-			boh.Exception.require<ParserException>(parts.Length >= 3, fDec + ": function access modifier and/or type expected");
+			boh.Exception.require<ParserException>(parts.Length >= 3 || (!requiresAccess && parts.Length >= 2), fDec + ": function access modifier and/or type expected");
 
 			identifier = parts[parts.Length - 1];
 			string typeName = parts[parts.Length - 2];
@@ -376,6 +396,31 @@ namespace bohc
 
 			Field field = new Field(mods, identifier, actualType);
 			((Class)f.type).fields.Add(field);
+		}
+
+		private static void parseEnumTCS(File f, string content)
+		{
+			string[] enumerators = content.Split(',');
+			for (int i = 0; i < enumerators.Length; ++i)
+			{
+				string enumerator = enumerators[i];
+				int idxEq = enumerator.IndexOf('=');
+				if (idxEq != -1)
+				{
+					enumerator = enumerator.Substring(0, idxEq);
+				}
+				enumerator = enumerator.Trim();
+
+				if (i == enumerators.Length - 1 && string.IsNullOrEmpty(enumerator))
+				{
+					break;
+				}
+
+				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(enumerator), enumerator + " is not a valid enumerator");
+				boh.Exception.warnIf(enumerator.ToUpperInvariant() != enumerator, "Enumerator names should be uppercase");
+
+				((typesys.Enum)f.type).enumerators.Add(new Enumerator(enumerator));
+			}
 		}
 
 		#endregion

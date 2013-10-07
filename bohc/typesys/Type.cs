@@ -89,7 +89,7 @@ namespace bohc.typesys
 		{
 			lock (types)
 			{
-				foreach (Package p in packages)
+				foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 				{
 					Type t = getExisting(p, name);
 					if (t != null)

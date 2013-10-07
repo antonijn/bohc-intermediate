@@ -53,5 +53,6 @@ namespace bohc.typesys
 		public static readonly Primitive FLOAT = new Primitive("float", 4);
 		public static readonly Primitive DOUBLE = new Primitive("double", 8);
 		public static readonly Primitive CHAR = new Primitive("char", 2);
+		public static readonly Primitive VOID = new Primitive("void", 0);
 	}
 }
