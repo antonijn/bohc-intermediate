@@ -47,21 +47,39 @@ namespace bohc.parsing
 			return sb.ToString();
 		}
 
-		public static Expression analyze(string str, List<typesys.Variable> vars, ts.File file)
+		private static Expression analyze(string str, List<typesys.Variable> vars, ts.File file, int opprec)
 		{
-			string next;
+			string next = null;
 			int i = 0;
 
 			Expression last = null;
+			analyzeOp(ref last, vars, ref i, ref next, str, file, opprec);
+
+			return last;
+		}
+
+		private static void analyzeOp(ref Expression last, List<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec)
+		{
 			while ((next = readNext(str, ref i)) != null)
 			{
 				if (analyzeBrackets(ref last, vars, ref i, ref next, str, file)) { continue; }
-				if (analyzeOperator(ref last, vars, ref i, ref next, str, file)) { continue; }
+				OpBreakStat s = analyzeOperator(ref last, vars, ref i, ref next, str, file, opprec);
+				if (s == OpBreakStat.BREAK)
+				{
+					break;
+				}
+				else if (s == OpBreakStat.CONTINUE)
+				{
+					continue;
+				}
 				if (analyzeLiteral(ref last, ref i, ref next, str, file)) { continue; }
 				if (analyzeName(ref last, vars, ref i, ref next, str, file)) { continue; }
 			}
+		}
 
-			return last;
+		public static Expression analyze(string str, List<typesys.Variable> vars, ts.File file)
+		{
+			return analyze(str, vars, file, -1);			
 		}
 
 		private static bool analyzeBrackets(ref Expression last, List<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file)
@@ -81,32 +99,39 @@ namespace bohc.parsing
 			return true;
 		}
 
-		private static bool analyzeOperator(ref Expression last, List<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file)
+		private enum OpBreakStat
+		{
+			BREAK,
+			CONTINUE,
+			NOTHING,
+		}
+
+		private static OpBreakStat analyzeOperator(ref Expression last, List<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec)
 		{
 			// TODO: unary operators
-
-			if (!parsing.Operator.isOperator(next))
+			if (!Operator.isOperator(next))
 			{
-				return false;
+				return OpBreakStat.NOTHING;
+			}
+
+			Operator op = Operator.getExisting(next, OperationType.BINARY);
+			if (op.precedence < opprec)
+			{
+				i -= op.representation.Length;
+				return OpBreakStat.BREAK;
 			}
 
 			Expression left = last;
-			parsing.Operator op = parsing.Operator.getExisting(next, OperationType.BINARY);
-
-			string nxt = readNext(str, ref i);
-			do
-			{
-				if (analyzeBrackets(ref last, vars, ref i, ref nxt, nxt, file)) { break; }
-				if (analyzeLiteral(ref last, ref i, ref nxt, nxt, file)) { break; }
-				if (analyzeName(ref last, vars, ref i, ref nxt, nxt, file)) { break; }
-			}
-			while (false);
-
-			Expression right = last;
+			string rightstr = str.Substring(i);
+			string nxt = null;
+			int _i = 0;
+			Expression right = null;
+			analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence);
+			i += _i;
 
 			last = new BinaryOperation(left, right, op);
 
-			return true;
+			return OpBreakStat.CONTINUE;
 		}
 
 		private static bool analyzeLiteral(ref Expression last, ref int i, ref string next, string str, ts.File file)

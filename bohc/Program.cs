@@ -43,7 +43,7 @@ public class Class
 			total.Stop();
 			Console.WriteLine("Parsing took:                        {0} milliseconds", total.Elapsed.TotalMilliseconds);
 
-			parsing.Expression e = parsing.Expression.analyze("Class.thing() + 5", new List<typesys.Variable>(), f0);
+			parsing.Expression e = parsing.Expression.analyze("3 + 1 * 2", new List<typesys.Variable>(), f0);
 
 			Console.ReadKey();
 		}
