@@ -47,9 +47,20 @@
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
     <Compile Include="Parser.cs" />
+    <Compile Include="parsing\Expression.cs" />
+    <Compile Include="parsing\ExprType.cs" />
+    <Compile Include="parsing\ExprVariable.cs" />
+    <Compile Include="parsing\FunctionCall.cs" />
+    <Compile Include="parsing\Literal.cs" />
+    <Compile Include="parsing\BinaryOperation.cs" />
+    <Compile Include="parsing\OperationType.cs" />
+    <Compile Include="parsing\Operator.cs" />
+    <Compile Include="parsing\ThisVar.cs" />
+    <Compile Include="parsing\UnaryOperation.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="typesys\Class.cs" />
+    <Compile Include="typesys\Constructor.cs" />
     <Compile Include="typesys\Enum.cs" />
     <Compile Include="typesys\Enumerator.cs" />
     <Compile Include="typesys\Field.cs" />
@@ -61,6 +72,7 @@
     <Compile Include="typesys\IType.cs" />
     <Compile Include="typesys\Modifiers.cs" />
     <Compile Include="typesys\ModifierHelper.cs" />
+    <Compile Include="typesys\OverloadedOperator.cs" />
     <Compile Include="typesys\Package.cs" />
     <Compile Include="typesys\Parameter.cs" />
     <Compile Include="typesys\Type.cs" />
@@ -75,6 +87,7 @@
   <ItemGroup>
     <None Include="README.md" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

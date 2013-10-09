@@ -44,6 +44,32 @@ namespace bohc
 			return getMatchingBraceCh(str, first, matches, -1);
 		}
 
+		public static IEnumerable<string> split(string str, int first, char matches, char seperator)
+		{
+			int scope = 0;
+			char begin = str[first];
+
+			for (int i = ++first; scope >= 0; ++i)
+			{
+				char ch = str[i];
+				if (ch == begin)
+				{
+					++scope;
+				}
+				else if (ch == matches)
+				{
+					--scope;
+				}
+				else if (scope == 0 && ch == seperator)
+				{
+					yield return str.Substring(first, i - first);
+					first = i + 1;
+				}
+			}
+
+			yield return str.Substring(first, str.Length - first - 1);
+		}
+
 		/// <summary>
 		/// Removes duplicate whitespace in string
 		/// </summary>
@@ -260,7 +286,7 @@ namespace bohc
 			if ((idxSemicol > idxCurly || idxSemicol == -1) && idxCurly != -1)
 			{
 				// function
-				((Class)f.type).functions.Add(parseFunctionTCS(f, content.Substring(0, idxCurly), true));
+				((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxCurly), true));
 
 				int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
 				string after = content.Substring(closingCurly + 1);
@@ -290,6 +316,10 @@ namespace bohc
 
 		private static Function parseFunctionTCS(File f, string fDec, bool requiresAccess)
 		{
+			// make sure the static constructors are called
+			parsing.BinaryOperation.ADD.GetType();
+			parsing.UnaryOperation.DECREMENT.GetType();
+
 			fDec = fDec.Trim();
 
 			Modifiers mods;
@@ -298,12 +328,46 @@ namespace bohc
 
 			parsePreFunctionParamsTCS(f, fDec, requiresAccess, out mods, out type, out identifier);
 
-			List<Parameter> parameters = new List<Parameter>();
-			Function func = new Function(mods, type, identifier, parameters);
+			if (identifier == "this")
+			{
+				boh.Exception.require<ParserException>(
+					!(mods.HasFlag(Modifiers.ABSTRACT) || mods.HasFlag(Modifiers.FINAL) ||
+					mods.HasFlag(Modifiers.OVERRIDE) || mods.HasFlag(Modifiers.STATIC) ||
+					mods.HasFlag(Modifiers.VIRTUAL)), "Invalid modifier for constructor");
 
-			parseFunctionParamsTCS(f, fDec, func);
+				List<Parameter> parameters = new List<Parameter>();
+				Constructor func = new Constructor(mods, (Class)f.type, parameters);
+				parseFunctionParamsTCS(f, fDec, func);
+				return func;
+			}
+			else if (parsing.Operator.isOperator(identifier))
+			{
+				boh.Exception.require<ParserException>(
+					mods.HasFlag(Modifiers.PUBLIC) && mods.HasFlag(Modifiers.STATIC), "Invalid modifier for constructor");
 
-			return func;
+				List<Parameter> parameters = new List<Parameter>();
+				OverloadedOperator func = new OverloadedOperator(
+					parsing.Operator.getExisting(identifier, parsing.OperationType.DOESNT_MATTER),
+					type, parameters);
+
+				parseFunctionParamsTCS(f, fDec, func);
+
+				boh.Exception.require<ParserException>(func.parameters.Any(x => x.type == f.type), "An overloaded operator must apply to the type on which it is overloaded");
+				boh.Exception.require<ParserException>(func.optype == parsing.OperationType.BINARY ? parameters.Count == 2 : parameters.Count == 1,
+					"Invalid parameter count for operator " + identifier);
+
+				return func;
+			}
+			else
+			{
+				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
+
+				List<Parameter> parameters = new List<Parameter>();
+				Function func = new Function(mods, type, identifier, parameters);
+				parseFunctionParamsTCS(f, fDec, func);
+				return func;
+			}
+
 		}
 
 		private static void parsePreFunctionParamsTCS(File f, string fDec, bool requiresAccess, out Modifiers mods, out typesys.Type type, out string identifier)
@@ -313,15 +377,17 @@ namespace bohc
 			fDec = remDupW(fDec.Substring(0, idxParent).Trim());
 
 			string[] parts = fDec.Split(' ');
-			boh.Exception.require<ParserException>(parts.Length >= 3 || (!requiresAccess && parts.Length >= 2), fDec + ": function access modifier and/or type expected");
+			bool isConstr = parts.Last() == "this";
+
+			boh.Exception.require<ParserException>(
+				(isConstr && parts.Length >= 2) || parts.Length >= 3 || (!requiresAccess && parts.Length >= 2),
+				fDec + ": function access modifier and/or type expected");
 
 			identifier = parts[parts.Length - 1];
-			string typeName = parts[parts.Length - 2];
-			IEnumerable<string> modifiers = parts.Take(parts.Length - 2);
+			string typeName = isConstr ? null : parts[parts.Length - 2];
+			IEnumerable<string> modifiers = parts.Take(parts.Length - (isConstr ? 1 : 2));
 
-			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
-
-			type = typesys.Type.getExisting(f.getContext(), typeName);
+			type = isConstr ? null : typesys.Type.getExisting(f.getContext(), typeName);
 			mods = ModifierHelper.getModifiersFromStrings(modifiers);
 		}
 
@@ -422,6 +488,12 @@ namespace bohc
 				((typesys.Enum)f.type).enumerators.Add(new Enumerator(enumerator));
 			}
 		}
+
+		#endregion
+
+		#region Type Content Parsing
+
+		
 
 		#endregion
 	}

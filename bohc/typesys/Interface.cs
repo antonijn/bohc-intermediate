@@ -32,5 +32,11 @@ namespace bohc.typesys
 				return i;
 			}
 		}
+
+		public IEnumerable<Function> getFunctions(string id)
+		{
+			IEnumerable<Function> inThis = functions.Where(x => x.identifier == id).ToList();
+			return inThis.Concat(implements.SelectMany(x => x.getFunctions(id)));
+		}
 	}
 }

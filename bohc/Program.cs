@@ -16,10 +16,12 @@ package hey.hi;
 import boh.lang;
 import boh.lang.lala;
 
-public enum Enum
+public class Class
 {
-	ENUMERATOR0,
-	ENUMERATOR1,
+	public static int thing()
+{
+
+}
 }";
 			Stopwatch total = new Stopwatch();
 			total.Start();
@@ -40,6 +42,8 @@ public enum Enum
 			Console.WriteLine("Type Content Skimming step took:     {0} milliseconds", sw.Elapsed.TotalMilliseconds);
 			total.Stop();
 			Console.WriteLine("Parsing took:                        {0} milliseconds", total.Elapsed.TotalMilliseconds);
+
+			parsing.Expression e = parsing.Expression.analyze("Class.thing() + 5", new List<typesys.Variable>(), f0);
 
 			Console.ReadKey();
 		}

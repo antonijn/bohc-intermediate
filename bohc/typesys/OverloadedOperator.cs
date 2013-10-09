@@ -1,0 +1,20 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace bohc.typesys
+{
+	public sealed class OverloadedOperator : Function
+	{
+		public readonly parsing.Operator which;
+		public readonly parsing.OperationType optype;
+
+		public OverloadedOperator(parsing.Operator which, typesys.Type returns, List<Parameter> parameters)
+			: base(Modifiers.PUBLIC | Modifiers.STATIC, returns, which.representation, parameters)
+		{
+			this.which = which;
+			this.optype = (parsing.BinaryOperation.isOperator(which.representation) ? parsing.OperationType.BINARY : parsing.OperationType.UNARY);
+		}
+	}
+}

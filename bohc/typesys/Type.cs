@@ -19,6 +19,23 @@ namespace bohc.typesys
 			file = f;
 		}
 
+		/// <summary>
+		/// gets a value indicating to which extent two types are related.
+		/// zero means no relation, one means it's the type itself,
+		/// two means it's the super class or an implemented interface,
+		/// three means it's a super class of the super class, or an implemented interface of the super class
+		/// and so on.
+		/// </summary>
+		public virtual int extends(Type other)
+		{
+			if (other == this)
+			{
+				return 1;
+			}
+
+			return 0;
+		}
+
 		public static bool isValidIdentifier(string name)
 		{
 			if (string.IsNullOrEmpty(name))
@@ -101,6 +118,11 @@ namespace bohc.typesys
 
 			boh.Exception._throw<exceptions.ParserException>("type not found: " + name);
 			return null;
+		}
+
+		public override string ToString()
+		{
+			return name;
 		}
 	}
 }

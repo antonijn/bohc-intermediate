@@ -59,3 +59,9 @@ Difficulties for each step:
 		  and functions. (unless you compile them using type erasure, but if you're even
 		  taking type erasure into consideration, I doubt you should be contributing to
 		  this project)
+
+Proposed changes
+----------------
+
+Only parse import directives in the Type Parsing step.
+The import directives can then be verified since the available packages are known.
