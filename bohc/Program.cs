@@ -18,10 +18,17 @@ import boh.lang.lala;
 
 public class Class
 {
-	public static int thing()
-{
+	public this()
+	{
+	}
 
-}
+	public static void main()
+	{
+		if (4 == 4)
+		{
+			Class c = new Class();
+		}
+	}
 }";
 			Stopwatch total = new Stopwatch();
 			total.Start();
@@ -38,12 +45,15 @@ public class Class
 			sw.Reset();
 			sw.Start();
 			Parser.parseFileTCS(f0, file);
+			Parser.parseFileTCP(f0, file);
+			Parser.parseFileCP(f0, file);
 			sw.Stop();
 			Console.WriteLine("Type Content Skimming step took:     {0} milliseconds", sw.Elapsed.TotalMilliseconds);
 			total.Stop();
 			Console.WriteLine("Parsing took:                        {0} milliseconds", total.Elapsed.TotalMilliseconds);
 
-			parsing.Expression e = parsing.Expression.analyze("3 + 1 * 2", new List<typesys.Variable>(), f0);
+			parsing.Expression e = parsing.Expression.analyze("8 == 4", new List<typesys.Variable>(), f0);
+			typesys.Type t = e.getType();
 
 			Console.ReadKey();
 		}

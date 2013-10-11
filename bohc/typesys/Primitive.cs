@@ -54,5 +54,46 @@ namespace bohc.typesys
 		public static readonly Primitive DOUBLE = new Primitive("double", 8);
 		public static readonly Primitive CHAR = new Primitive("char", 2);
 		public static readonly Primitive VOID = new Primitive("void", 0);
+
+		public bool isInt()
+		{
+			return (this == BYTE || this == SHORT || this == INT || this == LONG || this == CHAR);
+		}
+
+		public bool isFloat()
+		{
+			return (this == FLOAT || this == DOUBLE);
+		}
+
+		public override int extends(Type other)
+		{
+			if (this == VOID)
+			{
+				return 0;
+			}
+
+			if (this == other)
+			{
+				return 1;
+			}
+
+			Primitive oPrim = other as Primitive;
+			if (isInt() && oPrim.isInt())
+			{
+				return 2;
+			}
+
+			if (isFloat() && oPrim.isFloat())
+			{
+				return 2;
+			}
+
+			if (isInt() && oPrim.isFloat())
+			{
+				return 3;
+			}
+
+			return 0;
+		}
 	}
 }

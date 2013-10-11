@@ -7,12 +7,39 @@ using System.Text.RegularExpressions;
 using bohc.boh;
 using bohc.exceptions;
 using bohc.typesys;
+using bohc.parsing;
 using bohc.parsing.ts;
+using bohc.parsing.statements;
 
 namespace bohc
 {
 	public static class Parser
 	{
+		public static int indexOf(string str, char begin, char end, char idxOf)
+		{
+			int scope = 0;
+			int i = 0;
+			for (; true; ++i)
+			{
+				char ch = str[i];
+				if (ch == begin)
+				{
+					++scope;
+				}
+				else if (ch == end)
+				{
+					--scope;
+				}
+
+				if (ch == idxOf && scope <= 0)
+				{
+					break;
+				}
+			}
+
+			return i;
+		}
+
 		private static int getMatchingBraceCh(string str, int first, char matches, int step)
 		{
 			char startscope = str[first];
@@ -286,7 +313,10 @@ namespace bohc
 			if ((idxSemicol > idxCurly || idxSemicol == -1) && idxCurly != -1)
 			{
 				// function
-				((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxCurly), true));
+				int idxClose = getMatchingBraceChar(content, idxCurly, '}');
+				string body = content.Substring(idxCurly + 1, idxClose - idxCurly - 1);
+
+				((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxCurly), body, true));
 
 				int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
 				string after = content.Substring(closingCurly + 1);
@@ -311,10 +341,10 @@ namespace bohc
 			}
 
 			string func = content.Substring(0, semicol);
-			((Interface)f.type).functions.Add(parseFunctionTCS(f, func, false));
+			((Interface)f.type).functions.Add(parseFunctionTCS(f, func, null, false));
 		}
 
-		private static Function parseFunctionTCS(File f, string fDec, bool requiresAccess)
+		private static Function parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
 		{
 			// make sure the static constructors are called
 			parsing.BinaryOperation.ADD.GetType();
@@ -336,7 +366,7 @@ namespace bohc
 					mods.HasFlag(Modifiers.VIRTUAL)), "Invalid modifier for constructor");
 
 				List<Parameter> parameters = new List<Parameter>();
-				Constructor func = new Constructor(mods, (Class)f.type, parameters);
+				Constructor func = new Constructor(mods, (Class)f.type, parameters, body);
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
 			}
@@ -347,8 +377,9 @@ namespace bohc
 
 				List<Parameter> parameters = new List<Parameter>();
 				OverloadedOperator func = new OverloadedOperator(
+					(typesys.Class)type,
 					parsing.Operator.getExisting(identifier, parsing.OperationType.DOESNT_MATTER),
-					type, parameters);
+					type, parameters, body);
 
 				parseFunctionParamsTCS(f, fDec, func);
 
@@ -363,7 +394,7 @@ namespace bohc
 				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
 
 				List<Parameter> parameters = new List<Parameter>();
-				Function func = new Function(mods, type, identifier, parameters);
+				Function func = new Function((typesys.Class)f.type, mods, type, identifier, parameters, body);
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
 			}
@@ -439,10 +470,12 @@ namespace bohc
 		{
 			fDec = fDec.Trim();
 
+			string initvalstr = null;
 			int equals = fDec.IndexOf('=');
 			if (equals != -1)
 			{
-				fDec = fDec.Substring(0, equals - 1);
+				initvalstr = fDec.Substring(equals + 1);
+				fDec = fDec.Substring(0, equals);
 			}
 
 			fDec = remDupW(fDec);
@@ -460,7 +493,7 @@ namespace bohc
 			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
 			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true), mods.ToString() + ": invalid modifiers");
 
-			Field field = new Field(mods, identifier, actualType);
+			Field field = new Field(mods, identifier, actualType, initvalstr);
 			((Class)f.type).fields.Add(field);
 		}
 
@@ -493,7 +526,181 @@ namespace bohc
 
 		#region Type Content Parsing
 
-		
+		public static void parseFileTCP(File f, string file)
+		{
+			Class c = f.type as Class;
+			if (c != null)
+			{
+				parseClassTCP(c);
+			}
+		}
+
+		private static void parseClassTCP(Class c)
+		{
+			foreach (Field f in c.fields)
+			{
+				f.initial = parsing.Expression.analyze(f.initvalstr, new List<Variable>(), c.file);
+			}
+		}
+
+		#endregion
+
+		#region Code Parsing
+
+		public static void parseFileCP(File f, string file)
+		{
+			Class c = f.type as Class;
+			if (c == null)
+			{
+				return;
+			}
+
+			foreach (Function func in c.functions)
+			{
+				func.body = parseBody(func.bodystr, func, f);
+			}
+		}
+
+		private static Body parseBody(string body, Function func, File f)
+		{
+			Stack<List<Variable>> vars = new Stack<List<Variable>>();
+			vars.Push(func.parameters.ToList<typesys.Variable>());
+			return parseBody(body, func, vars, f);
+		}
+
+		private static Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f)
+		{
+			Body result = new Body();
+			vars.Push(new List<Variable>());
+
+			while (true)
+			{
+				body = body.TrimStart();
+				if (string.IsNullOrWhiteSpace(body))
+				{
+					break;
+				}
+				parseLine(ref body, func, vars, result, f);
+			}
+
+			vars.Pop();
+			return result;
+		}
+
+		private static void parseLine(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
+		{
+			if (line.StartsWith("if"))
+			{
+				result.statements.Add(parseIf(ref line, func, vars, f));
+			}
+			else if (line.StartsWith("while"))
+			{
+				result.statements.Add(parseWhile(ref line, func, vars, f));
+			}
+			else
+			{
+				int semicol = indexOf(line, '(', ')', ';');
+				string stat = line.Substring(0, semicol);
+				result.statements.Add(parseStatement(stat, func, vars, f));
+				line = line.Substring(semicol + 1).TrimStart();
+			}
+		}
+
+		private static Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			int wspace = line.IndexOf(' ');
+			if (wspace != -1)
+			{
+				string beforeWspace = line.Substring(0, wspace);
+				if (typesys.Type.exists(f.getContext(), beforeWspace))
+				{
+					typesys.Type type = typesys.Type.getExisting(f.getContext(), beforeWspace);
+					string id = null;
+
+					Expression initial = null;
+
+					int eq = indexOf(line, '(', ')', '=');
+					if (eq != -1)
+					{
+						id = line.Substring(wspace + 1, eq - wspace - 1).Trim();
+						boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(id), id + ": is not a valid identifier");
+						string initstr = line.Substring(eq + 1);
+						initial = Expression.analyze(initstr, vars.SelectMany(x => x), f);
+					}
+					else
+					{
+						id = line.Substring(wspace + 1).Trim();
+					}
+					Local variable = new Local(id, type);
+					vars.Peek().Add(variable);
+
+					return new VarDeclaration(variable, initial);
+				}
+			}
+
+			return new ExpressionStatement(Expression.analyze(line, vars.SelectMany(x => x), f));
+		}
+
+		private static void parseIfLike(ref string line, Function func, Stack<List<Variable>> vars, File f, out Expression condition, out Body body)
+		{
+			boh.Exception.require<ParserException>(line.StartsWith("("), "Condition must be placed between parentheses");
+
+			string condstr = getBrackets(line);
+			condition = Expression.analyze(condstr, vars.SelectMany(x => x), f);
+			line = line.Substring(condstr.Length + 2).TrimStart();
+
+			body = null;
+			if (line.StartsWith("{"))
+			{
+				string curlies = getCurlies(line);
+				body = parseBody(curlies, func, vars, f);
+				line = line.TrimStart().Substring(curlies.Length + 2);
+			}
+			else
+			{
+				string statement = line.Substring(indexOf(line, '(', ')', ';'));
+				body = parseBody(statement, func, vars, f);
+				line = line.TrimStart().Substring(statement.Length + 1);
+			}
+		}
+
+		private static IfStatement parseIf(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("if".Length).TrimStart();
+
+			Expression condition;
+			Body body;
+			parseIfLike(ref line, func, vars, f, out condition, out body);
+
+			return new IfStatement(condition, body);
+		}
+
+		private static WhileStatement parseWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("while".Length).TrimStart();
+
+			Expression condition;
+			Body body;
+			parseIfLike(ref line, func, vars, f, out condition, out body);
+
+			return new WhileStatement(condition, body);
+		}
+
+		private static string getBrackets(string line)
+		{
+			int lbrack = line.IndexOf('(');
+			int rbrack = getMatchingBraceChar(line, lbrack, ')');
+
+			return line.Substring(lbrack + 1, rbrack - lbrack - 1);
+		}
+
+		private static string getCurlies(string line)
+		{
+			int lbrack = line.IndexOf('{');
+			int rbrack = getMatchingBraceChar(line, lbrack, '}');
+
+			return line.Substring(lbrack + 1, rbrack - lbrack - 1);
+		}
 
 		#endregion
 	}

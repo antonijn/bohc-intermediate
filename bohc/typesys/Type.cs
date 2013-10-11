@@ -120,9 +120,29 @@ namespace bohc.typesys
 			return null;
 		}
 
+		public static bool exists(IEnumerable<Package> packages, string name)
+		{
+			foreach (Package p in packages)
+			{
+				Type t = getExisting(p, name);
+				if (t != null)
+				{
+					return true;
+				}
+			}
+
+			return false;
+		}
+
 		public override string ToString()
 		{
 			return name;
+		}
+
+		public override string fullName()
+		{
+			string pckg = package.ToString();
+			return (string.IsNullOrEmpty(pckg) ? string.Empty : pckg + '.') + name;
 		}
 	}
 }

@@ -6,3 +6,9 @@ C:\Users\adblo_000\Dropbox\bohc\bohc\obj\x86\Debug\bohc.exe
 C:\Users\adblo_000\Dropbox\bohc\bohc\obj\x86\Debug\bohc.pdb
 C:\Users\adblo_000\Dropbox\bohc\bohc\bin\Debug\bohc.exe
 C:\Users\adblo_000\Dropbox\bohc\bohc\bin\Debug\bohc.pdb
+C:\Users\Antonie\Dropbox\bohc\bohc\obj\x86\Debug\bohc.exe
+C:\Users\Antonie\Dropbox\bohc\bohc\obj\x86\Debug\bohc.pdb
+C:\Users\Antonie\Dropbox\bohc\bohc\bin\Debug\bohc.exe
+C:\Users\Antonie\Dropbox\bohc\bohc\bin\Debug\bohc.pdb
+C:\Users\Antonie\Dropbox\bohc\bohc\obj\x86\Debug\bohc.csprojResolveAssemblyReference.cache
+C:\Users\adblo_000\Dropbox\bohc\bohc\obj\x86\Debug\bohc.csprojResolveAssemblyReference.cache

@@ -9,8 +9,8 @@ namespace bohc.typesys
 	{
 		public readonly Class _class;
 
-		public Constructor(Modifiers mods, Class c, List<Parameter> parameters)
-			: base(mods, Primitive.VOID, "this", parameters)
+		public Constructor(Modifiers mods, Class c, List<Parameter> parameters, string body)
+			: base(c, mods, Primitive.VOID, "this", parameters, body)
 		{
 			this._class = c;
 		}
