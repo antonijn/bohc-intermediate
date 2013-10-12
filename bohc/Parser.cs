@@ -493,7 +493,7 @@ namespace bohc
 			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
 			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true), mods.ToString() + ": invalid modifiers");
 
-			Field field = new Field(mods, identifier, actualType, initvalstr);
+			Field field = new Field(mods, identifier, actualType, (Class)f.type, initvalstr);
 			((Class)f.type).fields.Add(field);
 		}
 
@@ -539,7 +539,10 @@ namespace bohc
 		{
 			foreach (Field f in c.fields)
 			{
-				f.initial = parsing.Expression.analyze(f.initvalstr, new List<Variable>(), c.file);
+				if (f.initvalstr != null)
+				{
+					f.initial = parsing.Expression.analyze(f.initvalstr, new List<Variable>(), c.file);
+				}
 			}
 		}
 

@@ -44,6 +44,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="boh\Exception.cs" />
+    <Compile Include="CodeGen.cs" />
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
     <Compile Include="Parser.cs" />

@@ -8,11 +8,13 @@ namespace bohc.typesys
 	public class Primitive : typesys.Type
 	{
 		public readonly int size;
+		public readonly string cname;
 
-		public Primitive(string name, int size)
+		public Primitive(string name, string cname, int size)
 			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, name)
 		{
 			this.size = size;
+			this.cname = cname;
 		}
 
 		public static bool isPrimitiveTypeName(string what)
@@ -45,15 +47,15 @@ namespace bohc.typesys
 			}
 		}
 
-		public static readonly Primitive BYTE = new Primitive("byte", 1);
-		public static readonly Primitive SHORT = new Primitive("short", 2);
-		public static readonly Primitive INT = new Primitive("int", 4);
-		public static readonly Primitive LONG = new Primitive("long", 8);
-		public static readonly Primitive BOOLEAN = new Primitive("boolean", 4);
-		public static readonly Primitive FLOAT = new Primitive("float", 4);
-		public static readonly Primitive DOUBLE = new Primitive("double", 8);
-		public static readonly Primitive CHAR = new Primitive("char", 2);
-		public static readonly Primitive VOID = new Primitive("void", 0);
+		public static readonly Primitive BYTE = new Primitive("byte", "uint8_t", 1);
+		public static readonly Primitive SHORT = new Primitive("short", "int16_t", 2);
+		public static readonly Primitive INT = new Primitive("int", "int32_t", 4);
+		public static readonly Primitive LONG = new Primitive("long", "int64_t", 8);
+		public static readonly Primitive BOOLEAN = new Primitive("boolean", "bool", 4);
+		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
+		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
+		public static readonly Primitive CHAR = new Primitive("char", "wchar_t", 2);
+		public static readonly Primitive VOID = new Primitive("void", "void", 0);
 
 		public bool isInt()
 		{

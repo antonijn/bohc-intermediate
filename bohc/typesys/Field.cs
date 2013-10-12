@@ -10,6 +10,7 @@ namespace bohc.typesys
 		public parsing.Expression initial = null;
 
 		public readonly Modifiers modifiers;
+		public readonly Class owner;
 		public readonly string initvalstr;
 
 		Modifiers IMember.getModifiers()
@@ -22,10 +23,11 @@ namespace bohc.typesys
 			return identifier;
 		}
 
-		public Field(Modifiers modifiers, string identifier, typesys.Type type, string initvalstr)
+		public Field(Modifiers modifiers, string identifier, typesys.Type type, Class owner, string initvalstr)
 			: base(identifier, type)
 		{
 			this.modifiers = modifiers;
+			this.owner = owner;
 			this.initvalstr = initvalstr;
 		}
 	}

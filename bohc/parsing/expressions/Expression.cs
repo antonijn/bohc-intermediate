@@ -79,7 +79,7 @@ namespace bohc.parsing
 
 		public static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file)
 		{
-			return analyze(str, vars, file, -1);			
+			return analyze(str, vars, file, -1);
 		}
 
 		private static bool analyzeBrackets(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file)
@@ -182,7 +182,11 @@ namespace bohc.parsing
 		{
 			string next = nxt;
 			int idxDot = nxt.IndexOf('.');
-			if (idxDot != -1)
+			if (idxDot == 0)
+			{
+				next = nxt.Substring(1);
+			}
+			else if (idxDot != -1)
 			{
 				next = nxt.Substring(0, idxDot);
 			}
@@ -214,6 +218,10 @@ namespace bohc.parsing
 				ExprType exprLast = (ExprType)last;
 				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.type);
 			}
+			else if (last is FunctionCall || last is ConstructorCall)
+			{
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, last.getType());
+			}
 			else if (vars.Any(x => x.identifier == next))
 			{
 				// TODO: callable variables
@@ -231,9 +239,10 @@ namespace bohc.parsing
 				i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type);
 			}
 
-			if (idxDot != -1)
+			int idxDot2 = next.IndexOf('.');
+			if (idxDot2 != -1)
 			{
-				string after = nxt.Substring(idxDot + 1);
+				string after = next.Substring(idxDot2 + 1);
 				analyzeName(ref last, vars, ref i, ref after, str, file);
 			}
 

@@ -139,7 +139,7 @@ namespace bohc.typesys
 			return name;
 		}
 
-		public override string fullName()
+		public string fullName()
 		{
 			string pckg = package.ToString();
 			return (string.IsNullOrEmpty(pckg) ? string.Empty : pckg + '.') + name;

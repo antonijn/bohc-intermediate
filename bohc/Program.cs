@@ -18,7 +18,13 @@ import boh.lang.lala;
 
 public class Class
 {
+	public int ah;
+
 	public this()
+	{
+	}
+
+	private virtual Class get(float f)
 	{
 	}
 
@@ -26,7 +32,7 @@ public class Class
 	{
 		if (4 == 4)
 		{
-			Class c = new Class();
+			new Class().get(1f).get(2).ah;
 		}
 	}
 }";
@@ -52,8 +58,7 @@ public class Class
 			total.Stop();
 			Console.WriteLine("Parsing took:                        {0} milliseconds", total.Elapsed.TotalMilliseconds);
 
-			parsing.Expression e = parsing.Expression.analyze("8 == 4", new List<typesys.Variable>(), f0);
-			typesys.Type t = e.getType();
+			CodeGen.generateFor((typesys.Type)f0.type, new typesys.Type[0]);
 
 			Console.ReadKey();
 		}
