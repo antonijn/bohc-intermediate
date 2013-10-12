@@ -29,5 +29,15 @@ namespace bohc.parsing
 		{
 			return onwhat.getType();
 		}
+
+		public override bool isLvalue()
+		{
+			return false;
+		}
+
+		public override bool isStatement()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

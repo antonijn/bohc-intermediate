@@ -5,13 +5,11 @@ using System.Text;
 
 namespace bohc.parsing.statements
 {
-	public abstract class BodyStatement : Statement
+	public class FinallyStatement : BodyStatement
 	{
-		public readonly Body body;
-
-		public BodyStatement(Body body)
+		public FinallyStatement(Body body)
+			: base(body)
 		{
-			this.body = body;
 		}
 	}
 }

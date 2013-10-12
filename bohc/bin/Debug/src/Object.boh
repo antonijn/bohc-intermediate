@@ -1,0 +1,1 @@
+package boh.lang;public class Object{	private static Type type = new Type();	public virtual Type getType()	{		return type;	}}

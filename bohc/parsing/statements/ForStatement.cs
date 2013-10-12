@@ -10,16 +10,15 @@ namespace bohc.parsing.statements
 		public readonly Statement initial;
 		public readonly Expression condition;
 		public readonly Statement final;
-		public readonly Body body;
 
 		public ForStatement(Statement initial, Expression condition, Statement final, Body body)
+			: base(body)
 		{
 			boh.Exception.require<exceptions.ParserException>(condition.getType() == typesys.Primitive.BOOLEAN, "Condition must be boolean");
 
 			this.initial = initial;
 			this.condition = condition;
 			this.final = final;
-			this.body = body;
 		}
 	}
 }

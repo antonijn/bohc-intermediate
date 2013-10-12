@@ -10,55 +10,45 @@ namespace bohc
 	{
 		public static void Main(string[] args)
 		{
-			string file = @"
-package hey.hi;
+			string[] filenames = new string[] { "src/Exception.boh", "src/Object.boh", "src/Type.boh" };
+			string[] files = new string[filenames.Length];
 
-import boh.lang;
-import boh.lang.lala;
+			for (int i = 0; i < filenames.Length; ++i)
+			{
+				files[i] = System.IO.File.ReadAllText(filenames[i]);
+			}
 
-public class Class
-{
-	public int ah;
+			Dictionary<string, parsing.ts.File> filesassoc = new Dictionary<string, parsing.ts.File>();
 
-	public this()
-	{
-	}
+			foreach (string file in files)
+			{
+				filesassoc[file] = Parser.parseFileTS(file);
+			}
 
-	private virtual Class get(float f)
-	{
-	}
+			foreach (string file in files)
+			{
+				Parser.parseFileTP(filesassoc[file], file);
+			}
 
-	public static void main()
-	{
-		if (4 == 4)
-		{
-			new Class().get(1f).get(2).ah;
-		}
-	}
-}";
-			Stopwatch total = new Stopwatch();
-			total.Start();
-			Stopwatch sw = new Stopwatch();
-			sw.Start();
-			parsing.ts.File f0 = Parser.parseFileTS(file);
-			sw.Stop();
-			Console.WriteLine("Type Skimming step took:             {0} milliseconds", sw.Elapsed.TotalMilliseconds);
-			sw.Reset();
-			sw.Start();
-			Parser.parseFileTP(f0, file);
-			sw.Stop();
-			Console.WriteLine("Type Parsing step took:              {0} milliseconds", sw.Elapsed.TotalMilliseconds);
-			sw.Reset();
-			sw.Start();
-			Parser.parseFileTCS(f0, file);
-			Parser.parseFileTCP(f0, file);
-			Parser.parseFileCP(f0, file);
-			sw.Stop();
-			Console.WriteLine("Type Content Skimming step took:     {0} milliseconds", sw.Elapsed.TotalMilliseconds);
-			total.Stop();
-			Console.WriteLine("Parsing took:                        {0} milliseconds", total.Elapsed.TotalMilliseconds);
+			foreach (string file in files)
+			{
+				Parser.parseFileTCS(filesassoc[file], file);
+			}
 
-			CodeGen.generateFor((typesys.Type)f0.type, new typesys.Type[0]);
+			foreach (string file in files)
+			{
+				Parser.parseFileTCP(filesassoc[file], file);
+			}
+
+			foreach (string file in files)
+			{
+				Parser.parseFileCP(filesassoc[file], file);
+			}
+
+			foreach (typesys.Type type in filesassoc.Values.Select(x => (typesys.Type)x.type).Where(x => x != null))
+			{
+				CodeGen.generateFor(type, filesassoc.Values.Select(x => (typesys.Type)x.type).Where(x => x != null));
+			}
 
 			Console.ReadKey();
 		}

@@ -7,7 +7,7 @@ using bohc.parsing.ts;
 
 namespace bohc.typesys
 {
-	public class Type : IType
+	public abstract class Type : IType
 	{
 		File IType.getFile()
 		{
@@ -80,7 +80,7 @@ namespace bohc.typesys
 
 		public Type(Package package, Modifiers modifiers, string name)
 		{
-			boh.Exception.require<exceptions.ParserException>(isValidName(name, this is Primitive), name + " is not a valid typename");
+			boh.Exception.require<exceptions.ParserException>(this is NullType || isValidName(name, this is Primitive), name + " is not a valid typename");
 
 			this.package = package;
 			this.modifiers = modifiers;
@@ -116,13 +116,14 @@ namespace bohc.typesys
 				}
 			}
 
-			boh.Exception._throw<exceptions.ParserException>("type not found: " + name);
+			// TODO: solve this
+			//boh.Exception._throw<exceptions.ParserException>("type not found: " + name);
 			return null;
 		}
 
 		public static bool exists(IEnumerable<Package> packages, string name)
 		{
-			foreach (Package p in packages)
+			foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 			{
 				Type t = getExisting(p, name);
 				if (t != null)
@@ -144,5 +145,7 @@ namespace bohc.typesys
 			string pckg = package.ToString();
 			return (string.IsNullOrEmpty(pckg) ? string.Empty : pckg + '.') + name;
 		}
+
+		public abstract parsing.Expression defaultVal();
 	}
 }

@@ -20,5 +20,15 @@ namespace bohc.parsing
 		{
 			return function.owner;
 		}
+
+		public override bool isLvalue()
+		{
+			return false;
+		}
+
+		public override bool isStatement()
+		{
+			return true;
+		}
 	}
 }

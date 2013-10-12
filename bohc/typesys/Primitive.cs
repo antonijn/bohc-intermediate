@@ -9,12 +9,18 @@ namespace bohc.typesys
 	{
 		public readonly int size;
 		public readonly string cname;
+		public parsing.Literal initval;
 
 		public Primitive(string name, string cname, int size)
 			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, name)
 		{
 			this.size = size;
 			this.cname = cname;
+		}
+
+		public override parsing.Expression defaultVal()
+		{
+			return initval;
 		}
 
 		public static bool isPrimitiveTypeName(string what)
@@ -54,8 +60,20 @@ namespace bohc.typesys
 		public static readonly Primitive BOOLEAN = new Primitive("boolean", "bool", 4);
 		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
 		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
-		public static readonly Primitive CHAR = new Primitive("char", "wchar_t", 2);
+		public static readonly Primitive CHAR = new Primitive("char", "char16_t", 2);
 		public static readonly Primitive VOID = new Primitive("void", "void", 0);
+
+		static Primitive()
+		{
+			BYTE.initval = new parsing.Literal(BYTE, "0");
+			SHORT.initval = new parsing.Literal(SHORT, "0");
+			INT.initval = new parsing.Literal(INT, "0");
+			LONG.initval = new parsing.Literal(LONG, "0L");
+			BOOLEAN.initval = new parsing.Literal(BOOLEAN, "false");
+			FLOAT.initval = new parsing.Literal(FLOAT, "0.0f");
+			DOUBLE.initval = new parsing.Literal(DOUBLE, "0.0");
+			CHAR.initval = new parsing.Literal(CHAR, "'\0'");
+		}
 
 		public bool isInt()
 		{

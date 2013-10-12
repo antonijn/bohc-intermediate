@@ -11,5 +11,15 @@ namespace bohc.parsing
 		{
 			return null;
 		}
+
+		public override bool isLvalue()
+		{
+			throw new NotImplementedException();
+		}
+
+		public override bool isStatement()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

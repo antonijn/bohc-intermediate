@@ -227,6 +227,15 @@ namespace bohc
 				c.super = parseExt(f, typedec);
 				boh.Exception.require<ParserException>(c.super != c, "Type cannot inherit itself");
 
+				if (c.super == null)
+				{
+					Class objClass = (typesys.Class)typesys.Class.getExisting(Package.getFromString("boh.lang"), "Object");
+					if (c != objClass)
+					{
+						c.super = objClass;
+					}
+				}
+
 				foreach (Interface i in parseImpl(f, typedec))
 				{
 					c.implement(i);
@@ -475,7 +484,7 @@ namespace bohc
 			if (equals != -1)
 			{
 				initvalstr = fDec.Substring(equals + 1);
-				fDec = fDec.Substring(0, equals);
+				fDec = fDec.Substring(0, equals).TrimEnd();
 			}
 
 			fDec = remDupW(fDec);
@@ -590,15 +599,32 @@ namespace bohc
 			return result;
 		}
 
+		private static bool startsWithKW(string line, string word)
+		{
+			return line.StartsWith(word) && !char.IsLetterOrDigit(line[word.Length]);
+		}
+
 		private static void parseLine(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
-			if (line.StartsWith("if"))
+			if (startsWithKW(line, "if"))
 			{
 				result.statements.Add(parseIf(ref line, func, vars, f));
 			}
-			else if (line.StartsWith("while"))
+			else if (startsWithKW(line, "while"))
 			{
 				result.statements.Add(parseWhile(ref line, func, vars, f));
+			}
+			else if (startsWithKW(line, "for"))
+			{
+				result.statements.Add(parseFor(ref line, func, vars, f));
+			}
+			else if (startsWithKW(line, "do"))
+			{
+				result.statements.Add(parseDoWhile(ref line, func, vars, f));
+			}
+			else if (startsWithKW(line, "try"))
+			{
+				result.statements.Add(parseTry(ref line, func, vars, f));
 			}
 			else
 			{
@@ -641,7 +667,46 @@ namespace bohc
 				}
 			}
 
+			if (line.StartsWith("return"))
+			{
+				return parseReturn(line, func, vars, f);
+			}
+			else if (line.StartsWith("break"))
+			{
+				// TODO: make sure that in loop
+				return new BreakStatement();
+			}
+			else if (line.StartsWith("continue"))
+			{
+				// TODO: make sure that in loop
+				return new ContinueStatement();
+			}
+
 			return new ExpressionStatement(Expression.analyze(line, vars.SelectMany(x => x), f));
+		}
+
+		private static ReturnStatement parseReturn(string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("return".Length);
+			Expression ret = Expression.analyze(line, vars.SelectMany(x => x), f);
+			boh.Exception.require<ParserException>(ret.getType().extends(func.returnType) != 0, "Return statement incompatible with function return type");
+			return new ReturnStatement(ret);
+		}
+
+		private static void parseStatBody(ref string line, Function func, Stack<List<Variable>> vars, File f, out Body body)
+		{
+			body = null;
+			if (line.StartsWith("{"))
+			{
+				string curlies = getCurlies(line);
+				body = parseBody(curlies, func, vars, f);
+				line = line.TrimStart().Substring(curlies.Length + 2);
+			}
+			else
+			{
+				body = new Body();
+				parseLine(ref line, func, vars, body, f);
+			}
 		}
 
 		private static void parseIfLike(ref string line, Function func, Stack<List<Variable>> vars, File f, out Expression condition, out Body body)
@@ -652,19 +717,71 @@ namespace bohc
 			condition = Expression.analyze(condstr, vars.SelectMany(x => x), f);
 			line = line.Substring(condstr.Length + 2).TrimStart();
 
-			body = null;
-			if (line.StartsWith("{"))
+			parseStatBody(ref line, func, vars, f, out body);
+		}
+
+		private static TryStatement parseTry(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("try".Length).TrimStart();
+
+			string curlies = getCurlies(line);
+			Body body = parseBody(curlies, func, f);
+			line = line.Substring(curlies.Length + 2).TrimStart();
+
+			List<CatchStatement> catches = new List<CatchStatement>();
+			while (line.StartsWith("catch"))
 			{
-				string curlies = getCurlies(line);
-				body = parseBody(curlies, func, vars, f);
-				line = line.TrimStart().Substring(curlies.Length + 2);
+				catches.Add(parseCatch(ref line, func, vars, f));
 			}
-			else
+
+			FinallyStatement fin = null;
+			if (line.StartsWith("finally"))
 			{
-				string statement = line.Substring(indexOf(line, '(', ')', ';'));
-				body = parseBody(statement, func, vars, f);
-				line = line.TrimStart().Substring(statement.Length + 1);
+				line = line.TrimStart();
+				curlies = getCurlies(line);
+				line = line.Substring(curlies.Length + 2).TrimStart();
+				fin = new FinallyStatement(parseBody(curlies, func, f));
 			}
+
+			return new TryStatement(body, catches, fin);
+		}
+
+		private static CatchStatement parseCatch(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("catch".Length).TrimStart();
+
+			string bracks = getBrackets(line);
+			string[] parts = bracks.Split(' ');
+
+			boh.Exception.require<ParserException>(parts.Length == 2, "Invalid parameter for catch block");
+
+			string typestr = parts[0];
+			string idstr = parts[1];
+
+			typesys.Type type = typesys.Type.getExisting(f.getContext(), typestr);
+
+			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(idstr), idstr + " is not a valid identifier");
+
+			Parameter param = new Parameter(func, Modifiers.NONE, idstr, type);
+
+			line = line.Substring(bracks.Length + 2).TrimStart();
+
+			string curlies = getCurlies(line);
+			Body body = parseBody(curlies, func, f);
+			line = line.Substring(curlies.Length + 2).TrimStart();
+
+			return new CatchStatement(param, body);
+		}
+
+		private static FinallyStatement parseFinally(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("try".Length).TrimStart();
+
+			string curlies = getCurlies(line);
+			Body body = parseBody(curlies, func, f);
+			line = line.Substring(curlies.Length + 2).TrimStart();
+
+			return new FinallyStatement(body);
 		}
 
 		private static IfStatement parseIf(ref string line, Function func, Stack<List<Variable>> vars, File f)
@@ -675,7 +792,22 @@ namespace bohc
 			Body body;
 			parseIfLike(ref line, func, vars, f, out condition, out body);
 
-			return new IfStatement(condition, body);
+			line = line.TrimStart();
+			if (line.StartsWith("else"))
+			{
+				return new IfStatement(condition, body, parseElse(ref line, func, vars, f));
+			}
+
+			return new IfStatement(condition, body, null);
+		}
+
+		private static ElseStatement parseElse(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("else".Length).TrimStart();
+			Body body;
+			parseStatBody(ref line, func, vars, f, out body);
+
+			return new ElseStatement(body);
 		}
 
 		private static WhileStatement parseWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
@@ -687,6 +819,51 @@ namespace bohc
 			parseIfLike(ref line, func, vars, f, out condition, out body);
 
 			return new WhileStatement(condition, body);
+		}
+
+		private static ForStatement parseFor(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("for".Length).TrimStart();
+
+			string betwBracks = "(" + getBrackets(line) + ")";
+			IEnumerable<string> strs = split(betwBracks, 0, ')', ';');
+
+			boh.Exception.require<ParserException>(strs.Count() == 3, "For loops require three parts between brackets");
+
+			string[] strparts = strs.ToArray();
+
+			Statement initial = parseStatement(strparts[0], func, vars, f);
+			Expression condition = Expression.analyze(strparts[1], vars.SelectMany(x => x), f);
+			Statement post = parseStatement(strparts[2], func, vars, f);
+
+			line = line.Substring(betwBracks.Length).TrimStart();
+
+			Body body;
+			parseStatBody(ref line, func, vars, f, out body);
+
+			return new ForStatement(initial, condition, post, body);
+		}
+
+		private static DoWhileStatement parseDoWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("do".Length).TrimStart();
+
+			string curlies = getCurlies(line);
+			Body body = parseBody(getCurlies(line), func, f);
+			line = line.Substring(curlies.Length + 2).TrimStart();
+
+			if (line.StartsWith("while"))
+			{
+				line = line.Substring("while".Length).TrimStart();
+				string pars = getBrackets(line);
+				Expression condition = Expression.analyze(pars, vars.SelectMany(x => x), f);
+
+				line = line.Substring(pars.Length + 2).TrimStart().Substring(1);
+
+				return new DoWhileStatement(condition, body);
+			}
+
+			return new DoWhileStatement(new parsing.Literal(Primitive.BOOLEAN, "false"), body);
 		}
 
 		private static string getBrackets(string line)

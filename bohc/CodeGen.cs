@@ -43,6 +43,11 @@ namespace bohc
 				return ((Primitive)type).cname;
 			}
 
+			if (type is NullType)
+			{
+				return "NULL";
+			}
+
 			throw new NotImplementedException();
 		}
 
@@ -84,7 +89,17 @@ namespace bohc
 				return "f_" + variable.identifier;
 			}
 
+			if (variable.identifier == "this")
+			{
+				return "self";
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private static string getVFuncName(Function func)
+		{
+			return func.identifier;
 		}
 
 		private static string getCFuncName(Function func)
@@ -133,6 +148,8 @@ namespace bohc
 			builder.AppendLine("#include <stdint.h>");
 			builder.AppendLine("#include <stdbool.h>");
 			builder.AppendLine("#include <stddef.h>");
+			builder.AppendLine("#include <uchar.h>");
+			builder.AppendLine("#include <longjmp.h>");
 
 			foreach (typesys.Type type in others)
 			{
@@ -151,7 +168,7 @@ namespace bohc
 			if (!func.modifiers.HasFlag(Modifiers.STATIC))
 			{
 				builder.Append(getCTypeName(func.owner));
-				builder.Append(" self, ");
+				builder.Append(" const self, ");
 			}
 
 			foreach (Parameter p in func.parameters)
@@ -258,8 +275,8 @@ namespace bohc
 			builder.Append(getCStructName(constr.owner));
 			builder.AppendLine("));");
 
-			builder.Append("\tresult->vtable = ");
-			builder.Append("instance_" + getVtableName(constr.owner));
+			builder.Append("\tresult->vtable = &instance_");
+			builder.Append(getVtableName(constr.owner));
 			builder.AppendLine(";");
 
 			builder.Append("\t");
@@ -316,7 +333,7 @@ namespace bohc
 				builder.Append("\t");
 				builder.Append(getCTypeName(f.returnType));
 				builder.Append(" (*");
-				builder.Append(getCFuncName(f));
+				builder.Append(getVFuncName(f));
 				builder.Append(")(");
 				addFunctionParams(builder, f);
 				builder.AppendLine(");");
@@ -329,8 +346,11 @@ namespace bohc
 			builder.AppendLine(getVtableName(c));
 			builder.AppendLine("{");
 			addVtableMembers(builder, c);
-			builder.AppendLine("}");
-			builder.Append("extern const instance_");
+			builder.AppendLine("};");
+			builder.AppendLine();
+			builder.Append("extern const struct ");
+			builder.Append(getVtableName(c));
+			builder.Append(" instance_");
 			builder.Append(getVtableName(c));
 			builder.AppendLine(";");
 		}
@@ -339,10 +359,12 @@ namespace bohc
 		{
 			addVtable(builder, c);
 
+			builder.AppendLine();
+
 			builder.AppendLine(getCStructName(c));
 			builder.AppendLine("{");
 
-			builder.Append("\tstruct ");
+			builder.Append("\tconst struct ");
 			builder.Append(getVtableName(c));
 			builder.AppendLine(" * vtable;");
 
@@ -362,54 +384,92 @@ namespace bohc
 		{
 			StringBuilder builder = new StringBuilder();
 			addIncludeGuard(builder, c);
+			builder.AppendLine();
 
 			addIncludes(builder, others);
+			builder.AppendLine();
 
 			addStructPrototype(builder, c);
+			builder.AppendLine();
 
 			addNewOperatorSigs(builder, c);
+			builder.AppendLine();
+	
 			addFunctionSigs(builder, c.functions.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE)), "extern ");
+			builder.AppendLine();
+			
 			addStaticFieldProtos(builder, c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE)), "extern ");
+			builder.AppendLine();
+	
 			addStructDefinition(builder, c);
+			builder.AppendLine();
 
 			builder.AppendLine("#endif");
 
 			return builder.ToString();
 		}
 
-		private static void addVtableInit(StringBuilder builder, Class c)
+		private class FEqualComp : IEqualityComparer<Function>
+		{
+			public bool Equals(Function f0, Function f1)
+			{
+				return f0.identifier == f1.identifier &&
+					f0.parameters.Select(x => x.identifier).SequenceEqual(f1.parameters.Select(x => x.identifier));
+			}
+
+			public int GetHashCode(Function f)
+			{
+				return f.GetHashCode();
+			}
+		}
+
+		private static void addVtableInit(StringBuilder builder, Class c, IEnumerable<Function> overriden)
 		{
 			Class super = c.super;
 			if (super != null)
 			{
-				addVtableInit(builder, super);
+				addVtableInit(builder, super, overriden.Union(
+					c.super.functions.Where(x => x.modifiers.HasFlag(Modifiers.OVERRIDE)),
+					new FEqualComp()));
 			}
 
 			foreach (Function f in c.functions.Where(x => x.modifiers.HasFlag(Modifiers.ABSTRACT) || x.modifiers.HasFlag(Modifiers.VIRTUAL)))
 			{
-				if (f.modifiers.HasFlag(Modifiers.ABSTRACT))
+				Function overridenf = overriden.SingleOrDefault(x => new FEqualComp().Equals(x, f));
+				if (overridenf != null)
 				{
-					builder.Append("NULL, ");
+					builder.Append("&" + getCFuncName(overridenf) + ", ");
 				}
 				else
 				{
-					builder.Append("&" + getCFuncName(f) + ", ");
+					if (f.modifiers.HasFlag(Modifiers.ABSTRACT))
+					{
+						builder.Append("NULL, ");
+					}
+					else
+					{
+						builder.Append("&" + getCFuncName(f) + ", ");
+					}
 				}
 			}
 		}
 
 		private static void addVtableDefinition(StringBuilder builder, Class c)
 		{
-			builder.Append("const struct " + getVtableName(c) + " *");
-			builder.Append("instance_" + getVtableName(c));
+			builder.Append("const struct " + getVtableName(c));
+			builder.Append(" instance_" + getVtableName(c));
 			builder.Append(" = { ");
-			addVtableInit(builder, c);
+			addVtableInit(builder, c, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.OVERRIDE)));
 			builder.Remove(builder.Length - 2, 2);
 			builder.AppendLine(" };");
 		}
 
 		private static void addFunctionDef(StringBuilder builder, Function func)
 		{
+			if (func.modifiers.HasFlag(Modifiers.PRIVATE))
+			{
+				builder.Append("static ");
+			}
 			builder.Append(getCTypeName(func.returnType));
 			builder.Append(" ");
 			builder.Append(getCFuncName(func));
@@ -419,6 +479,20 @@ namespace bohc
 
 			builder.AppendLine(")");
 
+			if (func.identifier == "this")
+			{
+				foreach (Field f in func.owner.fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
+				{
+					ExprVariable ev = new ExprVariable(f, new ThisVar(func.owner));
+					if (f.initial == null)
+					{
+						// TODO: add default value
+						f.initial = f.type.defaultVal();
+					}
+					BinaryOperation assignment = new BinaryOperation(ev, f.initial, BinaryOperation.ASSIGN);
+					func.body.statements.Insert(0, new ExpressionStatement(assignment));
+				}
+			}
 			addBody(builder, func.body);
 		}
 
@@ -451,21 +525,16 @@ namespace bohc
 		private static Stack<List<string>> tempstack = new Stack<List<string>>();
 		private static int tempvcounter = 0;
 
+		private static string addTemp(string prefix, string suffix)
+		{
+			string name = "temp" + tempvcounter++;
+			tempstack.Peek().Add(prefix + name + suffix + ";");
+			return name;
+		}
+
 		private static string addTemp(Expression value)
 		{
-			List<string> l = tempstack.Peek();
-
-			string name = "temp" + tempvcounter++;
-
-			StringBuilder builder = new StringBuilder();
-			builder.Append(getCTypeName(value.getType()));
-			builder.Append(" ");
-			builder.Append(name);
-			builder.Append(";");
-
-			l.Add(builder.ToString());
-
-			return name;
+			return addTemp(getCTypeName(value.getType()) + " ", string.Empty);
 		}
 
 		private static void addExpression(StringBuilder builder, Expression expression)
@@ -527,7 +596,7 @@ namespace bohc
 				else if (prim.isInt())
 				{
 					long lval = long.Parse(lit.representation);
-					builder.Append(lval.ToString("X"));
+					builder.Append(lval.ToString());
 					if (lval > int.MaxValue)
 					{
 						builder.Append("L");
@@ -542,7 +611,7 @@ namespace bohc
 					else
 					{
 						string str = lit.representation.Substring(0, lit.representation.Length - 1);
-						
+
 						builder.Append(str);
 						if (!str.Contains('.'))
 						{
@@ -551,6 +620,10 @@ namespace bohc
 						builder.Append("f");
 					}
 				}
+			}
+			else
+			{
+				builder.Append(lit.representation);
 			}
 		}
 
@@ -575,7 +648,7 @@ namespace bohc
 
 		private static void addFCall(StringBuilder builder, FunctionCall fcall)
 		{
-			if (fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) || fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL))
+			if (fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) || fcall.refersto.modifiers.HasFlag(Modifiers.ABSTRACT))
 			{
 				string temp = addTemp(fcall.belongsto);
 
@@ -585,7 +658,7 @@ namespace bohc
 				addExpression(builder, fcall.belongsto);
 				builder.Append(")->vtable->");
 
-				builder.Append(getCFuncName(fcall.refersto));
+				builder.Append(getVFuncName(fcall.refersto));
 				builder.Append("(");
 				builder.Append(temp);
 				builder.Append(", ");
@@ -671,6 +744,48 @@ namespace bohc
 					addVarDec(statb, vdec);
 					break;
 				}
+
+				ReturnStatement ret = statement as ReturnStatement;
+				if (ret != null)
+				{
+					addReturn(statb, ret);
+					break;
+				}
+
+				BreakStatement bre = statement as BreakStatement;
+				if (bre != null)
+				{
+					addSingleString(statb, "break;");
+					break;
+				}
+
+				ContinueStatement cont = statement as ContinueStatement;
+				if (cont != null)
+				{
+					addSingleString(statb, "continue;");
+					break;
+				}
+
+				ForStatement forstat = statement as ForStatement;
+				if (forstat != null)
+				{
+					addFor(statb, forstat);
+					break;
+				}
+
+				DoWhileStatement dostat = statement as DoWhileStatement;
+				if (dostat != null)
+				{
+					addDoWhile(statb, dostat);
+					break;
+				}
+
+				TryStatement trys = statement as TryStatement;
+				if (trys != null)
+				{
+					addTry(statb, trys);
+					break;
+				}
 			}
 			while (false);
 
@@ -681,6 +796,87 @@ namespace bohc
 			}
 
 			builder.Append(statb.ToString());
+		}
+
+		private static void addReturn(StringBuilder builder, ReturnStatement ret)
+		{
+			addIndent(builder);
+			builder.Append("return ");
+			addExpression(builder, ret.returns);
+			builder.AppendLine(";");
+		}
+
+		// used for continue and break, usage otherwise discouraged
+		private static void addSingleString(StringBuilder builder, string str)
+		{
+			addIndent(builder);
+			builder.AppendLine(str);
+		}
+
+		private static void addTry(StringBuilder builder, TryStatement trys)
+		{
+			addIndent(builder);
+			string tempname = addTemp("jmp_buf ", string.Empty);
+			builder.Append("memcpy(&");
+			builder.Append(tempname);
+			builder.AppendLine(", &exception_buf, sizeof(jmp_buf));");
+			
+			addIndent(builder);
+			builder.AppendLine("if (setjmp(exception_buf) == 0)");
+			addBody(builder, trys.body);
+
+			addIndent(builder);
+			builder.AppendLine("else");
+			addIndent(builder);
+			builder.AppendLine("{");
+
+			// TODO: add type checks
+
+			addIndent(builder);
+			builder.AppendLine("}");
+
+			builder.AppendLine();
+		}
+
+		private static void addDoWhile(StringBuilder builder, DoWhileStatement dostat)
+		{
+			addIndent(builder);
+			builder.AppendLine("do");
+			addBody(builder, dostat.body);
+			addIndent(builder);
+			builder.Append("while (");
+			addExpression(builder, dostat.condition);
+			builder.AppendLine(");");
+		}
+
+		private static void addFor(StringBuilder builder, ForStatement forstat)
+		{
+			addIndent(builder);
+			builder.Append("for (");
+
+			StringBuilder sbuild = new StringBuilder();
+			addStatement(sbuild, forstat.initial);
+			string str = sbuild.ToString().Trim();
+			builder.Append(str);
+			builder.Append(" ");
+
+			addExpression(builder, forstat.condition);
+			builder.Append("; ");
+
+			sbuild = new StringBuilder();
+			addStatement(sbuild, forstat.final);
+			str = sbuild.ToString().Trim();
+			builder.Append(str.Substring(0, str.Length - 1));
+			builder.AppendLine(")");
+
+			addBody(builder, forstat.body);
+		}
+
+		private static void addElse(StringBuilder builder, ElseStatement elsestat)
+		{
+			addIndent(builder);
+			builder.AppendLine("else");
+			addBody(builder, elsestat.body);
 		}
 
 		private static void addVarDec(StringBuilder builder, VarDeclaration vdec)
@@ -709,19 +905,23 @@ namespace bohc
 		private static void addWhileStat(StringBuilder builder, WhileStatement stat)
 		{
 			addIndent(builder);
-			builder.Append("while ");
+			builder.Append("while (");
 			addExpression(builder, stat.condition);
-			builder.AppendLine();
+			builder.AppendLine(")");
 			addBody(builder, stat.body);
 		}
 
 		private static void addIfStat(StringBuilder builder, IfStatement stat)
 		{
 			addIndent(builder);
-			builder.Append("if ");
+			builder.Append("if (");
 			addExpression(builder, stat.condition);
-			builder.AppendLine();
+			builder.AppendLine(")");
 			addBody(builder, stat.body);
+			if (stat.elsestat != null)
+			{
+				addElse(builder, stat.elsestat);
+			}
 		}
 
 		private static void addFunctionDefs(StringBuilder builder, IEnumerable<Function> funcs)
@@ -750,11 +950,16 @@ namespace bohc
 			builder.Append("#include \"");
 			builder.Append(getHeaderName(c));
 			builder.AppendLine("\"");
+			builder.AppendLine();
 
 			addStaticFieldProtos(builder, c.fields, string.Empty);
-			addFunctionSigs(builder, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.PRIVATE)), string.Empty);
+			builder.AppendLine();
+			addFunctionSigs(builder, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.PRIVATE)), "static ");
+			builder.AppendLine();
 			addVtableDefinition(builder, c);
+			builder.AppendLine();
 			addNewOperators(builder, c);
+			builder.AppendLine();
 			addFunctionDefs(builder, c.functions);
 
 			return builder.ToString();

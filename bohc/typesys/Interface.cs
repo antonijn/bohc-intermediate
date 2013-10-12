@@ -17,6 +17,11 @@ namespace bohc.typesys
 		{
 		}
 
+		public override parsing.Expression defaultVal()
+		{
+			return new parsing.Literal(this, "NULL");
+		}
+
 		public static Interface get(Package package, Modifiers modifiers, string name)
 		{
 			lock (instances)

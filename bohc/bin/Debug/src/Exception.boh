@@ -1,0 +1,1 @@
+package boh.lang;public class Exception{	private static Type type = new Type();		public override Type getType()	{		return type;	}	public this()	{	}}

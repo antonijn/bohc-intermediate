@@ -138,6 +138,42 @@ namespace bohc.parsing
 		{
 			// TODO: chars and strings
 
+			if (next == "'")
+			{
+				StringBuilder builder = new StringBuilder("'");
+
+				char ch = str[i++];
+				char close = str[i++];
+				if (ch == '\\') // control character
+				{
+					builder.Append(ch);
+					builder.Append(close);
+					close = str[i++];
+				}
+				else
+				{
+					builder.Append(ch);
+				}
+
+				boh.Exception.require<exceptions.ParserException>(close == '\'', "Chars may only be one character wide");
+
+				builder.Append("'");
+				last = new Literal(typesys.Primitive.CHAR, builder.ToString());
+				return true;
+			}
+
+			if (next == "true" || next == "false")
+			{
+				last = new Literal(typesys.Primitive.BOOLEAN, next);
+				return true;
+			}
+
+			if (next == "null")
+			{
+				last = typesys.NullType.NULL.defaultVal();
+				return true;
+			}
+
 			byte b;
 			short s;
 			int _i;
@@ -180,14 +216,19 @@ namespace bohc.parsing
 
 		private static bool analyzeName(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file)
 		{
+			int ibackup = i;
+
 			string next = nxt;
 			int idxDot = nxt.IndexOf('.');
 			if (idxDot == 0)
 			{
 				next = nxt.Substring(1);
+				//++i;
+				return analyzeName(ref last, vars, ref i, ref next, str, file);
 			}
 			else if (idxDot != -1)
 			{
+				i -= idxDot + 1;
 				next = nxt.Substring(0, idxDot);
 			}
 
@@ -239,11 +280,13 @@ namespace bohc.parsing
 				i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type);
 			}
 
-			int idxDot2 = next.IndexOf('.');
-			if (idxDot2 != -1)
+			// recursively parse stuff
+			if (idxDot != -1 && idxDot != 0)
 			{
-				string after = next.Substring(idxDot2 + 1);
-				analyzeName(ref last, vars, ref i, ref after, str, file);
+				string after = nxt.Substring(idxDot + 1);
+				int j = ibackup;
+				analyzeName(ref last, vars, ref j, ref after, str, file);
+				i = j;
 			}
 
 			return true;
@@ -279,7 +322,9 @@ namespace bohc.parsing
 				field = ((typesys.Class)type).fields.SingleOrDefault(x => x.identifier == next);
 			}
 
-			boh.Exception.require<exceptions.ParserException>(functions.Count() != 0 || field != null, "Invalid identifier: " + next);
+			boh.Exception.require<exceptions.ParserException>(
+				next == "this" || functions != null && functions.Count() != 0 || field != null,
+				"Invalid identifier: " + next);
 
 			string nextnext = readNext(str, ref i);
 			if (nextnext == "(")
@@ -290,12 +335,23 @@ namespace bohc.parsing
 				FunctionCall call = new FunctionCall(f, expr, parameters);
 				expr = call;
 
-				i -= nextnext.Length;
-				i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
+				//i -= nextnext.Length;
+				//i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
 			}
 			else
 			{
-				expr = new ExprVariable(field, expr);
+				if (next == "this")
+				{
+					expr = ((typesys.Class)file.type).THISVAR;
+				}
+				else
+				{
+					expr = new ExprVariable(field, expr);
+					if (nextnext != null)
+					{
+						i -= nextnext.Length;
+					}
+				}
 			}
 
 			return i;
@@ -363,5 +419,7 @@ namespace bohc.parsing
 		}
 
 		public abstract typesys.Type getType();
+		public abstract bool isLvalue();
+		public abstract bool isStatement();
 	}
 }

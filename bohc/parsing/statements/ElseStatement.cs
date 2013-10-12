@@ -7,11 +7,9 @@ namespace bohc.parsing.statements
 {
 	public class ElseStatement : BodyStatement
 	{
-		public readonly Body body;
-
 		public ElseStatement(Body body)
+			: base(body)
 		{
-			this.body = body;
 		}
 	}
 }

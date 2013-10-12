@@ -21,6 +21,11 @@ namespace bohc.typesys
 		public List<Field> fields = new List<Field>();
 		public List<IMember> members = new List<IMember>();
 
+		public override parsing.Expression defaultVal()
+		{
+			return new parsing.Literal(this, "NULL");
+		}
+
 		public override int extends(Type other)
 		{
 			if (other == this)
@@ -164,9 +169,9 @@ namespace bohc.typesys
 			}
 
 			return fields.SingleOrDefault(x => x.identifier == id &&
-				(_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
+				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
 				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
-				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE)));
+				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));
 		}
 	}
 }

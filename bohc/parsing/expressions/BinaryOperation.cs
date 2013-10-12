@@ -71,6 +71,8 @@ namespace bohc.parsing
 			this.left = left;
 			this.right = right;
 			this.operation = Operator.getExisting(rep, OperationType.BINARY);
+
+			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(), "Not a modifiable lvalue");
 		}
 
 		public BinaryOperation(Expression left, Expression right, Operator operation)
@@ -78,6 +80,8 @@ namespace bohc.parsing
 			this.left = left;
 			this.right = right;
 			this.operation = operation;
+
+			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(), "Not a modifiable lvalue");
 		}
 
 		private typesys.Type getTypeArith()
@@ -174,6 +178,31 @@ namespace bohc.parsing
 			}
 
 			return getTypeArith();
+		}
+
+		public override bool isLvalue()
+		{
+			return false;
+		}
+
+		public bool isAssignment()
+		{
+			if (operation == ASSIGN || operation == ASSIGN_ADD ||
+				operation == ASSIGN_AND || operation == ASSIGN_DIV ||
+				operation == ASSIGN_MUL || operation == ASSIGN_OR ||
+				operation == ASSIGN_REM || operation == ASSIGN_SHL ||
+				operation == ASSIGN_SHR || operation == ASSIGN_SUB ||
+				operation == ASSIGN_XOR)
+			{
+				return true;
+			}
+
+			return false;
+		}
+
+		public override bool isStatement()
+		{
+			return isAssignment();
 		}
 	}
 }

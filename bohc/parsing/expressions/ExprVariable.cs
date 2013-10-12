@@ -25,5 +25,15 @@ namespace bohc.parsing
 		{
 			return refersto.type;
 		}
+
+		public override bool isLvalue()
+		{
+			return true;
+		}
+
+		public override bool isStatement()
+		{
+			return false;
+		}
 	}
 }

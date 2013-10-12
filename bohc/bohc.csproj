@@ -61,14 +61,17 @@
     <Compile Include="parsing\statements\Body.cs" />
     <Compile Include="parsing\statements\BodyStatement.cs" />
     <Compile Include="parsing\statements\BreakStatement.cs" />
+    <Compile Include="parsing\statements\CatchStatement.cs" />
     <Compile Include="parsing\statements\ContinueStatement.cs" />
     <Compile Include="parsing\statements\DoWhileStatement.cs" />
     <Compile Include="parsing\statements\ElseStatement.cs" />
     <Compile Include="parsing\statements\ExpressionStatement.cs" />
+    <Compile Include="parsing\statements\FinallyStatement.cs" />
     <Compile Include="parsing\statements\ForStatement.cs" />
     <Compile Include="parsing\statements\IfStatement.cs" />
     <Compile Include="parsing\statements\ReturnStatement.cs" />
     <Compile Include="parsing\statements\Statement.cs" />
+    <Compile Include="parsing\statements\TryStatement.cs" />
     <Compile Include="parsing\statements\VarDeclaration.cs" />
     <Compile Include="parsing\statements\WhileStatement.cs" />
     <Compile Include="parsing\expressions\ThisVar.cs" />
@@ -89,6 +92,7 @@
     <Compile Include="typesys\Local.cs" />
     <Compile Include="typesys\Modifiers.cs" />
     <Compile Include="typesys\ModifierHelper.cs" />
+    <Compile Include="typesys\NullType.cs" />
     <Compile Include="typesys\OverloadedOperator.cs" />
     <Compile Include="typesys\Package.cs" />
     <Compile Include="typesys\Parameter.cs" />

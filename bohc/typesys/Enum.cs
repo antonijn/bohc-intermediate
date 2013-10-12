@@ -16,6 +16,11 @@ namespace bohc.typesys
 		{
 		}
 
+		public override parsing.Expression defaultVal()
+		{
+			return new parsing.Literal(Primitive.INT, "0");
+		}
+
 		public static Enum get(Package package, Modifiers modifiers, string name)
 		{
 			lock (instances)

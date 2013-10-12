@@ -11,6 +11,8 @@ namespace bohc.parsing.statements
 
 		public ExpressionStatement(Expression expression)
 		{
+			boh.Exception.require<exceptions.ParserException>(expression.isStatement(), "Expression is not a statement");
+
 			this.expression = expression;
 		}
 	}
