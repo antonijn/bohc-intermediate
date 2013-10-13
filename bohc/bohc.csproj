@@ -71,6 +71,7 @@
     <Compile Include="parsing\statements\IfStatement.cs" />
     <Compile Include="parsing\statements\ReturnStatement.cs" />
     <Compile Include="parsing\statements\Statement.cs" />
+    <Compile Include="parsing\statements\ThrowStatement.cs" />
     <Compile Include="parsing\statements\TryStatement.cs" />
     <Compile Include="parsing\statements\VarDeclaration.cs" />
     <Compile Include="parsing\statements\WhileStatement.cs" />
@@ -102,6 +103,9 @@
     <Compile Include="typesys\Variable.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="boh_internal.h">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="codegen.md" />
     <None Include="parsing.md" />
   </ItemGroup>

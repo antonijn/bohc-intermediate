@@ -147,9 +147,9 @@ namespace bohc.typesys
 			}
 
 			return functions.Where(x => x.identifier == id &&
-				(_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
+				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
 				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
-				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE)));
+				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));
 		}
 
 		public Field getField(string id, Class context)
@@ -168,10 +168,17 @@ namespace bohc.typesys
 				_protected = true;
 			}
 
-			return fields.SingleOrDefault(x => x.identifier == id &&
+			Field result = fields.SingleOrDefault(x => x.identifier == id &&
 				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
 				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
 				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));
+
+			if (result == null && super != null)
+			{
+				return super.getField(id, context);
+			}
+
+			return result;
 		}
 	}
 }

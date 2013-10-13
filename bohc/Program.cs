@@ -10,7 +10,7 @@ namespace bohc
 	{
 		public static void Main(string[] args)
 		{
-			string[] filenames = new string[] { "src/Exception.boh", "src/Object.boh", "src/Type.boh" };
+			string[] filenames = new string[] { "src/Exception.boh", "src/Object.boh", "src/Type.boh", "src/Class.boh" };
 			string[] files = new string[filenames.Length];
 
 			for (int i = 0; i < filenames.Length; ++i)

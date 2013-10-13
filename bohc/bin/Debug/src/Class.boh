@@ -1,0 +1,32 @@
+package boh.lang;
+
+public class Class extends Type
+{
+	private Class base;
+	
+	public override boolean isSubTypeOf(Type other)
+	{
+		antonijn = 10;
+	
+		if (other == this)
+		{
+			return true;
+		}
+		if (base != null)
+		{
+			return base.isSubTypeOf(other);
+		}
+		
+		return false;
+	}
+	
+	public Class getBase()
+	{
+		return base;
+	}
+	
+	protected cvisible this()
+	{
+	
+	}
+}

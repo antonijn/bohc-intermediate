@@ -172,7 +172,7 @@ namespace bohc.parsing
 			}
 
 			if (operation == RELAT_GE || operation == RELAT_L ||
-				operation == RELAT_LE || operation == EQUAL)
+				operation == RELAT_LE || operation == EQUAL || operation == NOT_EQUAL)
 			{
 				return typesys.Primitive.BOOLEAN;
 			}

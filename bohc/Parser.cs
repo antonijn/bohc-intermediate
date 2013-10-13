@@ -334,10 +334,25 @@ namespace bohc
 			else if ((idxCurly > idxSemicol || idxCurly == -1) && idxSemicol != -1)
 			{
 				// field
-				parseFieldTCS(f, content.Substring(0, idxSemicol));		
+				string b4semi = content.Substring(0, idxSemicol);
 
-				string after = content.Substring(idxSemicol + 1);
-				parseClassTCS(f, after);
+				if (b4semi.Contains(" abstract "))
+				{
+					boh.Exception.require<ParserException>(((Class)f.type).modifiers.HasFlag(Modifiers.ABSTRACT), "Abstract functions require the surrounding class to be abstract too");
+
+					((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxSemicol), null, true));
+
+					int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
+					string after = content.Substring(closingCurly + 1);
+					parseClassTCS(f, after);
+				}
+				else
+				{
+					parseFieldTCS(f, b4semi);
+
+					string after = content.Substring(idxSemicol + 1);
+					parseClassTCS(f, after);
+				}
 			}
 		}
 
@@ -357,7 +372,7 @@ namespace bohc
 		{
 			// make sure the static constructors are called
 			parsing.BinaryOperation.ADD.GetType();
-			parsing.UnaryOperation.DECREMENT.GetType();
+			parsing.UnaryOperation.DECREMENT_POST.GetType();
 
 			fDec = fDec.Trim();
 
@@ -569,7 +584,10 @@ namespace bohc
 
 			foreach (Function func in c.functions)
 			{
-				func.body = parseBody(func.bodystr, func, f);
+				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT))
+				{
+					func.body = parseBody(func.bodystr, func, f);
+				}
 			}
 		}
 
@@ -667,22 +685,34 @@ namespace bohc
 				}
 			}
 
-			if (line.StartsWith("return"))
+			if (startsWithKW(line, "return"))
 			{
 				return parseReturn(line, func, vars, f);
 			}
-			else if (line.StartsWith("break"))
+			else if (startsWithKW(line, "throw"))
+			{
+				return parseThrow(line, func, vars, f);
+			}
+			else if (startsWithKW(line, "break"))
 			{
 				// TODO: make sure that in loop
 				return new BreakStatement();
 			}
-			else if (line.StartsWith("continue"))
+			else if (startsWithKW(line, "continue"))
 			{
 				// TODO: make sure that in loop
 				return new ContinueStatement();
 			}
 
 			return new ExpressionStatement(Expression.analyze(line, vars.SelectMany(x => x), f));
+		}
+
+		private static ThrowStatement parseThrow(string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			line = line.Substring("throw".Length);
+			Expression thr = Expression.analyze(line, vars.SelectMany(x => x), f);
+			boh.Exception.require<ParserException>(thr.getType().extends(typesys.Type.getExisting(Package.getFromString("boh.lang"), "Exception")) != 0, "Expression after throw must be an exception");
+			return new ThrowStatement(thr);
 		}
 
 		private static ReturnStatement parseReturn(string line, Function func, Stack<List<Variable>> vars, File f)
@@ -725,7 +755,7 @@ namespace bohc
 			line = line.Substring("try".Length).TrimStart();
 
 			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, f);
+			Body body = parseBody(curlies, func, vars, f);
 			line = line.Substring(curlies.Length + 2).TrimStart();
 
 			List<CatchStatement> catches = new List<CatchStatement>();
@@ -737,7 +767,7 @@ namespace bohc
 			FinallyStatement fin = null;
 			if (line.StartsWith("finally"))
 			{
-				line = line.TrimStart();
+				line = line.Substring("finally".Length).TrimStart();
 				curlies = getCurlies(line);
 				line = line.Substring(curlies.Length + 2).TrimStart();
 				fin = new FinallyStatement(parseBody(curlies, func, f));
@@ -763,6 +793,8 @@ namespace bohc
 			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(idstr), idstr + " is not a valid identifier");
 
 			Parameter param = new Parameter(func, Modifiers.NONE, idstr, type);
+			vars.Push(new List<Variable>());
+			vars.Peek().Add(param);
 
 			line = line.Substring(bracks.Length + 2).TrimStart();
 
@@ -770,18 +802,9 @@ namespace bohc
 			Body body = parseBody(curlies, func, f);
 			line = line.Substring(curlies.Length + 2).TrimStart();
 
+			vars.Pop();
+
 			return new CatchStatement(param, body);
-		}
-
-		private static FinallyStatement parseFinally(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("try".Length).TrimStart();
-
-			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, f);
-			line = line.Substring(curlies.Length + 2).TrimStart();
-
-			return new FinallyStatement(body);
 		}
 
 		private static IfStatement parseIf(ref string line, Function func, Stack<List<Variable>> vars, File f)

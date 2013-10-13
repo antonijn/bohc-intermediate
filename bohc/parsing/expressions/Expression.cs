@@ -114,22 +114,54 @@ namespace bohc.parsing
 				return OpBreakStat.NOTHING;
 			}
 
-			Operator op = Operator.getExisting(next, OperationType.BINARY);
-			if (op.precedence < opprec)
+			if (last == null) // normal unary operator, including prefix increment and decrement
 			{
-				i -= op.representation.Length;
-				return OpBreakStat.BREAK;
+				Operator op = Operator.getExisting(next, OperationType.UNARY);
+				if (op.precedence < opprec)
+				{
+					i -= op.representation.Length;
+					return OpBreakStat.BREAK;
+				}
+
+				string rightstr = str.Substring(i);
+				string nxt = null;
+				int _i = 0;
+				Expression right = null;
+				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence);
+				i += _i;
+
+				last = new UnaryOperation(right, op);
 			}
+			else // binary operator, or suffix increment/decrement
+			{
+				if (next == "++")
+				{
+					last = new UnaryOperation(last, UnaryOperation.INCREMENT_POST);
+					return OpBreakStat.CONTINUE;
+				}
+				else if (next == "--")
+				{
+					last = new UnaryOperation(last, UnaryOperation.DECREMENT_POST);
+					return OpBreakStat.CONTINUE;
+				}
 
-			Expression left = last;
-			string rightstr = str.Substring(i);
-			string nxt = null;
-			int _i = 0;
-			Expression right = null;
-			analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence);
-			i += _i;
+				Operator op = Operator.getExisting(next, OperationType.BINARY);
+				if (op.precedence < opprec)
+				{
+					i -= op.representation.Length;
+					return OpBreakStat.BREAK;
+				}
 
-			last = new BinaryOperation(left, right, op);
+				Expression left = last;
+				string rightstr = str.Substring(i);
+				string nxt = null;
+				int _i = 0;
+				Expression right = null;
+				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence);
+				i += _i;
+
+				last = new BinaryOperation(left, right, op);
+			}
 
 			return OpBreakStat.CONTINUE;
 		}
@@ -323,7 +355,7 @@ namespace bohc.parsing
 			}
 
 			boh.Exception.require<exceptions.ParserException>(
-				next == "this" || functions != null && functions.Count() != 0 || field != null,
+				next == "this" || (functions != null && functions.Count() != 0) || field != null,
 				"Invalid identifier: " + next);
 
 			string nextnext = readNext(str, ref i);
@@ -331,7 +363,7 @@ namespace bohc.parsing
 			{
 				// function
 				IEnumerable<Expression> parameters;
-				typesys.Function f = getCompatibleFunction(ref i, next, str, file, functions, out parameters);
+				typesys.Function f = getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters);
 				FunctionCall call = new FunctionCall(f, expr, parameters);
 				expr = call;
 
@@ -360,7 +392,7 @@ namespace bohc.parsing
 		/// <summary>
 		/// Selects the function compatible with the given expressions.
 		/// </summary>
-		private static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters)
+		private static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters)
 		{
 			int close = Parser.getMatchingBraceChar(str, i - 1, ')');
 			string paramstring = str.Substring(i - 1, close - i + 2);
@@ -369,7 +401,7 @@ namespace bohc.parsing
 							strs
 							.Select(x => x.Trim())
 							.Where(x => !string.IsNullOrEmpty(x))
-							.Select(x => Expression.analyze(x, new List<typesys.Variable>(), file))
+							.Select(x => Expression.analyze(x, locals, file))
 							.Where(x => x != null);
 
 			List<Expression> exprsnlist = parameters.ToList();

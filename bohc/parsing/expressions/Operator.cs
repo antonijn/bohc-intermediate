@@ -33,6 +33,10 @@ namespace bohc.parsing
 			boh.Exception.require<exceptions.ParserException>(result.Count() != 0, "No operator found for '" + op + "'");
 			if (result.Count() == 2)
 			{
+				if (result.First() == UnaryOperation.INCREMENT)
+				{
+					return result.First();
+				}
 				return result.Single(x => !parsing.UnaryOperation.UNARY_PRECENDENCES.Contains(x.precedence));
 			}
 

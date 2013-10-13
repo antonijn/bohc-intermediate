@@ -1,12 +1,15 @@
 #include "boh_lang_object.h"
 
-struct c_boh_p_lang_p_Type * c_boh_p_lang_p_Object_sf_type;
 
 
-const struct vtable_c_boh_p_lang_p_Object instance_vtable_c_boh_p_lang_p_Object = { &c_boh_p_lang_p_Object_m_getType };
+const struct vtable_c_boh_p_lang_p_Object instance_vtable_c_boh_p_lang_p_Object =  };
 
-
-struct c_boh_p_lang_p_Type * c_boh_p_lang_p_Object_m_getType(struct c_boh_p_lang_p_Object * const self)
+struct c_boh_p_lang_p_Type * typeof_c_boh_p_lang_p_Type(void)
 {
-	return self->c_boh_p_lang_p_Object_sf_type;
+	static struct c_boh_p_lang_p_Type * result = NULL;
+	if (result == NULL)
+	{
+	}
+	return result;
 }
+

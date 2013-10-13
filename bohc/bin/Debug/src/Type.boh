@@ -1,1 +1,1 @@
-package boh.lang;public class Type{	private static Type type = new Type();		public override Type getType()	{		return type;	}	public this()	{	}}
+package boh.lang;public abstract class Type{	protected int antonijn;	public abstract boolean isSubTypeOf(Type type);	protected cvisible this()	{	}}
