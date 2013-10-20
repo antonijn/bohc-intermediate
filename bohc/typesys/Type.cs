@@ -80,24 +80,59 @@ namespace bohc.typesys
 
 		public Type(Package package, Modifiers modifiers, string name)
 		{
-			boh.Exception.require<exceptions.ParserException>(this is NullType || isValidName(name, this is Primitive), name + " is not a valid typename");
+			boh.Exception.require<exceptions.ParserException>(
+				this is NullType ||
+				this is CompatibleWithAllType ||
+				this is NativeType ||
+				isValidName(name, this is Primitive), name + " is not a valid typename");
 
 			this.package = package;
 			this.modifiers = modifiers;
 			this.name = name;
 
-			lock (types)
+			if (!(this is NullType || this is CompatibleWithAllType))
 			{
-				boh.Exception.require<exceptions.ParserException>(!types.Any(x => x.package == package && x.name == name), "multiple definitions for " + package.ToString() + name);
-				types.Add(this);
+				lock (types)
+				{
+					boh.Exception.require<exceptions.ParserException>(!types.Any(x => x.package == package && x.name == name), "multiple definitions for " + package.ToString() + name);
+					types.Add(this);
+				}
 			}
 		}
 
 		/// <returns>null on failure</returns>
 		public static Type getExisting(Package package, string name)
 		{
+			return getExisting(package, new[] { package }, name);
+		}
+		public static Type getExisting(Package package, IEnumerable<Package> packages, string name)
+		{
+			if (name.StartsWith("native."))
+			{
+				if (isValidName(name.Replace(".", string.Empty).Replace("*", string.Empty), true))
+				{
+					return new NativeType(name.Substring("native.".Length));
+				}
+				return null;
+			}
+
 			lock (types)
 			{
+				int idxL = name.IndexOf('<');
+				if (idxL != -1)
+				{
+					string actName = name.Substring(0, idxL);
+					string[] split = Parser.split(name, idxL, '>', ',').ToArray();
+					Type[] genTypes = split.Select(x => getExisting(packages, x)).ToArray();
+					IEnumerable<GenericType> options = GenericType.allGenTypes.Where(x => x.file.package == package);
+					if (options.Count() == 0)
+					{
+						return null;
+					}
+
+					GenericType gType = options.Single(x => x.name == actName);
+					return gType.getTypeFor(genTypes);
+				}
 				return types.SingleOrDefault(x => x.package == package && x.name == name);
 			}
 		}
@@ -108,7 +143,7 @@ namespace bohc.typesys
 			{
 				foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 				{
-					Type t = getExisting(p, name);
+					Type t = getExisting(p, packages, name);
 					if (t != null)
 					{
 						return t;

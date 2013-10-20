@@ -17,11 +17,28 @@ namespace bohc
 	{
 		public static int indexOf(string str, char begin, char end, char idxOf)
 		{
+			bool instring = false;
+
 			int scope = 0;
 			int i = 0;
 			for (; true; ++i)
 			{
+				if (i >= str.Length)
+				{
+					return -1;
+				}
+
 				char ch = str[i];
+				if (ch == '"')
+				{
+					instring = !instring;
+				}
+
+				if (instring)
+				{
+					continue;
+				}
+
 				if (ch == begin)
 				{
 					++scope;
@@ -42,12 +59,23 @@ namespace bohc
 
 		private static int getMatchingBraceCh(string str, int first, char matches, int step)
 		{
+			bool instring = false;
 			char startscope = str[first];
 			int scope = 0;
 			int i;
 			for (i = first + step; scope != -1; i += step)
 			{
 				char ch = str[i];
+				if (ch == '"')
+				{
+					instring = !instring;
+				}
+
+				if (instring)
+				{
+					continue;
+				}
+
 				if (ch == startscope)
 				{
 					++scope;
@@ -73,12 +101,24 @@ namespace bohc
 
 		public static IEnumerable<string> split(string str, int first, char matches, char seperator)
 		{
+			bool instring = false;
 			int scope = 0;
 			char begin = str[first];
 
 			for (int i = ++first; scope >= 0; ++i)
 			{
 				char ch = str[i];
+
+				if (ch == '"')
+				{
+					instring = !instring;
+				}
+
+				if (instring)
+				{
+					continue;
+				}
+
 				if (ch == begin)
 				{
 					++scope;
@@ -111,11 +151,11 @@ namespace bohc
 		public static File parseFileTS(string file)
 		{
 			int openCurly = file.IndexOf('{');
-			string beforeTypeBody = file.Substring(0, openCurly - 1);
+			string beforeTypeBody = file.Substring(0, openCurly);
 			int lastSemicol = beforeTypeBody.LastIndexOf(';');
 			string header = lastSemicol != -1 ? beforeTypeBody.Substring(0, lastSemicol) : string.Empty;
 
-			File f = parseCommonFileHeader(header);
+			File f = parseCommonFileHeader(header, file);
 
 			string typedec = beforeTypeBody.Substring(lastSemicol + 1);
 			parseTypeStart(f, typedec);
@@ -123,13 +163,13 @@ namespace bohc
 			return f;
 		}
 
-		private static File parseCommonFileHeader(string header)
+		private static File parseCommonFileHeader(string header, string content)
 		{
 			IEnumerable<string> headerParts = header.Split(';').Select(x => x.Trim());
-			return parseHeaderParts(headerParts);
+			return parseHeaderParts(headerParts, content);
 		}
 
-		private static File parseHeaderParts(IEnumerable<string> headerParts)
+		private static File parseHeaderParts(IEnumerable<string> headerParts, string content)
 		{
 			// the file header contains the package directive
 			// and the import directives
@@ -161,7 +201,7 @@ namespace bohc
 				}
 			}
 
-			return new File(imports, package);
+			return new File(imports, package, content);
 		}
 
 		private static void parseTypeStart(File file, string typedec)
@@ -191,20 +231,35 @@ namespace bohc
 				boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegalForType(mod), "Illegal modifier for type");
 			}
 
-			switch (type)
+			// TODO: better generics
+			// consider the name string "GenType< T,  U>"
+
+			if (name.Contains("<"))
 			{
-				case "class":
-					file.type = Class.get(file.package, mod, name);
-					break;
-				case "enum":
-					file.type = typesys.Enum.get(file.package, mod, name);
-					break;
-				case "interface":
-					file.type = Interface.get(file.package, mod, name);
-					break;
-				default:
-					boh.Exception._throw<ParserException>("Invalid start of type detected");
-					break;
+				// generic
+				int f = name.IndexOf('<');
+				int l = name.LastIndexOf('>');
+				string genname = name.Substring(0, f);
+				string[] types = split(name, f, '>', ',').ToArray();
+				file.type = new GenericType(types, genname);
+			}
+			else
+			{
+				switch (type)
+				{
+					case "class":
+						file.type = Class.get(file.package, mod, name);
+						break;
+					case "enum":
+						file.type = typesys.Enum.get(file.package, mod, name);
+						break;
+					case "interface":
+						file.type = Interface.get(file.package, mod, name);
+						break;
+					default:
+						boh.Exception._throw<ParserException>("Invalid start of type detected");
+						break;
+				}
 			}
 
 			file.type.setFile(file);
@@ -297,7 +352,12 @@ namespace bohc
 
 			if (f.type is Class)
 			{
+				Class c = (Class)f.type;
 				parseClassTCS(f, content);
+				if (c.constructors.Count == 0)
+				{
+					c.addMember(new Constructor(Modifiers.PUBLIC, c, new List<Parameter>(), string.Empty));
+				}
 			}
 			else if (f.type is Interface)
 			{
@@ -342,8 +402,7 @@ namespace bohc
 
 					((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxSemicol), null, true));
 
-					int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
-					string after = content.Substring(closingCurly + 1);
+					string after = content.Substring(idxSemicol + 1);
 					parseClassTCS(f, after);
 				}
 				else
@@ -358,14 +417,19 @@ namespace bohc
 
 		private static void parseInterfaceTCS(File f, string content)
 		{
-			int semicol = content.IndexOf(';');
-			if (semicol == -1)
+			string func = string.Empty;
+			while (true)
 			{
-				return;
-			}
+				int semicol = content.IndexOf(';');
+				if (semicol == -1)
+				{
+					return;
+				}
 
-			string func = content.Substring(0, semicol);
-			((Interface)f.type).functions.Add(parseFunctionTCS(f, func, null, false));
+				func = content.Substring(0, semicol);
+				((Interface)f.type).functions.Add(parseFunctionTCS(f, func, null, false));
+				content = content.Substring(semicol + 1);
+			}
 		}
 
 		private static Function parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
@@ -418,7 +482,7 @@ namespace bohc
 				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
 
 				List<Parameter> parameters = new List<Parameter>();
-				Function func = new Function((typesys.Class)f.type, mods, type, identifier, parameters, body);
+				Function func = new Function((typesys.Type)f.type, mods, type, identifier, parameters, body);
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
 			}
@@ -518,7 +582,7 @@ namespace bohc
 			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true), mods.ToString() + ": invalid modifiers");
 
 			Field field = new Field(mods, identifier, actualType, (Class)f.type, initvalstr);
-			((Class)f.type).fields.Add(field);
+			((Class)f.type).addMember(field);
 		}
 
 		private static void parseEnumTCS(File f, string content)
@@ -799,7 +863,7 @@ namespace bohc
 			line = line.Substring(bracks.Length + 2).TrimStart();
 
 			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, f);
+			Body body = parseBody(curlies, func, vars, f);
 			line = line.Substring(curlies.Length + 2).TrimStart();
 
 			vars.Pop();
@@ -846,6 +910,8 @@ namespace bohc
 
 		private static ForStatement parseFor(ref string line, Function func, Stack<List<Variable>> vars, File f)
 		{
+			vars.Push(new List<Variable>());
+
 			line = line.Substring("for".Length).TrimStart();
 
 			string betwBracks = "(" + getBrackets(line) + ")";
@@ -863,6 +929,8 @@ namespace bohc
 
 			Body body;
 			parseStatBody(ref line, func, vars, f, out body);
+
+			vars.Pop();
 
 			return new ForStatement(initial, condition, post, body);
 		}

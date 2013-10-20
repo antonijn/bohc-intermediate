@@ -7,7 +7,7 @@ namespace bohc.typesys
 {
 	public class Function : IFunction
 	{
-		public readonly typesys.Class owner;
+		public readonly typesys.Type owner;
 		public readonly Modifiers modifiers;
 		public readonly typesys.Type returnType;
 		public readonly string identifier;
@@ -26,7 +26,7 @@ namespace bohc.typesys
 			return identifier;
 		}
 
-		public Function(typesys.Class owner, Modifiers modifiers, typesys.Type returnType, string identifier, List<Parameter> parameters, string bodystr)
+		public Function(typesys.Type owner, Modifiers modifiers, typesys.Type returnType, string identifier, List<Parameter> parameters, string bodystr)
 		{
 			this.owner = owner;
 			this.modifiers = modifiers;

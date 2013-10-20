@@ -1,0 +1,11 @@
+package boh.lang;
+
+public interface IEnumerator<T>
+{
+	T current();
+	boolean moveRight();
+	boolean moveLeft();
+	void skip(int amount);
+	void moveLast();
+	void reset();
+}

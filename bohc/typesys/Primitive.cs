@@ -57,7 +57,7 @@ namespace bohc.typesys
 		public static readonly Primitive SHORT = new Primitive("short", "int16_t", 2);
 		public static readonly Primitive INT = new Primitive("int", "int32_t", 4);
 		public static readonly Primitive LONG = new Primitive("long", "int64_t", 8);
-		public static readonly Primitive BOOLEAN = new Primitive("boolean", "bool", 4);
+		public static readonly Primitive BOOLEAN = new Primitive("boolean", "_Bool", 4);
 		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
 		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
 		public static readonly Primitive CHAR = new Primitive("char", "char16_t", 2);
@@ -69,10 +69,10 @@ namespace bohc.typesys
 			SHORT.initval = new parsing.Literal(SHORT, "0");
 			INT.initval = new parsing.Literal(INT, "0");
 			LONG.initval = new parsing.Literal(LONG, "0L");
-			BOOLEAN.initval = new parsing.Literal(BOOLEAN, "false");
+			BOOLEAN.initval = new parsing.Literal(BOOLEAN, "0");
 			FLOAT.initval = new parsing.Literal(FLOAT, "0.0f");
 			DOUBLE.initval = new parsing.Literal(DOUBLE, "0.0");
-			CHAR.initval = new parsing.Literal(CHAR, "'\0'");
+			CHAR.initval = new parsing.Literal(CHAR, "'\\0'");
 		}
 
 		public bool isInt()

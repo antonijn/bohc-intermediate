@@ -17,6 +17,11 @@ namespace bohc.typesys
 		{
 		}
 
+		public IEnumerable<Function> getAllFuncs()
+		{
+			return implements.SelectMany(x => x.functions).Concat(functions);
+		}
+
 		public override parsing.Expression defaultVal()
 		{
 			return new parsing.Literal(this, "NULL");

@@ -10,7 +10,21 @@ namespace bohc
 	{
 		public static void Main(string[] args)
 		{
-			string[] filenames = new string[] { "src/Exception.boh", "src/Object.boh", "src/Type.boh", "src/Class.boh" };
+			string[] filenames = new string[]
+			{
+				"src/String.boh",
+				"src/Exception.boh",
+				"src/Object.boh",
+				"src/Type.boh",
+				"src/Interface.boh",
+				"src/Array.boh",
+				"src/Package.boh",
+				"src/ICollection.boh", 
+				"src/IEnumerator.boh",
+				"src/IIndexedCollection.boh",
+				"src/IndexedEnumerator.boh",
+			};
+			//string[] filenames = new string[] { "src/String.boh", "src/Exception.boh", "src/Object.boh", "src/Type.boh", "src/Class.boh", "src/Interface.boh" };
 			string[] files = new string[filenames.Length];
 
 			for (int i = 0; i < filenames.Length; ++i)
@@ -27,27 +41,49 @@ namespace bohc
 
 			foreach (string file in files)
 			{
-				Parser.parseFileTP(filesassoc[file], file);
+				parsing.ts.File f = filesassoc[file];
+				if (f.type is typesys.Type)
+				{
+					Parser.parseFileTP(f, file);
+				}
 			}
 
 			foreach (string file in files)
 			{
-				Parser.parseFileTCS(filesassoc[file], file);
+				parsing.ts.File f = filesassoc[file];
+				if (f.type is typesys.Type)
+				{
+					Parser.parseFileTCS(f, file);
+				}
 			}
 
 			foreach (string file in files)
 			{
-				Parser.parseFileTCP(filesassoc[file], file);
+				parsing.ts.File f = filesassoc[file];
+				if (f.type is typesys.Type)
+				{
+					Parser.parseFileTCP(f, file);
+				}
 			}
 
 			foreach (string file in files)
 			{
-				Parser.parseFileCP(filesassoc[file], file);
+				parsing.ts.File f = filesassoc[file];
+				if (f.type is typesys.Type)
+				{
+					Parser.parseFileCP(f, file);
+				}
 			}
 
-			foreach (typesys.Type type in filesassoc.Values.Select(x => (typesys.Type)x.type).Where(x => x != null))
+			//typesys.GenericType arrayt = filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).Single();
+			//arrayt.getTypeFor(new[] { typesys.Primitive.BOOLEAN });
+
+			IEnumerable<typesys.Type> types = filesassoc.Values.Select(x => x.type as typesys.Type).Where(x => x != null).Concat(
+				filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).SelectMany(x => x.types.Values));
+
+			foreach (typesys.Type type in types)
 			{
-				CodeGen.generateFor(type, filesassoc.Values.Select(x => (typesys.Type)x.type).Where(x => x != null));
+				CodeGen.generateFor(type, types);
 			}
 
 			Console.ReadKey();

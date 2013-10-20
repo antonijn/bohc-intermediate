@@ -1,0 +1,55 @@
+package boh.lang;
+
+public class String
+{
+	private int length;
+	private char first;
+	
+	public override String toString()
+	{
+		return this;
+	}
+	
+	private void set(int i, char ch)
+	{
+		native.boh_str_set_ch(this, i, ch);
+	}
+	
+	private char get(int i)
+	{
+		return native.boh_str_get_ch(this, i);
+	}
+	
+	public String substring(int first, int len)
+	{
+		String result = native.boh_create_string_empty(len);
+		for (int i = 0; i < len; ++i)
+		{
+			result.set(i, get(first + i));
+		}
+		return result;
+	}
+	
+	public String substring(int first)
+	{
+		Array<int> integers;
+	
+		int len = length - first;
+		return substring(first, len);
+	}
+	
+	public static String +(String left, Object robj)
+	{
+		String right = robj.toString();
+		String result = native.boh_create_string_empty(left.length + right.length);
+		for (int i = 0; i < left.length; ++i)
+		{
+			result.set(i, left.get(i));
+		}
+		for (int i = 0; i < right.length; ++i)
+		{
+			result.set(i, right.get(i));
+		}
+		return result;
+	}
+}

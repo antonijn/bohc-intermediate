@@ -21,6 +21,38 @@ namespace bohc.typesys
 		public List<Field> fields = new List<Field>();
 		public List<IMember> members = new List<IMember>();
 
+		private class FuncComp : IEqualityComparer<Function>
+		{
+			public bool Equals(Function f0, Function f1)
+			{
+				// can't be private
+				// TODO: can't have different access modifiers
+				// names must match
+				// parameter types must be equal
+				// neither can be override
+
+				return !(f0.modifiers.HasFlag(Modifiers.PRIVATE) || f1.modifiers.HasFlag(Modifiers.PRIVATE)) &&
+					(f0.identifier == f1.identifier) &&
+					(f0.parameters.Select(x => x.type).SequenceEqual(f1.parameters.Select(x => x.type))) &&
+					!(f0.modifiers.HasFlag(Modifiers.OVERRIDE) || f1.modifiers.HasFlag(Modifiers.OVERRIDE));
+			}
+
+			public int GetHashCode(Function f)
+			{
+				return f.GetHashCode();
+			}
+		}
+
+		public IEnumerable<Function> getAllFuncs()
+		{
+			if (super != null)
+			{
+				return functions.Union(super.functions, new FuncComp());
+			}
+
+			return functions;
+		}
+
 		public override parsing.Expression defaultVal()
 		{
 			return new parsing.Literal(this, "NULL");
@@ -146,7 +178,7 @@ namespace bohc.typesys
 				_protected = true;
 			}
 
-			return functions.Where(x => x.identifier == id &&
+			return getAllFuncs().Where(x => x.identifier == id &&
 				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
 				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
 				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));

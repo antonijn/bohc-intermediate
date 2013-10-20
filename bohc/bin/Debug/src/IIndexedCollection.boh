@@ -1,0 +1,7 @@
+package boh.lang;
+
+public interface IIndexedCollection<T> implements ICollection<T>
+{
+	T get(int i);
+	void set(int i, T value);
+}

@@ -33,7 +33,13 @@ namespace bohc
 
 		private static string getCTypeName(typesys.Type type)
 		{
-			if (type is Class)
+			NativeType nt = type as NativeType;
+			if (nt != null)
+			{
+				return nt.crep;
+			}
+
+			if (type is Class || type is Interface)
 			{
 				return getCStructName(type) + " *";
 			}
@@ -99,11 +105,20 @@ namespace bohc
 
 		private static string getVFuncName(Function func)
 		{
-			return func.identifier;
+			return "m_" + func.identifier;
+		}
+
+		private static string getOpName(Operator op)
+		{
+			return op.overloadName;
 		}
 
 		private static string getCFuncName(Function func)
 		{
+			if (func is OverloadedOperator)
+			{
+				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which);
+			}
 			return getCName(func.owner) + "_m_" + func.identifier;
 		}
 
@@ -123,6 +138,11 @@ namespace bohc
 
 			string code = generateCode(type, others);
 			System.IO.File.WriteAllText(getCodeFileName(type), code);
+
+			if (!System.IO.File.Exists("boh_internal.h"))
+			{
+				System.IO.File.Copy(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + System.IO.Path.DirectorySeparatorChar + "boh_internal.h", "boh_internal.h");
+			}
 		}
 
 		private static string generateHeader(typesys.Type type, IEnumerable<typesys.Type> others)
@@ -134,7 +154,106 @@ namespace bohc
 				return generateClassHeader(c, others);
 			}
 
+			Interface i = type as Interface;
+			if (i != null)
+			{
+				return generateInterfaceHeader(i, others);
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private static string generateInterfaceHeader(Interface iface, IEnumerable<typesys.Type> others)
+		{
+			StringBuilder builder = new StringBuilder();
+
+			addIncludeGuard(builder, iface);
+			builder.AppendLine();
+
+			builder.Append(getCStructName(iface));
+			builder.AppendLine(";");
+			builder.AppendLine();
+
+			addIncludes(builder, others);
+			builder.AppendLine();
+
+			addInterfaceNewOpSig(builder, iface);
+			builder.AppendLine();
+
+			addInterfaceStruct(builder, iface);
+			builder.AppendLine();
+
+			builder.AppendLine("#endif");
+
+			return builder.ToString();
+		}
+
+		private static void addInterfaceFunc(StringBuilder builder, Function f)
+		{
+			builder.Append(getCTypeName(f.returnType));
+			builder.Append(" (*");
+			builder.Append(getVFuncName(f));
+			builder.Append(")(");
+			addFunctionParams(builder, f);
+			builder.Append(")");
+		}
+
+		private static void addInterfaceFuncs(StringBuilder builder, Interface iface)
+		{
+			foreach (Interface impl in iface.implements)
+			{
+				addInterfaceFuncs(builder, impl);
+			}
+
+			foreach (Function f in iface.functions)
+			{
+				builder.Append("\t");
+				addInterfaceFunc(builder, f);
+				builder.AppendLine(";");
+			}
+		}
+
+		private static void addInterfaceStruct(StringBuilder builder, Interface iface)
+		{
+			builder.AppendLine(getCStructName(iface));
+			builder.AppendLine("{");
+
+			builder.Append("\t");
+			builder.Append(getCTypeName(StdType.obj));
+			builder.AppendLine(" object;");
+			addInterfaceFuncs(builder, iface);
+			builder.AppendLine("};");
+		}
+
+		private static void addInterfaceNewOpParams(StringBuilder builder, Interface iface)
+		{
+			foreach (Interface impl in iface.implements)
+			{
+				addInterfaceNewOpParams(builder, impl);
+			}
+
+			foreach (Function f in iface.functions)
+			{
+				addInterfaceFunc(builder, f);
+				builder.Append(", ");
+			}
+		}
+
+		private static void addInterfaceNewOpSig(StringBuilder builder, Interface iface)
+		{
+			builder.Append("extern ");
+			builder.Append(getCTypeName(iface));
+			builder.Append(" new_");
+			builder.Append(getCName(iface));
+			builder.Append("(");
+			builder.Append(getCTypeName(StdType.obj));
+			builder.Append(" object, ");
+
+			addInterfaceNewOpParams(builder, iface);
+
+			builder.Remove(builder.Length - 2, 2);
+
+			builder.AppendLine(");");
 		}
 
 		private static void addIncludeGuard(StringBuilder builder, typesys.Type type)
@@ -145,11 +264,11 @@ namespace bohc
 
 		private static void addIncludes(StringBuilder builder, IEnumerable<typesys.Type> others)
 		{
+			builder.AppendLine("#include \"boh_internal.h\"");
 			builder.AppendLine("#include <stdint.h>");
-			builder.AppendLine("#include <stdbool.h>");
 			builder.AppendLine("#include <stddef.h>");
 			builder.AppendLine("#include <uchar.h>");
-			builder.AppendLine("#include <longjmp.h>");
+			builder.AppendLine("#include <setjmp.h>");
 
 			foreach (typesys.Type type in others)
 			{
@@ -167,7 +286,14 @@ namespace bohc
 		{
 			if (!func.modifiers.HasFlag(Modifiers.STATIC))
 			{
-				builder.Append(getCTypeName(func.owner));
+				if (func.owner is Interface)
+				{
+					builder.Append(getCTypeName(StdType.obj));
+				}
+				else
+				{
+					builder.Append(getCTypeName(func.owner));
+				}
 				builder.Append(" const self, ");
 			}
 
@@ -213,9 +339,8 @@ namespace bohc
 
 		private static void addTypeOfSig(StringBuilder builder, typesys.Type type)
 		{
-			typesys.Type typesystype = typesys.Type.getExisting(Package.getFromString("boh.lang"), "Type");
-			string cname = getCName(typesystype);
-			string ctype = getCTypeName(typesystype);
+			string cname = getCName(type);
+			string ctype = getCTypeName(StdType.type);
 
 			builder.Append("extern ");
 			builder.Append(ctype);
@@ -227,9 +352,8 @@ namespace bohc
 
 		private static void addTypeOfDef(StringBuilder builder, typesys.Type type)
 		{
-			typesys.Type typesystype = typesys.Type.getExisting(Package.getFromString("boh.lang"), "Type");
-			string cname = getCName(typesystype);
-			string ctype = getCTypeName(typesystype);
+			string cname = getCName(type);
+			string ctype = getCTypeName(StdType.type);
 
 			builder.Append(ctype);
 			builder.Append(" typeof_");
@@ -312,7 +436,7 @@ namespace bohc
 			builder.AppendLine("));");
 
 			builder.Append("\tresult->vtable = &instance_");
-			builder.Append(getVtableName(constr.owner));
+			builder.Append(getVtableName((typesys.Class)constr.owner));
 			builder.AppendLine(";");
 
 			builder.Append("\t");
@@ -432,10 +556,10 @@ namespace bohc
 			addIncludeGuard(builder, c);
 			builder.AppendLine();
 
-			addIncludes(builder, others);
+			addStructPrototype(builder, c);
 			builder.AppendLine();
 
-			addStructPrototype(builder, c);
+			addIncludes(builder, others);
 			builder.AppendLine();
 
 			addTypeOfSig(builder, c);
@@ -530,9 +654,9 @@ namespace bohc
 
 			if (func.identifier == "this")
 			{
-				foreach (Field f in func.owner.fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
+				foreach (Field f in ((typesys.Class)func.owner).fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
 				{
-					ExprVariable ev = new ExprVariable(f, new ThisVar(func.owner));
+					ExprVariable ev = new ExprVariable(f, new ThisVar((typesys.Class)func.owner));
 					if (f.initial == null)
 					{
 						// TODO: add default value
@@ -557,21 +681,28 @@ namespace bohc
 
 		private static int indentation = 0;
 
+		public const string INDENT_SEQ = "\t";
+
 		private static void addIndent(StringBuilder builder)
 		{
 			for (int i = 0; i < indentation; ++i)
 			{
-				builder.Append("\t");
+				builder.Append(INDENT_SEQ);
 			}
 		}
 
-		private static Stack<List<string>> tempstack = new Stack<List<string>>();
+		private static Stack<List<string>> prestatstack = new Stack<List<string>>();
 		private static int tempvcounter = 0;
+
+		private static void addPreStatStatement(string txt)
+		{
+			prestatstack.Peek().Add(txt);
+		}
 
 		private static string addTemp(string prefix, string suffix)
 		{
 			string name = "temp" + tempvcounter++;
-			tempstack.Peek().Add(prefix + name + suffix);
+			addPreStatStatement(prefix + name + suffix);
 			return name;
 		}
 
@@ -583,6 +714,87 @@ namespace bohc
 		#endregion
 
 		#region Expressions
+
+		private static void addInterfaceNewCallFunc(StringBuilder builder, Function f, string tempn)
+		{
+			builder.Append("&");
+			if (f.modifiers.HasFlag(Modifiers.OVERRIDE) || f.modifiers.HasFlag(Modifiers.VIRTUAL) || f.modifiers.HasFlag(Modifiers.ABSTRACT))
+			{
+				builder.Append(tempn);
+				builder.Append("->vtable->");
+				builder.Append(getVFuncName(f));
+			}
+			else
+			{
+				builder.Append(getCFuncName(f));
+			}
+		}
+
+		private static void addInterfaceNewCallFuncs(StringBuilder builder, Interface iface, Class c, string tempn)
+		{
+			// leaves ", " at the end of the string
+
+			foreach (Interface i in iface.implements)
+			{
+				addInterfaceNewCallFuncs(builder, i, c, tempn);
+			}
+
+			foreach (Function other in iface.functions)
+			{
+				foreach (Function f in c.getAllFuncs())
+				{
+					if (f.identifier == other.identifier &&
+						f.modifiers.HasFlag(Modifiers.PUBLIC) &&
+						f.parameters.Select(x => x.type).SequenceEqual(other.parameters.Select(x => x.type)))
+					{
+						addInterfaceNewCallFunc(builder, f, tempn);
+						builder.Append(", ");
+						break;
+					}
+				}
+			}
+		}
+
+		private static void addExpressionImplCon(StringBuilder builder, Expression expression, typesys.Type towhat)
+		{
+			typesys.Type type = expression.getType();
+			if (type == towhat)
+			{
+				addExpression(builder, expression);
+			}
+			else if (type is Interface && towhat is Class)
+			{
+				builder.Append("(");
+				builder.Append(getCTypeName(towhat));
+				builder.Append(")");
+				addExpression(builder, expression);
+				builder.Append("->object");
+			}
+			else if (type is Class && towhat is Interface)
+			{
+				string tempn = addTemp(getCTypeName(type), ";");
+
+				Interface towi = towhat as Interface;
+				builder.Append("new_");
+				builder.Append(getCName(towhat));
+				builder.Append("(");
+				builder.Append(tempn);
+				builder.Append(" = (");
+				addExpression(builder, expression);
+				builder.Append("), ");
+				addInterfaceNewCallFuncs(builder, towi, type as Class, tempn);
+				builder.Remove(builder.Length - 2, 2);
+				builder.Append(")");
+			}
+			else
+			{
+				builder.Append("(");
+				builder.Append(getCTypeName(towhat));
+				builder.Append(")(");
+				addExpression(builder, expression);
+				builder.Append(")");
+			}
+		}
 
 		private static void addExpression(StringBuilder builder, Expression expression)
 		{
@@ -631,6 +843,41 @@ namespace bohc
 				addExprVar(builder, exprvar);
 				return;
 			}
+
+			NativeExpression nexpr = expression as NativeExpression;
+			if (nexpr != null)
+			{
+				addNativeExpression(builder, nexpr);
+				return;
+			}
+
+			NativeFCall nfcall = expression as NativeFCall;
+			if (nfcall != null)
+			{
+				addNativeFCall(builder, nfcall);
+				return;
+			}
+		}
+
+		private static int getStrLitLen(string str)
+		{
+			int len = 0;
+			for (int i = 0; i < str.Length; ++i)
+			{
+				char ch = str[i];
+				if (ch == '\\')
+				{
+					if (++i >= str.Length || str[i] != '\\')
+					{
+					}
+					else
+					{
+						--i;
+					}
+				}
+				++len;
+			}
+			return len - 2;
 		}
 
 		private static void addLiteral(StringBuilder builder, Literal lit)
@@ -647,7 +894,7 @@ namespace bohc
 				}
 				else if (prim == Primitive.BOOLEAN)
 				{
-					builder.Append(lit.representation);
+					builder.Append(lit.representation == "true" ? 1 : 0);
 				}
 				else if (prim.isInt())
 				{
@@ -679,7 +926,18 @@ namespace bohc
 			}
 			else
 			{
-				builder.Append(lit.representation);
+				if (lit.type == StdType.str && lit.representation != "NULL")
+				{
+					builder.Append("boh_create_string(u");
+					builder.Append(lit.representation);
+					builder.Append(", ");
+					builder.Append(getStrLitLen(lit.representation));
+					builder.Append(")");
+				}
+				else
+				{
+					builder.Append(lit.representation);
+				}
 			}
 		}
 
@@ -688,9 +946,12 @@ namespace bohc
 			builder.Append(getNewName(ccall.function.owner));
 			builder.Append("(");
 
+			IEnumerator<Parameter> fparams = ccall.function.parameters.GetEnumerator();
 			foreach (Expression param in ccall.parameters)
 			{
-				addExpression(builder, param);
+				fparams.MoveNext();
+
+				addExpressionImplCon(builder, param, fparams.Current.type);
 				builder.Append(", ");
 			}
 
@@ -702,29 +963,82 @@ namespace bohc
 			builder.Append(")");
 		}
 
+		private static void addNativeExpression(StringBuilder builder, NativeExpression nexpr)
+		{
+			builder.Append(nexpr.str);
+		}
+
+		private static void addNativeFCall(StringBuilder builder, NativeFCall fcall)
+		{
+			builder.Append(fcall.str);
+			builder.Append("(");
+			foreach (Expression e in fcall.parameters)
+			{
+				addExpression(builder, e);
+				builder.Append(", ");
+			}
+
+			if (fcall.parameters.Length > 0)
+			{
+				builder.Remove(builder.Length - 2, 2);
+			}
+
+			builder.Append(")");
+		}
+
 		private static void addFCall(StringBuilder builder, FunctionCall fcall)
 		{
-			if (fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) || fcall.refersto.modifiers.HasFlag(Modifiers.ABSTRACT))
+			if (fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) ||
+				fcall.refersto.modifiers.HasFlag(Modifiers.ABSTRACT) ||
+				fcall.refersto.modifiers.HasFlag(Modifiers.OVERRIDE))
 			{
-				string temp = addTemp(fcall.belongsto);
+				if (fcall.belongsto is SuperVar)
+				{
+					builder.Append("instance_");
+					builder.Append(getVtableName((Class)fcall.belongsto.getType()));
+					builder.Append(".");
+					builder.Append(getVFuncName(fcall.refersto));
+					builder.Append("(");
+					builder.Append("self, ");
+				}
+				else
+				{
+					string temp = addTemp(fcall.belongsto);
 
-				builder.Append("(");
-				builder.Append(temp);
-				builder.Append(" = ");
-				addExpression(builder, fcall.belongsto);
-				builder.Append(")->vtable->");
+					builder.Append("(");
+					builder.Append(temp);
+					builder.Append(" = ");
+					addExpression(builder, fcall.belongsto);
+					builder.Append(")->vtable->");
 
-				builder.Append(getVFuncName(fcall.refersto));
-				builder.Append("(");
-				builder.Append(temp);
-				builder.Append(", ");
+					builder.Append(getVFuncName(fcall.refersto));
+					builder.Append("(");
+					builder.Append(temp);
+					builder.Append(", ");
+				}
 			}
 			else if (!fcall.refersto.modifiers.HasFlag(Modifiers.STATIC))
 			{
-				builder.Append(getCFuncName(fcall.refersto));
-				builder.Append("(");
-				addExpression(builder, fcall.belongsto);
-				builder.Append(", ");
+				if (fcall.refersto.owner is Class)
+				{
+					builder.Append(getCFuncName(fcall.refersto));
+					builder.Append("(");
+					addExpression(builder, fcall.belongsto);
+					builder.Append(", ");
+				}
+				else
+				{
+					string temp = addTemp(fcall.belongsto);
+					builder.Append("(");
+					builder.Append(temp);
+					builder.Append(" = ");
+					addExpression(builder, fcall.belongsto);
+					builder.Append(")->");
+					builder.Append(getVFuncName(fcall.refersto));
+					builder.Append("(");
+					builder.Append(temp);
+					builder.Append("->object, ");
+				}
 			}
 			else
 			{
@@ -732,9 +1046,12 @@ namespace bohc
 				builder.Append("(");
 			}
 
+			IEnumerator<Parameter> fparams = fcall.refersto.parameters.GetEnumerator();
 			foreach (Expression param in fcall.parameters)
 			{
-				addExpression(builder, param);
+				fparams.MoveNext();
+
+				addExpressionImplCon(builder, param, fparams.Current.type);
 				builder.Append(", ");
 			}
 
@@ -746,13 +1063,57 @@ namespace bohc
 			builder.Append(")");
 		}
 
+		private static void addEqualsBinOp(StringBuilder builder, Expression left, Expression right)
+		{
+			Function objEq = StdType.obj.functions.Single(x => x.identifier == "valEquals");
+			builder.Append(getCFuncName(objEq));
+			builder.Append("(");
+			addExpression(builder, left);
+			builder.Append(", ");
+			addExpression(builder, right);
+			builder.Append(")");
+		}
+
+		private static string getOpRep(Operator op)
+		{
+			if (op == BinaryOperation.R_EQ)
+			{
+				return "==";
+			}
+
+			return op.representation;
+		}
+
 		private static void addBinOp(StringBuilder builder, BinaryOperation binop)
 		{
-			addExpression(builder, binop.left);
-			builder.Append(" ");
-			builder.Append(binop.operation);
-			builder.Append(" ");
-			addExpression(builder, binop.right);
+			if (binop.operation == BinaryOperation.EQUAL)
+			{
+				addEqualsBinOp(builder, binop.left, binop.right);
+			}
+			else if (binop.overloaded != null)
+			{
+				builder.Append(getCFuncName(binop.overloaded));
+				builder.Append("(");
+				addExpression(builder, binop.left);
+				builder.Append(", ");
+				addExpression(builder, binop.right);
+				builder.Append(")");
+			}
+			else
+			{
+				addExpression(builder, binop.left);
+				builder.Append(" ");
+				builder.Append(getOpRep(binop.operation));
+				builder.Append(" ");
+				if (binop.isAssignment())
+				{
+					addExpressionImplCon(builder, binop.right, binop.left.getType());
+				}
+				else
+				{
+					addExpression(builder, binop.right);
+				}
+			}
 		}
 
 		private static void addTypeOf(StringBuilder builder, typesys.Type type)
@@ -783,7 +1144,7 @@ namespace bohc
 
 		private static void addExprVar(StringBuilder builder, ExprVariable exprvar)
 		{
-			if (exprvar.belongsto != null)
+			if (exprvar.belongsto is ExprVariable)
 			{
 				addExpression(builder, exprvar.belongsto);
 				builder.Append("->");
@@ -826,7 +1187,7 @@ namespace bohc
 
 		private static void addStatement(StringBuilder builder, Statement statement)
 		{
-			tempstack.Push(new List<string>());
+			prestatstack.Push(new List<string>());
 
 			StringBuilder statb = new StringBuilder();
 
@@ -846,7 +1207,7 @@ namespace bohc
 			}
 			while (false);
 
-			foreach (string str in tempstack.Pop())
+			foreach (string str in prestatstack.Pop())
 			{
 				addIndent(builder);
 				builder.AppendLine(str);
@@ -880,7 +1241,6 @@ namespace bohc
 
 		private static void addCatch(StringBuilder builder, CatchStatement cstat, string finname)
 		{
-			addIndent(builder);
 			builder.Append("if (exception_type == typeof_");
 			builder.Append(getCName(cstat.param.type));
 			builder.AppendLine("())");
@@ -907,12 +1267,11 @@ namespace bohc
 				builder.AppendLine("();");
 			}
 
-			addIndent(builder);
-			builder.AppendLine("longjmp(exception_buf, 1);");
-
 			--indentation;
 			addIndent(builder);
 			builder.AppendLine("}");
+			addIndent(builder);
+			builder.Append("else ");
 		}
 
 		private static void addTry(StringBuilder builder, TryStatement trys)
@@ -942,6 +1301,8 @@ namespace bohc
 
 			addBody(builder, trys.body);
 
+			addJmpReset(builder, tempname);
+
 			if (finname != null)
 			{
 				addIndent(builder);
@@ -959,25 +1320,41 @@ namespace bohc
 			builder.AppendLine("{");
 			++indentation;
 
-			addIndent(builder);
-			builder.Append("memcpy(&exception_buf, &");
-			builder.Append(tempname);
-			builder.AppendLine(", sizeof(jmp_buf));");
+			addJmpReset(builder, tempname);
 
 			addIndent(builder);
-			typesys.Type typeofType = typesys.Type.getExisting(Package.getFromString("boh.lang"), "Type");
-			builder.Append(getCTypeName(typeofType));
-			builder.AppendLine(" exception_type = exception->vtable->getType(exception);");
-
-			// TODO: add type checks
 			foreach (CatchStatement cstat in trys.catches)
 			{
 				addCatch(builder, cstat, finname);
 			}
 
+			builder.AppendLine();
+			addIndent(builder);
+			builder.AppendLine("{");
+			++indentation;
+			if (finname != null)
+			{
+				addIndent(builder);
+				builder.Append(finname);
+				builder.AppendLine("();");
+			}
+			addIndent(builder);
+			builder.AppendLine("longjmp(exception_buf, 1);");
 			--indentation;
 			addIndent(builder);
 			builder.AppendLine("}");
+
+			--indentation;
+			addIndent(builder);
+			builder.AppendLine("}");
+		}
+
+		private static void addJmpReset(StringBuilder builder, string tempname)
+		{
+			addIndent(builder);
+			builder.Append("memcpy(&exception_buf, &");
+			builder.Append(tempname);
+			builder.AppendLine(", sizeof(jmp_buf));");
 		}
 
 		private static void addDoWhile(StringBuilder builder, DoWhileStatement dostat)
@@ -1031,7 +1408,7 @@ namespace bohc
 			if (vdec.initial != null)
 			{
 				builder.Append(" = ");
-				addExpression(builder, vdec.initial);
+				addExpressionImplCon(builder, vdec.initial, vdec.refersto.type);
 			}
 
 			builder.AppendLine(";");
@@ -1076,7 +1453,67 @@ namespace bohc
 				return generateClassCode(c, others);
 			}
 
+			Interface i = type as Interface;
+			if (i != null)
+			{
+				return generateInterfaceCode(i, others);
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private static void addInterfaceConstructor(StringBuilder builder, Interface iface)
+		{
+			builder.Append(getCTypeName(iface));
+			builder.Append(" new_");
+			builder.Append(getCName(iface));
+			builder.Append("(");
+			builder.Append(getCTypeName(StdType.obj));
+			builder.Append(" object, ");
+			addInterfaceNewOpParams(builder, iface);
+			builder.Remove(builder.Length - 2, 2);
+			builder.AppendLine(")");
+			builder.AppendLine("{");
+			builder.Append("\t");
+			builder.Append(getCTypeName(iface));
+			builder.Append(" result = GC_malloc(sizeof(");
+			builder.Append(getCStructName(iface));
+			builder.AppendLine("));");
+			builder.AppendLine("\tresult->object = object;");
+			addInterfaceAssignments(builder, iface);
+			builder.AppendLine("\treturn result;");
+			builder.AppendLine("}");
+		}
+
+		private static void addInterfaceAssignments(StringBuilder builder, Interface iface)
+		{
+			foreach (Interface impl in iface.implements)
+			{
+				addInterfaceAssignments(builder, impl);
+			}
+
+			foreach (Function f in iface.functions)
+			{
+				builder.Append("\tresult->");
+				builder.Append(getVFuncName(f));
+				builder.Append(" = ");
+				builder.Append(getVFuncName(f));
+				builder.AppendLine(";");
+			}
+		}
+
+		private static string generateInterfaceCode(Interface iface, IEnumerable<typesys.Type> others)
+		{
+			StringBuilder builder = new StringBuilder();
+
+			builder.Append("#include \"");
+			builder.Append(getHeaderName(iface));
+			builder.AppendLine("\"");
+			builder.AppendLine();
+
+			addInterfaceConstructor(builder, iface);
+
+			return builder.ToString();
 		}
 
 		private static string generateClassCode(Class c, IEnumerable<typesys.Type> others)

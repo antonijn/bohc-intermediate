@@ -1,0 +1,38 @@
+package boh.lang;
+
+public final class Array<T> implements ICollection<T>
+{
+	private int length;
+	private native.T* items;
+	
+	public this(int length)
+	{
+		T dummy;
+		this.items = native.GC_malloc(length * native.sizeof(dummy));
+		if (this.items == null)
+		{
+			
+		}
+		this.length = length;
+	}
+	
+	public int size()
+	{
+		return length;
+	}
+	
+	public T get(int i)
+	{
+		return native.boh_deref_ptr(items, i);
+	}
+	
+	public void set(int i, T value)
+	{
+		native.boh_set_deref(items, i, value);
+	}
+	
+	public IEnumerator<T> getEnumerator()
+	{
+		return new IndexedEnumerator<T>(this);
+	}
+}

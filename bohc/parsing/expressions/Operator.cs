@@ -11,11 +11,13 @@ namespace bohc.parsing
 
 		public readonly string representation;
 		public readonly int precedence;
+		public readonly string overloadName;
 
-		public Operator(string representation, int precedence)
+		public Operator(string representation, int precedence, string overloadName)
 		{
 			this.representation = representation;
 			this.precedence = precedence;
+			this.overloadName = overloadName;
 
 			operators.Add(this);
 		}

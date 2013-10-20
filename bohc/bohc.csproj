@@ -55,9 +55,11 @@
     <Compile Include="parsing\expressions\FunctionCall.cs" />
     <Compile Include="parsing\expressions\Literal.cs" />
     <Compile Include="parsing\expressions\BinaryOperation.cs" />
+    <Compile Include="parsing\expressions\NativeFCall.cs" />
     <Compile Include="parsing\expressions\NewDummy.cs" />
     <Compile Include="parsing\expressions\OperationType.cs" />
     <Compile Include="parsing\expressions\Operator.cs" />
+    <Compile Include="parsing\expressions\SuperVar.cs" />
     <Compile Include="parsing\statements\Body.cs" />
     <Compile Include="parsing\statements\BodyStatement.cs" />
     <Compile Include="parsing\statements\BreakStatement.cs" />
@@ -69,6 +71,7 @@
     <Compile Include="parsing\statements\FinallyStatement.cs" />
     <Compile Include="parsing\statements\ForStatement.cs" />
     <Compile Include="parsing\statements\IfStatement.cs" />
+    <Compile Include="parsing\expressions\NativeExpression.cs" />
     <Compile Include="parsing\statements\ReturnStatement.cs" />
     <Compile Include="parsing\statements\Statement.cs" />
     <Compile Include="parsing\statements\ThrowStatement.cs" />
@@ -80,6 +83,7 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="typesys\Class.cs" />
+    <Compile Include="typesys\CompatibleWithAllType.cs" />
     <Compile Include="typesys\Constructor.cs" />
     <Compile Include="typesys\Enum.cs" />
     <Compile Include="typesys\Enumerator.cs" />
@@ -93,10 +97,12 @@
     <Compile Include="typesys\Local.cs" />
     <Compile Include="typesys\Modifiers.cs" />
     <Compile Include="typesys\ModifierHelper.cs" />
+    <Compile Include="typesys\NativeType.cs" />
     <Compile Include="typesys\NullType.cs" />
     <Compile Include="typesys\OverloadedOperator.cs" />
     <Compile Include="typesys\Package.cs" />
     <Compile Include="typesys\Parameter.cs" />
+    <Compile Include="typesys\StdType.cs" />
     <Compile Include="typesys\Type.cs" />
     <Compile Include="typesys\GenericType.cs" />
     <Compile Include="typesys\Primitive.cs" />

@@ -9,6 +9,8 @@ namespace bohc.parsing
 	{
 		private static string readNext(string str, ref int pos)
 		{
+			bool instring = false;
+			
 			StringBuilder sb = new StringBuilder();
 			int i = 0;
 			for (; pos < str.Length; ++pos)
@@ -16,22 +18,54 @@ namespace bohc.parsing
 				char ch = str[pos];
 				if (ch == ' ')
 				{
-					if (i > 0)
+					if (!instring)
 					{
-						break;
+						if (i > 0)
+						{
+							break;
+						}
+						continue;
 					}
-					continue;
+				}
+				else if (ch == '"')
+				{
+					if (sb.Length > 0)
+					{
+						if (!instring)
+						{
+							//sb.Append("\"");
+							//--pos;
+							break;
+						}
+						else
+						{
+							++pos;
+							sb.Append("\"");
+							break;
+						}
+					}
+					instring = !instring;
 				}
 
 				if (pos > 0 && i > 0)
 				{
-					char prev = str[pos - 1];
-					if (((char.IsLetterOrDigit(prev) && !char.IsLetterOrDigit(ch)) ||
-						(char.IsLetterOrDigit(ch) && !char.IsLetterOrDigit(prev)) ||
-						prev == '(' || prev == ')')
-						&& ch != '.' && prev != '.')
+					if (!instring)
 					{
-						break;
+						char prev = str[pos - 1];
+						if ((((char.IsLetterOrDigit(prev) || prev == '_') && !(char.IsLetterOrDigit(ch) || ch == '_')) ||
+							((char.IsLetterOrDigit(ch) || ch == '_') && !(char.IsLetterOrDigit(prev) || prev == '_')) ||
+							prev == '(' || prev == ')')
+							&& ch != '.' && prev != '.')
+						{
+							if (ch == '*' && sb.ToString().StartsWith("native."))
+							{
+								// yeah, it's supposed to be empty
+							}
+							else
+							{
+								break;
+							}
+						}
 					}
 				}
 
@@ -146,7 +180,7 @@ namespace bohc.parsing
 				}
 
 				Operator op = Operator.getExisting(next, OperationType.BINARY);
-				if (op.precedence < opprec)
+				if (op.precedence <= opprec)
 				{
 					i -= op.representation.Length;
 					return OpBreakStat.BREAK;
@@ -191,6 +225,12 @@ namespace bohc.parsing
 
 				builder.Append("'");
 				last = new Literal(typesys.Primitive.CHAR, builder.ToString());
+				return true;
+			}
+
+			if (next.StartsWith("\""))
+			{
+				last = new Literal(typesys.StdType.str, next);
 				return true;
 			}
 
@@ -246,8 +286,37 @@ namespace bohc.parsing
 			return false;
 		}
 
+		private static bool analyzeNative(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file)
+		{
+			if (nxt.StartsWith("native."))
+			{
+				string after = readNext(str, ref i);
+				if (after == "(")
+				{
+					last = new NativeFCall(nxt.Substring("native.".Length), getStringParams(str, i, vars, file).ToArray());
+					i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
+				}
+				else
+				{
+					if (after != null)
+					{
+						i -= after.Length;
+					}
+					last = new NativeExpression(nxt.Substring("native.".Length));
+				}
+				return true;
+			}
+
+			return false;
+		}
+
 		private static bool analyzeName(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file)
 		{
+			if (analyzeNative(ref last, vars, ref i, ref nxt, str, file))
+			{
+				return true;
+			}
+
 			int ibackup = i;
 
 			string next = nxt;
@@ -276,7 +345,25 @@ namespace bohc.parsing
 				// constructor call
 
 				string typeConstr = readNext(str, ref i);
-				i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr));
+				int backup = i;
+				try
+				{
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr));
+				}
+				catch (NullReferenceException)
+				{
+					// generic type
+					i = backup;
+					string after = readNext(str, ref i);
+					if (after != "<")
+					{
+						throw;
+					}
+					int greaterThan = Parser.getMatchingBraceChar(str, i - 1, '>');
+					string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
+					i = greaterThan + 1;
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr + "<" + genpars + ">"));
+				}
 				FunctionCall flast = (FunctionCall)last;
 				typesys.Constructor constr = (typesys.Constructor)flast.refersto;
 				last = new ConstructorCall(constr, flast.parameters);
@@ -355,7 +442,7 @@ namespace bohc.parsing
 			}
 
 			boh.Exception.require<exceptions.ParserException>(
-				next == "this" || (functions != null && functions.Count() != 0) || field != null,
+				(next == "this" || next == "super") || (functions != null && functions.Count() != 0) || field != null,
 				"Invalid identifier: " + next);
 
 			string nextnext = readNext(str, ref i);
@@ -376,6 +463,10 @@ namespace bohc.parsing
 				{
 					expr = ((typesys.Class)file.type).THISVAR;
 				}
+				else if (next == "super")
+				{
+					expr = new SuperVar((typesys.Class)file.type);
+				}
 				else
 				{
 					expr = new ExprVariable(field, expr);
@@ -389,27 +480,27 @@ namespace bohc.parsing
 			return i;
 		}
 
+		private static IEnumerable<Expression> getStringParams(string str, int i, IEnumerable<typesys.Variable> locals, ts.File file)
+		{
+			int close = Parser.getMatchingBraceChar(str, i - 1, ')');
+			string paramstring = str.Substring(i - 1, close - i + 2);
+			return Parser.split(paramstring, 0, ')', ',')
+							.Select(x => x.Trim())
+							.Where(x => !string.IsNullOrEmpty(x))
+							.Select(x => Expression.analyze(x, locals, file))
+							.Where(x => x != null);
+		}
+
 		/// <summary>
 		/// Selects the function compatible with the given expressions.
 		/// </summary>
 		private static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters)
 		{
-			int close = Parser.getMatchingBraceChar(str, i - 1, ')');
-			string paramstring = str.Substring(i - 1, close - i + 2);
-			IEnumerable<string> strs = Parser.split(paramstring, 0, ')', ',');
-			parameters =
-							strs
-							.Select(x => x.Trim())
-							.Where(x => !string.IsNullOrEmpty(x))
-							.Select(x => Expression.analyze(x, locals, file))
-							.Where(x => x != null);
-
-			List<Expression> exprsnlist = parameters.ToList();
-
 			/*typesys.Function compatible = functions
 				.Where(x => x.parameters.Count == parameters.Count())
 				.SingleOrDefault(x => areParamsCompatible(parameters, x));*/
 
+			parameters = getStringParams(str, i, locals, file);
 			IEnumerable<Expression> _parameters = parameters;
 			typesys.Function compatible = functions
 				.Where(x => x.parameters.Count == _parameters.Count())

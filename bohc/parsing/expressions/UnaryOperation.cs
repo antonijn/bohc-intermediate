@@ -9,15 +9,15 @@ namespace bohc.parsing
 	{
 		public static readonly int[] UNARY_PRECENDENCES = new int[] { 7, 8 };
 
-		public static readonly Operator PLUS = new Operator("+", 7);
-		public static readonly Operator MINUS = new Operator("-", 7);
-		public static readonly Operator INCREMENT = new Operator("++", 7);
-		public static readonly Operator INCREMENT_POST = new Operator("++", 7);
-		public static readonly Operator DECREMENT = new Operator("--", 7);
-		public static readonly Operator DECREMENT_POST = new Operator("--", 7);
-		public static readonly Operator INVERT = new Operator("!", 7);
-		public static readonly Operator NOT = new Operator("~", 7);
-		public static readonly Operator TYPEOF = new Operator("typeof", 8);
+		public static readonly Operator PLUS = new Operator("+", 7, "plus");
+		public static readonly Operator MINUS = new Operator("-", 7, "minus");
+		public static readonly Operator INCREMENT = new Operator("++", 7, "inc");
+		public static readonly Operator INCREMENT_POST = new Operator("++", 7, "inc_post");
+		public static readonly Operator DECREMENT = new Operator("--", 7, "dec");
+		public static readonly Operator DECREMENT_POST = new Operator("--", 7, "dec_post");
+		public static readonly Operator INVERT = new Operator("!", 7, "inv");
+		public static readonly Operator NOT = new Operator("~", 7, "not");
+		public static readonly Operator TYPEOF = new Operator("typeof", 8, "typeof");
 
 		public readonly Expression onwhat;
 		public readonly Operator operation;
