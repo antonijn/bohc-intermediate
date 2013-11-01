@@ -1,32 +1,27 @@
 package boh.lang;
 
-public class Class extends Type
+public final class Class extends Type
 {
-	private Class base;
+	private final Array<Function> functions;
+	private final Array<Field> fields;
 	
-	public override boolean isSubTypeOf(Type other)
+	private cvisible this(String name, Package pack, Array<Function> functions, Array<Field> fields)
 	{
-		antonijn = 10;
-	
-		if (other == this)
-		{
-			return true;
-		}
-		if (base != null)
-		{
-			return base.isSubTypeOf(other);
-		}
+		super(name, pack);
 		
-		return false;
+		this.functions = functions;
+		this.fields = fields;
 	}
 	
-	public Class getBase()
+	public ICollection<Constructor> getConstructors()
 	{
-		return base;
+		return functions.query().ofType<Constructor>();
 	}
 	
-	protected cvisible this()
+	public ICollection<OverloadedOperator> getOperators()
 	{
-	
+		return functions.query().ofType<OverloadedOperator>();
 	}
+	
+	public ICollection<>
 }

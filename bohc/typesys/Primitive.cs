@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2013 Antonie Blom
+// The antonijn open-source license, draft 1, short form.
+// This source file is licensed under the antonijn open-source license, a
+// full version of which is included with the project.
+// Please refer to the long version for a list of rights and restrictions
+// pertaining to source file use and modification.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -46,6 +53,8 @@ namespace bohc.typesys
 					return FLOAT;
 				case "double":
 					return DOUBLE;
+				case "decimal":
+					return DECIMAL;
 				case "char":
 					return CHAR;
 				default:
@@ -60,6 +69,7 @@ namespace bohc.typesys
 		public static readonly Primitive BOOLEAN = new Primitive("boolean", "_Bool", 4);
 		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
 		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
+		public static readonly Primitive DECIMAL = new Primitive("decimal", "_Decimal64", 8);
 		public static readonly Primitive CHAR = new Primitive("char", "char16_t", 2);
 		public static readonly Primitive VOID = new Primitive("void", "void", 0);
 
@@ -72,6 +82,7 @@ namespace bohc.typesys
 			BOOLEAN.initval = new parsing.Literal(BOOLEAN, "0");
 			FLOAT.initval = new parsing.Literal(FLOAT, "0.0f");
 			DOUBLE.initval = new parsing.Literal(DOUBLE, "0.0");
+			DECIMAL.initval = new parsing.Literal(DECIMAL, "0.0DD");
 			CHAR.initval = new parsing.Literal(CHAR, "'\\0'");
 		}
 

@@ -1,6 +1,0 @@
-package boh.lang;
-
-public interface Interface
-{
-	void myFunction(int a, float b);
-}

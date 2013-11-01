@@ -2,6 +2,5 @@ package boh.lang;
 
 public interface ICollection<T>
 {
-	int size();
-	IEnumerator<T> getEnumerator();
+	IIterator<T> iterator();
 }

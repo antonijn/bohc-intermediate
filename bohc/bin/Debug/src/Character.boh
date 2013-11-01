@@ -1,0 +1,12 @@
+package boh.lang;
+
+public struct Character
+{
+	public override String toString()
+	{
+		return null;
+	}
+
+	public char ch0;
+	public char ch1;
+}

@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2013 Antonie Blom
+// The antonijn open-source license, draft 1, short form.
+// This source file is licensed under the antonijn open-source license, a
+// full version of which is included with the project.
+// Please refer to the long version for a list of rights and restrictions
+// pertaining to source file use and modification.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -15,7 +22,7 @@ namespace bohc
 {
 	public static class Parser
 	{
-		public static int indexOf(string str, char begin, char end, char idxOf)
+		public static int indexOf(string str, char[] begin, char[] end, char idxOf)
 		{
 			bool instring = false;
 
@@ -39,11 +46,11 @@ namespace bohc
 					continue;
 				}
 
-				if (ch == begin)
+				if (begin.Contains(ch))
 				{
 					++scope;
 				}
-				else if (ch == end)
+				else if (end.Contains(ch))
 				{
 					--scope;
 				}
@@ -55,6 +62,11 @@ namespace bohc
 			}
 
 			return i;
+		}
+
+		public static int indexOf(string str, char begin, char end, char idxOf)
+		{
+			return indexOf(str, new[] { begin }, new[] { end }, idxOf);
 		}
 
 		private static int getMatchingBraceCh(string str, int first, char matches, int step)
@@ -99,13 +111,13 @@ namespace bohc
 			return getMatchingBraceCh(str, first, matches, -1);
 		}
 
-		public static IEnumerable<string> split(string str, int first, char matches, char seperator)
+		public static IEnumerable<string> split(string str, char[] begin, char[] end, char seperator)
 		{
 			bool instring = false;
 			int scope = 0;
-			char begin = str[first];
 
-			for (int i = ++first; scope >= 0; ++i)
+			int temp = 0;
+			for (int i = 0; scope >= 0 && i < str.Length; ++i)
 			{
 				char ch = str[i];
 
@@ -119,22 +131,29 @@ namespace bohc
 					continue;
 				}
 
-				if (ch == begin)
+				if (begin.Contains(ch))
 				{
 					++scope;
 				}
-				else if (ch == matches)
+				else if (end.Contains(ch))
 				{
 					--scope;
 				}
 				else if (scope == 0 && ch == seperator)
 				{
-					yield return str.Substring(first, i - first);
-					first = i + 1;
+					yield return str.Substring(temp, i - temp);
+					temp = i + 1;
 				}
 			}
 
-			yield return str.Substring(first, str.Length - first - 1);
+			yield return str.Substring(temp, str.Length - temp);
+		}
+
+		public static IEnumerable<string> split(string str, int first, char matches, char seperator)
+		{
+			char begin = str[first];
+			int stop = getMatchingBraceChar(str, first, matches);
+			return split(str.Substring(first + 1, stop - first - 1), new[] { begin }, new[] { matches }, seperator);
 		}
 
 		/// <summary>
@@ -248,7 +267,10 @@ namespace bohc
 				switch (type)
 				{
 					case "class":
-						file.type = Class.get(file.package, mod, name);
+						file.type = Class.get<Class>(file.package, mod, name);
+						break;
+					case "struct":
+						file.type = Struct.get<Struct>(file.package, mod, name);
 						break;
 					case "enum":
 						file.type = typesys.Enum.get(file.package, mod, name);
@@ -525,7 +547,7 @@ namespace bohc
 			// TODO: consider special cases:
 			// public void function(void() f = () => otherFunc(1, 2))
 
-			string[] parts = paramString.Split(',');
+			string[] parts = split(paramString, new[] { '<', '(' }, new[] { '>', ')' }, ',').ToArray();
 			for (int i = 0; i < parts.Length; ++i)
 			{
 				parts[i] = parts[i].Trim();
@@ -719,7 +741,7 @@ namespace bohc
 
 		private static Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, File f)
 		{
-			int wspace = line.IndexOf(' ');
+			int wspace = Math.Max(indexOf(line, '<', '>', ' '), indexOf(line, '(', ')', ' '));
 			if (wspace != -1)
 			{
 				string beforeWspace = line.Substring(0, wspace);
@@ -768,7 +790,13 @@ namespace bohc
 				return new ContinueStatement();
 			}
 
-			return new ExpressionStatement(Expression.analyze(line, vars.SelectMany(x => x), f));
+			Expression expr = Expression.analyze(line, vars.SelectMany(x => x), f);
+			if (expr != null)
+			{
+				return new ExpressionStatement(expr);
+			}
+
+			return new EmptyStatement();
 		}
 
 		private static ThrowStatement parseThrow(string line, Function func, Stack<List<Variable>> vars, File f)

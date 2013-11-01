@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2013 Antonie Blom
+// The antonijn open-source license, draft 1, short form.
+// This source file is licensed under the antonijn open-source license, a
+// full version of which is included with the project.
+// Please refer to the long version for a list of rights and restrictions
+// pertaining to source file use and modification.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -130,16 +137,24 @@ namespace bohc.typesys
 			this.THISVAR = new parsing.ThisVar(this);
 		}
 
-		public static Class get(Package package, Modifiers modifiers, string name)
+		public static Class get<T>(Package package, Modifiers modifiers, string name)
+			where T : Class
 		{
 			lock (instances)
 			{
-				Class c = instances.SingleOrDefault(x => (x.package == package && x.name == name));
-				if (c == default(Class))
+				T c = (T)instances.SingleOrDefault(x => (x.package == package && x.name == name));
+				if (c == default(T))
 				{
-					Class newc = new Class(package, modifiers, name);
-					instances.Add(newc);
-					return newc;
+					if (typeof(T) == typeof(Class))
+					{
+						Class newc = new Class(package, modifiers, name);
+						instances.Add(newc);
+						return newc;
+					}
+
+					Struct news = new Struct(package, modifiers, name);
+					instances.Add(news);
+					return news;
 				}
 
 				return c;
@@ -211,6 +226,16 @@ namespace bohc.typesys
 			}
 
 			return result;
+		}
+
+		public IEnumerable<Field> getAllFields()
+		{
+			if (super == null)
+			{
+				return fields;
+			}
+
+			return super.getAllFields().Concat(fields);
 		}
 	}
 }

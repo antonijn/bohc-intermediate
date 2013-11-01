@@ -1,0 +1,154 @@
+package boh.lang;
+
+public class Query<T> implements ICollection<T>
+{
+	private IIterator<T> iter;
+	
+	public this(IIterator<T> iter)
+	{
+		this.iter = iter;
+	}
+	
+	public IIterator<T> iterator()
+	{
+		return iter;
+	}
+	
+	public Query<T> where(boolean(T) cond)
+	{
+		return new Query<T>
+		(
+			new Iterator<T>
+			(
+				// current
+				() => iter.current(),
+				() =>
+				{
+					while (iter.next())
+					{
+						if (cond(iter.current()))
+						{
+							return true;
+						}
+					}
+					
+					return false;
+				},
+				() =>
+				{
+					while (iter.previous())
+					{
+						if (cond(iter.current()))
+						{
+							return true;
+						}
+					}
+					
+					return false;
+				},
+				() => iter.moveLast(),
+				() => iter.reset()
+			)
+		);
+	}
+	
+	public Query<U> select<U>(U(T) sel)
+	{
+		return new Query<U>
+		(
+			new Iterator<U>
+			(
+				() => sel(iter.current()),
+				() => iter.next(),
+				() => iter.previous(),
+				() => iter.moveLast(),
+				() => iter.reset()
+			)
+		);
+	}
+	
+	public Query<U> expand<U>(ICollection<U>(T) sel)
+	{
+		return new Query<U>(new ExpandIterator<T, U>(iter, sel));
+	}
+	
+	public Query<T> reverse()
+	{
+		iter.moveLast();
+		return new Query<T>
+		(
+			new Iterator<T>
+			(
+				() => iter.current(),
+				() => iter.previous(),
+				() => iter.next(),
+				() => iter.reset(),
+				() => iter.moveLast()
+			);
+		);
+	}
+	
+	public int count()
+	{
+		int result;
+		for (result = 0; iter.next(); ++result)
+			;
+		iter.reset();
+		return result;
+	}
+	
+	public T first(boolean(T) cond)
+	{
+		while (iter.next())
+		{
+			T item = iter.current();
+			if (cond(item))
+			{
+				return item;
+			}
+		}
+		
+		throw new QueryException("No such item in the collection");
+	}
+	
+	public T first()
+	{
+		return first(x => true);
+	}
+	
+	public T single(boolean(T) cond)
+	{
+		boolean found = false;
+		T result = default(T);
+		while (iter.next())
+		{
+			result = iter.current();
+			if (cond(curr))
+			{
+				Exception.req<QueryException>(!found,
+					"Collection contains multiple items for the condition");
+			}
+		}
+		
+		Exception.req<QueryException>(found,
+			"Item was not found in the collection");
+		return result;
+	}
+	
+	public T singleOrDefault(boolean(T) cond)
+	{
+		boolean found = false;
+		T result = default(T);
+		while (iter.next())
+		{
+			result = iter.current();
+			if (cond(curr))
+			{
+				Exception.req<QueryException>(!found,
+					"Collection contains multiple items for the condition");
+			}
+		}
+		
+		return result;
+	}
+}

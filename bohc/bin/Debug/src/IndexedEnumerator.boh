@@ -1,6 +1,6 @@
 package boh.lang;
 
-public class IndexedEnumerator<T> implements IEnumerator<T>
+public class IndexedEnumerator<T> implements IIterator<T>
 {
 	private IIndexedCollection<T> collection;
 	private int current;

@@ -3,19 +3,26 @@ package boh.lang;
 public class String
 {
 	private int length;
-	private char first;
+	private Character first;
 	
 	public override String toString()
 	{
+		first.ch0 = 0;
+		String str = first.toString();
 		return this;
 	}
 	
-	private void set(int i, char ch)
+	public int size()
+	{
+		return length;
+	}
+	
+	private void set(int i, Character ch)
 	{
 		native.boh_str_set_ch(this, i, ch);
 	}
 	
-	private char get(int i)
+	private Character get(int i)
 	{
 		return native.boh_str_get_ch(this, i);
 	}
@@ -32,10 +39,117 @@ public class String
 	
 	public String substring(int first)
 	{
-		Array<int> integers;
-	
 		int len = length - first;
 		return substring(first, len);
+	}
+	
+	public int indexOf(Character ch)
+	{
+		for (int i = 0; i < length; ++i)
+		{
+			if (get(i) == ch)
+			{
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public int lastIndexOf(Character ch)
+	{
+		for (int i = length - 1; i >= 0; --i)
+		{
+			if (get(i) == ch)
+			{
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public boolean stringAtPos(String str, int pos)
+	{
+		for (int i = 0; i < str.length; ++i)
+		{
+			if (get(i + pos) != str.get(i))
+			{
+				return false;
+			}
+		}
+		
+		return true;
+	}
+	
+	public int indexOf(String str)
+	{
+		for (int i = 0; i < length - str.length; ++i)
+		{
+			if (stringAtPos(str, i))
+			{
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public int lastIndexOf(String str)
+	{
+		for (int i = length - str.length - 1; i >= 0; --i)
+		{
+			if (stringAtPos(str, i))
+			{
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public Array<int> indicesOf(Character ch)
+	{
+	}
+	
+	public Array<int> indicesOf(String str)
+	{
+	}
+	
+	public Array<String> split(Character ch)
+	{
+	}
+	
+	public String trim()
+	{
+		int start;
+		for (start = 0; start < length && get(start) < 32; ++start)
+			;
+		
+		int finish;
+		for (finish = length - 1; finish >= 0 && get(finish) < 32; --finish)
+			;
+		
+		int len = finish + 1 - start;
+		return substring(start, len);
+	}
+	
+	public String trimStart()
+	{
+		int start;
+		for (start = 0; start < length && get(start) < 32; ++start)
+			;
+		
+		return substring(start);
+	}
+	
+	public String trimEnd()
+	{
+		int finish;
+		for (finish = length - 1; finish >= 0 && get(finish) < 32; --finish)
+			;
+		
+		return substring(0, finish + 1);
 	}
 	
 	public static String +(String left, Object robj)

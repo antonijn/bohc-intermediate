@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2013 Antonie Blom
+// The antonijn open-source license, draft 1, short form.
+// This source file is licensed under the antonijn open-source license, a
+// full version of which is included with the project.
+// Please refer to the long version for a list of rights and restrictions
+// pertaining to source file use and modification.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -31,12 +38,32 @@ namespace bohc
 			return type.fullName().Replace('.', '_').ToLowerInvariant() + ".c";
 		}
 
+		private static string getThisParamTypeName(typesys.Type type)
+		{
+			if (type is Struct)
+			{
+				return getCTypeName(type) + " * const";
+			}
+
+			if (type is Interface)
+			{
+				return getCTypeName(StdType.obj) + " const";
+			}
+
+			return getCTypeName(type) + " const";
+		}
+
 		private static string getCTypeName(typesys.Type type)
 		{
 			NativeType nt = type as NativeType;
 			if (nt != null)
 			{
 				return nt.crep;
+			}
+
+			if (type is Struct)
+			{
+				return getCStructName(type);
 			}
 
 			if (type is Class || type is Interface)
@@ -103,9 +130,30 @@ namespace bohc
 			throw new NotImplementedException();
 		}
 
+		private static uint hashString(string str)
+		{
+			return (uint)str.GetHashCode();
+		}
+
+		private static string getFuncAddition(Function func)
+		{
+			StringBuilder builder = new StringBuilder();
+			if (!func.modifiers.HasFlag(Modifiers.STATIC))
+			{
+				builder.Append("self");
+			}
+			foreach (typesys.Type type in func.parameters.Select(x => x.type))
+			{
+				builder.Append(getCName(type));
+			}
+			string str = builder.ToString();
+			uint hash = hashString(str);
+			return "_" + hash;
+		}
+
 		private static string getVFuncName(Function func)
 		{
-			return "m_" + func.identifier;
+			return "m_" + func.identifier + getFuncAddition(func);
 		}
 
 		private static string getOpName(Operator op)
@@ -117,9 +165,9 @@ namespace bohc
 		{
 			if (func is OverloadedOperator)
 			{
-				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which);
+				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which) + getFuncAddition(func);
 			}
-			return getCName(func.owner) + "_m_" + func.identifier;
+			return getCName(func.owner) + "_m_" + func.identifier + getFuncAddition(func);
 		}
 
 		private static string getVtableName(Class c)
@@ -147,8 +195,13 @@ namespace bohc
 
 		private static string generateHeader(typesys.Type type, IEnumerable<typesys.Type> others)
 		{
-			Class c = type as Class;
+			Struct s = type as Struct;
+			if (s != null)
+			{
+				return generateStructHeader(s, others);
+			}
 
+			Class c = type as Class;
 			if (c != null)
 			{
 				return generateClassHeader(c, others);
@@ -258,8 +311,7 @@ namespace bohc
 
 		private static void addIncludeGuard(StringBuilder builder, typesys.Type type)
 		{
-			builder.AppendLine("#ifndef " + getIncludeGuardName(type));
-			builder.AppendLine("#define " + getIncludeGuardName(type));
+			builder.AppendLine("#pragma once");
 		}
 
 		private static void addIncludes(StringBuilder builder, IEnumerable<typesys.Type> others)
@@ -276,25 +328,27 @@ namespace bohc
 			}
 		}
 
-		private static void addStructPrototype(StringBuilder builder, typesys.Class c)
+		private static void addStructPrototype(StringBuilder builder, typesys.Type c)
 		{
-			builder.Append(getCStructName(c));
-			builder.AppendLine(";");
+			if (c is Struct)
+			{
+				builder.Append("#include \"");
+				builder.Append(getHeaderName(c));
+				builder.AppendLine("\"");
+			}
+			else
+			{
+				builder.Append(getCStructName(c));
+				builder.AppendLine(";");
+			}
 		}
 
 		private static void addFunctionParams(StringBuilder builder, Function func)
 		{
 			if (!func.modifiers.HasFlag(Modifiers.STATIC))
 			{
-				if (func.owner is Interface)
-				{
-					builder.Append(getCTypeName(StdType.obj));
-				}
-				else
-				{
-					builder.Append(getCTypeName(func.owner));
-				}
-				builder.Append(" const self, ");
+				builder.Append(getThisParamTypeName(func.owner));
+				builder.Append(" self, ");
 			}
 
 			foreach (Parameter p in func.parameters)
@@ -431,17 +485,49 @@ namespace bohc
 
 			builder.Append("\t");
 			builder.Append(getCTypeName(constr.owner));
-			builder.Append(" result = GC_malloc(sizeof(");
-			builder.Append(getCStructName(constr.owner));
-			builder.AppendLine("));");
+			builder.Append(" result");
+			if (constr.owner is Struct)
+			{
+				builder.AppendLine(";");
+			}
+			else
+			{
+				builder.Append(" = GC_malloc(sizeof(");
+				builder.Append(getCStructName(constr.owner));
+				builder.AppendLine("));");
+			}
 
-			builder.Append("\tresult->vtable = &instance_");
-			builder.Append(getVtableName((typesys.Class)constr.owner));
-			builder.AppendLine(";");
+			foreach (Field f in ((typesys.Class)constr.owner).getAllFields().Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
+			{
+				if (constr.owner is Struct)
+				{
+					builder.Append("\tresult.");
+				}
+				else
+				{
+					builder.Append("\tresult->");
+				}
+				builder.Append(getVarName(f));
+				builder.Append(" = ");
+				addExpression(builder, f.type.defaultVal());
+				builder.AppendLine(";");
+			}
+
+			if (!(constr.owner is Struct))
+			{
+				builder.Append("\tresult->vtable = &instance_");
+				builder.Append(getVtableName((typesys.Class)constr.owner));
+				builder.AppendLine(";");
+			}
 
 			builder.Append("\t");
 			builder.Append(getCFuncName(constr));
-			builder.Append("(result");
+			builder.Append("(");
+			if (constr.owner is Struct)
+			{
+				builder.Append("&");
+			}
+			builder.Append("result");
 
 			foreach (Parameter p in constr.parameters)
 			{
@@ -534,20 +620,59 @@ namespace bohc
 
 		private static void addStructDefinition(StringBuilder builder, typesys.Class c)
 		{
-			addVtable(builder, c);
+			if (!(c is Struct))
+			{
+				addVtable(builder, c);
 
-			builder.AppendLine();
+				builder.AppendLine();
+			}
 
 			builder.AppendLine(getCStructName(c));
 			builder.AppendLine("{");
 
-			builder.Append("\tconst struct ");
-			builder.Append(getVtableName(c));
-			builder.AppendLine(" * vtable;");
+			if (!(c is Struct))
+			{
+				builder.Append("\tconst struct ");
+				builder.Append(getVtableName(c));
+				builder.AppendLine(" * vtable;");
+			}
 
 			addStructFields(builder, c);
 
 			builder.AppendLine("};");
+		}
+
+		private static string generateStructHeader(typesys.Struct c, IEnumerable<typesys.Type> others)
+		{
+			StringBuilder builder = new StringBuilder();
+			addIncludeGuard(builder, c);
+			builder.AppendLine();
+
+			foreach (typesys.Type t in others)
+			{
+				addStructPrototype(builder, t);
+			}
+			builder.AppendLine();
+
+			addStructDefinition(builder, c);
+			builder.AppendLine();
+
+			addIncludes(builder, others.Where(x => !(x is Struct)));
+			builder.AppendLine();
+
+			addTypeOfSig(builder, c);
+			builder.AppendLine();
+
+			addNewOperatorSigs(builder, c);
+			builder.AppendLine();
+
+			addFunctionSigs(builder, c.functions.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT)), "extern ");
+			builder.AppendLine();
+
+			addStaticFieldProtos(builder, c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT)), "extern ");
+			builder.AppendLine();
+
+			return builder.ToString();
 		}
 
 		private static string generateClassHeader(typesys.Class c, IEnumerable<typesys.Type> others)
@@ -576,8 +701,6 @@ namespace bohc
 	
 			addStructDefinition(builder, c);
 			builder.AppendLine();
-
-			builder.AppendLine("#endif");
 
 			return builder.ToString();
 		}
@@ -652,20 +775,6 @@ namespace bohc
 
 			builder.AppendLine(")");
 
-			if (func.identifier == "this")
-			{
-				foreach (Field f in ((typesys.Class)func.owner).fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
-				{
-					ExprVariable ev = new ExprVariable(f, new ThisVar((typesys.Class)func.owner));
-					if (f.initial == null)
-					{
-						// TODO: add default value
-						f.initial = f.type.defaultVal();
-					}
-					BinaryOperation assignment = new BinaryOperation(ev, f.initial, BinaryOperation.ASSIGN);
-					func.body.statements.Insert(0, new ExpressionStatement(assignment));
-				}
-			}
 			addBody(builder, func.body);
 		}
 
@@ -887,42 +996,46 @@ namespace bohc
 			Primitive prim = type as Primitive;
 			if (prim != null)
 			{
-				if (prim == Primitive.CHAR)
-				{
-					builder.Append("u");
-					builder.Append(lit.representation);
-				}
-				else if (prim == Primitive.BOOLEAN)
-				{
-					builder.Append(lit.representation == "true" ? 1 : 0);
-				}
-				else if (prim.isInt())
-				{
-					long lval = long.Parse(lit.representation);
-					builder.Append(lval.ToString());
-					if (lval > int.MaxValue)
-					{
-						builder.Append("L");
-					}
-				}
-				else if (prim.isFloat())
-				{
-					if (prim == Primitive.DOUBLE)
-					{
-						builder.Append(lit.representation);
-					}
-					else
-					{
-						string str = lit.representation.Substring(0, lit.representation.Length - 1);
+                if (prim == Primitive.CHAR)
+                {
+                    builder.Append("u");
+                    builder.Append(lit.representation);
+                }
+                else if (prim == Primitive.BOOLEAN)
+                {
+                    builder.Append(lit.representation == "true" ? 1 : 0);
+                }
+                else if (prim.isInt())
+                {
+                    long lval = long.Parse(lit.representation);
+                    builder.Append(lval.ToString());
+                    if (lval > int.MaxValue)
+                    {
+                        builder.Append("L");
+                    }
+                }
+                else if (prim.isFloat())
+                {
+                    if (prim == Primitive.DOUBLE)
+                    {
+                        builder.Append(lit.representation);
+                    }
+                    else
+                    {
+                        string str = lit.representation.Substring(0, lit.representation.Length - 1);
 
-						builder.Append(str);
-						if (!str.Contains('.'))
-						{
-							builder.Append(".0");
-						}
-						builder.Append("f");
-					}
-				}
+                        builder.Append(str);
+                        if (!str.Contains('.'))
+                        {
+                            builder.Append(".0");
+                        }
+                        builder.Append("f");
+                    }
+                }
+                else if (prim == Primitive.DECIMAL)
+                {
+                    builder.Append(lit.representation.ToUpperInvariant());
+                }
 			}
 			else
 			{
@@ -988,9 +1101,10 @@ namespace bohc
 
 		private static void addFCall(StringBuilder builder, FunctionCall fcall)
 		{
-			if (fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) ||
+			if ((fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) ||
 				fcall.refersto.modifiers.HasFlag(Modifiers.ABSTRACT) ||
-				fcall.refersto.modifiers.HasFlag(Modifiers.OVERRIDE))
+				fcall.refersto.modifiers.HasFlag(Modifiers.OVERRIDE)) &&
+				!(fcall.refersto.owner is Struct))
 			{
 				if (fcall.belongsto is SuperVar)
 				{
@@ -1019,7 +1133,20 @@ namespace bohc
 			}
 			else if (!fcall.refersto.modifiers.HasFlag(Modifiers.STATIC))
 			{
-				if (fcall.refersto.owner is Class)
+				if (fcall.refersto.owner is Struct)
+				{
+					string tempname = addTemp(getCTypeName(fcall.refersto.owner) + " ", ";");
+
+					builder.Append(getCFuncName(fcall.refersto));
+					builder.Append("((");
+					builder.Append(tempname);
+					builder.Append(" = ");
+					addExpression(builder, fcall.belongsto);
+					builder.Append(", &");
+					builder.Append(tempname);
+					builder.Append("), ");
+				}
+				else if (fcall.refersto.owner is Class)
 				{
 					builder.Append(getCFuncName(fcall.refersto));
 					builder.Append("(");
@@ -1065,13 +1192,24 @@ namespace bohc
 
 		private static void addEqualsBinOp(StringBuilder builder, Expression left, Expression right)
 		{
-			Function objEq = StdType.obj.functions.Single(x => x.identifier == "valEquals");
-			builder.Append(getCFuncName(objEq));
-			builder.Append("(");
-			addExpression(builder, left);
-			builder.Append(", ");
-			addExpression(builder, right);
-			builder.Append(")");
+			if (left.getType() is Primitive && right.getType() is Primitive)
+			{
+				builder.Append("(");
+				addExpression(builder, left);
+				builder.Append(" == ");
+				addExpression(builder, right);
+				builder.Append(")");
+			}
+			else
+			{
+				Function objEq = StdType.obj.functions.Single(x => x.identifier == "valEquals");
+				builder.Append(getCFuncName(objEq));
+				builder.Append("(");
+				addExpressionImplCon(builder, left, StdType.obj);
+				builder.Append(", ");
+				addExpressionImplCon(builder, right, StdType.obj);
+				builder.Append(")");
+			}
 		}
 
 		private static string getOpRep(Operator op)
@@ -1086,8 +1224,12 @@ namespace bohc
 
 		private static void addBinOp(StringBuilder builder, BinaryOperation binop)
 		{
-			if (binop.operation == BinaryOperation.EQUAL)
+			if (binop.operation == BinaryOperation.EQUAL || binop.operation == BinaryOperation.NOT_EQUAL)
 			{
+				if (binop.operation == BinaryOperation.NOT_EQUAL)
+				{
+					builder.Append("!");
+				}
 				addEqualsBinOp(builder, binop.left, binop.right);
 			}
 			else if (binop.overloaded != null)
@@ -1147,7 +1289,14 @@ namespace bohc
 			if (exprvar.belongsto is ExprVariable)
 			{
 				addExpression(builder, exprvar.belongsto);
-				builder.Append("->");
+				if (exprvar.belongsto.getType() is Struct)
+				{
+					builder.Append(".");
+				}
+				else
+				{
+					builder.Append("->");
+				}
 			}
 			builder.Append(getVarName(exprvar.refersto));
 		}

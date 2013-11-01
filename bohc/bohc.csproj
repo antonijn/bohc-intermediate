@@ -38,7 +38,6 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
     <Reference Include="System.Data" />
     <Reference Include="System.Xml" />
   </ItemGroup>
@@ -67,6 +66,7 @@
     <Compile Include="parsing\statements\ContinueStatement.cs" />
     <Compile Include="parsing\statements\DoWhileStatement.cs" />
     <Compile Include="parsing\statements\ElseStatement.cs" />
+    <Compile Include="parsing\statements\EmptyStatement.cs" />
     <Compile Include="parsing\statements\ExpressionStatement.cs" />
     <Compile Include="parsing\statements\FinallyStatement.cs" />
     <Compile Include="parsing\statements\ForStatement.cs" />
@@ -103,6 +103,7 @@
     <Compile Include="typesys\Package.cs" />
     <Compile Include="typesys\Parameter.cs" />
     <Compile Include="typesys\StdType.cs" />
+    <Compile Include="typesys\Struct.cs" />
     <Compile Include="typesys\Type.cs" />
     <Compile Include="typesys\GenericType.cs" />
     <Compile Include="typesys\Primitive.cs" />

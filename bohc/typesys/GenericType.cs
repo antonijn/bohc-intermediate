@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2013 Antonie Blom
+// The antonijn open-source license, draft 1, short form.
+// This source file is licensed under the antonijn open-source license, a
+// full version of which is included with the project.
+// Please refer to the long version for a list of rights and restrictions
+// pertaining to source file use and modification.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -69,7 +76,7 @@ namespace bohc.typesys
 		{
 			// TODO: PROPER REPLACING FFS!!!
 
-			string code = file.content;			
+			string code = Parser.remDupW(file.content).Replace(" ,", ",").Replace(", ", ",");
 			for (int i = 0; i < what.Length; ++i)
 			{
 				string gtname = genTypeNames[i];
@@ -78,19 +85,30 @@ namespace bohc.typesys
 				code = code.Replace(gtname, w.name);
 			}
 
-			code = code.Replace(name + "<", name + "_");
-			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
-			string b4type = code.Substring(0, code.IndexOf('{'));
-			string repl = b4type.Replace("> implements", " implements");
-			if (b4type == repl)
+			StringBuilder replaceWhat = new StringBuilder();
+			replaceWhat.Append(name);
+			replaceWhat.Append("<");
+			foreach (Type t in what)
 			{
-				repl = b4type.Replace("> extends", " extends");
-				if (b4type == repl)
-				{
-					repl = b4type.Replace(">", string.Empty);
-				}
+				replaceWhat.Append(t.name);
+				replaceWhat.Append(",");
 			}
-			code = code.Replace(b4type, repl);
+			replaceWhat.Remove(replaceWhat.Length - 1, 1);
+			replaceWhat.Append(">");
+
+			StringBuilder byWhat = new StringBuilder();
+			byWhat.Append(name);
+			byWhat.Append("_");
+			foreach (Type t in what)
+			{
+				byWhat.Append(t.fullName().Replace(".", "_"));
+				byWhat.Append("_");
+			}
+			byWhat.Remove(byWhat.Length - 1, 1);
+
+			code = code.Replace(replaceWhat.ToString(), byWhat.ToString());
+
+			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
 			parsing.ts.File newf = Parser.parseFileTS(code);
 			Parser.parseFileTP(newf, code);
@@ -100,7 +118,22 @@ namespace bohc.typesys
 
 			newf.type.setFile(newf);
 
-			return (Type)newf.type;
+			try
+			{
+				return (Type)newf.type;
+			}
+			catch
+			{
+				StringBuilder typestrrep = new StringBuilder();
+				foreach (typesys.Type t in what)
+				{
+					typestrrep.Append(t.fullName());
+					typestrrep.Append(", ");
+				}
+				typestrrep.Remove(typestrrep.Length - 2, 2);
+				boh.Exception._throw<exceptions.CodeGenException>(typestrrep.ToString() + " are not valid types for " + name);
+				return null;
+			}
 		}
 	}
 }

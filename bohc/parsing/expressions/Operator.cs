@@ -1,4 +1,11 @@
-﻿using System;
+﻿// Copyright (c) 2013 Antonie Blom
+// The antonijn open-source license, draft 1, short form.
+// This source file is licensed under the antonijn open-source license, a
+// full version of which is included with the project.
+// Please refer to the long version for a list of rights and restrictions
+// pertaining to source file use and modification.
+
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -35,7 +42,7 @@ namespace bohc.parsing
 			boh.Exception.require<exceptions.ParserException>(result.Count() != 0, "No operator found for '" + op + "'");
 			if (result.Count() == 2)
 			{
-				if (result.First() == UnaryOperation.INCREMENT)
+				if (result.First() == UnaryOperation.INCREMENT || result.First() == UnaryOperation.DECREMENT)
 				{
 					return result.First();
 				}
