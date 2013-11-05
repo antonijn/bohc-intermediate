@@ -16,7 +16,7 @@ namespace bohc.typesys
 	{
 		public readonly typesys.Type owner;
 		public readonly Modifiers modifiers;
-		public readonly typesys.Type returnType;
+		public readonly Type returnType;
 		public readonly string identifier;
 		public readonly List<Parameter> parameters;
 
@@ -41,6 +41,15 @@ namespace bohc.typesys
 			this.identifier = identifier;
 			this.parameters = parameters;
 			this.bodystr = bodystr;
+		}
+
+		public Function(typesys.Type owner, Modifiers modifiers, typesys.Type returnType, string identifier, List<Parameter> parameters, parsing.statements.Body body)
+		{
+			this.owner = owner;
+			this.modifiers = modifiers;
+			this.identifier = identifier;
+			this.parameters = parameters;
+			this.body = body;
 		}
 	}
 }

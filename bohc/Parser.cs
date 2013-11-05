@@ -306,7 +306,7 @@ namespace bohc
 
 				if (c.super == null)
 				{
-					Class objClass = (typesys.Class)typesys.Class.getExisting(Package.getFromString("boh.lang"), "Object");
+					Class objClass = StdType.obj;
 					if (c != objClass)
 					{
 						c.super = objClass;
@@ -338,7 +338,7 @@ namespace bohc
 				return superClass;
 			}
 
-			// TODO: should be default super class (boh.lang.Object)
+			// TODO: should be default super class (boh.std.Object)
 			return null;
 		}
 
@@ -449,12 +449,14 @@ namespace bohc
 				}
 
 				func = content.Substring(0, semicol);
-				((Interface)f.type).functions.Add(parseFunctionTCS(f, func, null, false));
+				IFunction funcAct = parseFunctionTCS(f, func, null, false);
+				boh.Exception.require<ParserException>(funcAct is Function, "Interfaces may not contain generic functions");
+				((Interface)f.type).functions.Add((Function)funcAct);
 				content = content.Substring(semicol + 1);
 			}
 		}
 
-		private static Function parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
+		private static IFunction parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
 		{
 			// make sure the static constructors are called
 			parsing.BinaryOperation.ADD.GetType();
@@ -673,11 +675,129 @@ namespace bohc
 				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT))
 				{
 					func.body = parseBody(func.bodystr, func, f);
+					if (func.returnType != Primitive.VOID)
+					{
+						boh.Exception.require<ParserException>(hasReturned(func.body), "Function must return a value");
+					}
+					else if (func is Constructor)
+					{
+						boh.Exception.require<ParserException>(
+							c.super == null ||
+							c.super.constructors.Any(x => !(x.modifiers.HasFlag(Modifiers.PRIVATE) || x.modifiers.HasFlag(Modifiers.CVISIBLE)) && x.parameters.Count == 0) ||
+							hasSuperBeenCalled(func.body),
+							"Constructor must call super constructor");
+					}
 				}
 			}
 		}
 
-		private static Body parseBody(string body, Function func, File f)
+		public static bool hasSuperBeenCalled(Body body)
+		{
+			foreach (Statement s in body.statements)
+			{
+				ExpressionStatement expr = s as ExpressionStatement;
+				if (expr != null)
+				{
+					FunctionCall f = expr.expression as FunctionCall;
+					if (f != null)
+					{
+						if (f.refersto.identifier == "this")
+						{
+							return true;
+						}
+					}
+				}
+
+				IfStatement ifstat = s as IfStatement;
+				if (ifstat != null)
+				{
+					if (ifstat.elsestat != null)
+					{
+						return hasSuperBeenCalled(ifstat.body) && hasSuperBeenCalled(ifstat.elsestat.body);
+					}
+
+					continue;
+				}
+
+				TryStatement trys = s as TryStatement;
+				if (trys != null)
+				{
+					if (tryReturnsOrSuper(trys, hasSuperBeenCalled))
+					{
+						return true;
+					}
+
+					continue;
+				}
+
+				if (s is BreakStatement || s is ContinueStatement)
+				{
+					return false;
+				}
+			}
+
+			return false;
+		}
+
+		public static bool hasReturned(Body body)
+		{
+			foreach (Statement s in body.statements)
+			{
+				if (s is ReturnStatement || s is ThrowStatement)
+				{
+					return true;
+				}
+
+				IfStatement ifstat = s as IfStatement;
+				if (ifstat != null)
+				{
+					if (ifstat.elsestat != null)
+					{
+						return hasReturned(ifstat.body) && hasReturned(ifstat.elsestat.body);
+					}
+
+					continue;
+				}
+
+				TryStatement trys = s as TryStatement;
+				if (trys != null)
+				{
+					if (tryReturnsOrSuper(trys, hasReturned))
+					{
+						return true;
+					}
+
+					continue;
+				}
+				
+				if (s is BreakStatement || s is ContinueStatement)
+				{
+					return false;
+				}
+			}
+
+			return false;
+		}
+
+		private static bool tryReturnsOrSuper(TryStatement trys, Func<Body, bool> bodyAct)
+		{
+			if (!bodyAct(trys.body))
+			{
+				return false;
+			}
+
+			foreach (CatchStatement cs in trys.catches)
+			{
+				if (!bodyAct(cs.body))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		public static Body parseBody(string body, Function func, File f)
 		{
 			Stack<List<Variable>> vars = new Stack<List<Variable>>();
 			vars.Push(func.parameters.ToList<typesys.Variable>());
@@ -779,6 +899,22 @@ namespace bohc
 			{
 				return parseThrow(line, func, vars, f);
 			}
+			else if (func is Constructor && line.Replace(" ", string.Empty).StartsWith("this("))
+			{
+				int i = line.IndexOf("(") + 1;
+				IEnumerable<Expression> parameters;
+				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).constructors, out parameters);
+				line = line.Substring(i);
+				return new ExpressionStatement(new FunctionCall(constr, ((Class)func.owner).THISVAR, parameters));
+			}
+			else if (func is Constructor && line.StartsWith("super("))
+			{
+				int i = line.IndexOf("(") + 1;
+				IEnumerable<Expression> parameters;
+				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).super.constructors, out parameters);
+				line = line.Substring(i);
+				return new ExpressionStatement(new FunctionCall(constr, ((Class)func.owner).THISVAR, parameters));
+			}
 			else if (startsWithKW(line, "break"))
 			{
 				// TODO: make sure that in loop
@@ -803,7 +939,7 @@ namespace bohc
 		{
 			line = line.Substring("throw".Length);
 			Expression thr = Expression.analyze(line, vars.SelectMany(x => x), f);
-			boh.Exception.require<ParserException>(thr.getType().extends(typesys.Type.getExisting(Package.getFromString("boh.lang"), "Exception")) != 0, "Expression after throw must be an exception");
+			boh.Exception.require<ParserException>(thr.getType().extends(typesys.Type.getExisting(StdType.boh_lang, "Exception")) != 0, "Expression after throw must be an exception");
 			return new ThrowStatement(thr);
 		}
 

@@ -39,7 +39,7 @@ namespace bohc.parsing
 		{
 			if (operation == TYPEOF)
 			{
-				return typesys.Type.getExisting(typesys.Package.getFromString("boh.lang"), "Type");
+				return typesys.StdType.type;
 			}
 			return onwhat.getType();
 		}

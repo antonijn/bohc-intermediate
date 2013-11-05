@@ -103,7 +103,7 @@ namespace bohc.parsing
 		{
 			while ((next = readNext(str, ref i)) != null)
 			{
-				if (analyzeBrackets(ref last, vars, ref i, ref next, str, file)) { continue; }
+				if (analyzeBrackets(ref last, vars, ref i, ref next, str, file, opprec)) { continue; }
 				OpBreakStat s = analyzeOperator(ref last, vars, ref i, ref next, str, file, opprec);
 				if (s == OpBreakStat.BREAK)
 				{
@@ -123,7 +123,7 @@ namespace bohc.parsing
 			return analyze(str, vars, file, -1);
 		}
 
-		private static bool analyzeBrackets(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file)
+		private static bool analyzeBrackets(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec)
 		{
 			if (next != "(")
 			{
@@ -136,6 +136,20 @@ namespace bohc.parsing
 			i += between.Length + 1;
 
 			last = betweenBrackets;
+
+			// typecast
+			ExprType type = betweenBrackets as ExprType;
+			if (type != null && opprec != UnaryOperation.TYPEOF.precedence)
+			{
+				// a typecast has operator precedence 8, hence the 8
+				// TODO: or is it 7?
+				analyzeOp(ref last, vars, ref i, ref next, str, file, 8);
+				// only apply if it's actually followed by something
+				if (last != type)
+				{
+					last = new TypeCast(type.type, last);
+				}
+			}
 
 			return true;
 		}
@@ -506,7 +520,7 @@ namespace bohc.parsing
 		/// <summary>
 		/// Selects the function compatible with the given expressions.
 		/// </summary>
-		private static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters)
+		public static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters)
 		{
 			/*typesys.Function compatible = functions
 				.Where(x => x.parameters.Count == parameters.Count())

@@ -46,7 +46,7 @@ namespace bohc.typesys
 
 		public readonly Dictionary<int, typesys.Type> types = new Dictionary<int, typesys.Type>();
 
-		private static int getArrHash<T>(T[] arr)
+		public static int getArrHash<T>(T[] arr)
 		{
 			int result = 666;
 			foreach (T item in arr)

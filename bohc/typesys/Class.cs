@@ -27,6 +27,7 @@ namespace bohc.typesys
 		public List<OverloadedOperator> operators = new List<OverloadedOperator>();
 		public List<Field> fields = new List<Field>();
 		public List<IMember> members = new List<IMember>();
+		public List<GenericFunction> genfuncs = new List<GenericFunction>();
 
 		private class FuncComp : IEqualityComparer<Function>
 		{
@@ -86,6 +87,19 @@ namespace bohc.typesys
 			}
 
 			return super.extends(other) + 1;
+		}
+
+		public void addMember(IFunction f)
+		{
+			Function func = f as Function;
+			if (func != null)
+			{
+				addMember(func);
+			}
+			else
+			{
+				genfuncs.Add((GenericFunction)f);
+			}
 		}
 
 		public void addMember(Constructor f)

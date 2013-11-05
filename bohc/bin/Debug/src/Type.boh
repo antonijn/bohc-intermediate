@@ -1,1 +1,23 @@
-package boh.lang;public abstract class Type{	private final String name;	private final Package pack;	protected cvisible this(String name, Package pack)	{		this.name = name;		this.pack = pack;	}		public abstract boolean isSubTypeOf(Type type);		public String getName()	{		return name;	}		public Package getPackage()	{		return pack;	}		public override String toString()	{		if (pack == Package.GLOBAL)		{			return name;		}				return pack.toString() + "." + name;	}}
+package boh.std;
+
+public class Type
+{
+
+	private String name;
+	private Type base;
+	
+	public this(String name)
+	{
+		this.name = name;
+	}
+
+	public virtual String getName()
+	{
+		return name;
+	}
+	
+	public virtual boolean isSubTypeOf(Type t)
+	{
+		return base == t;
+	}
+}

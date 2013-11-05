@@ -59,6 +59,7 @@
     <Compile Include="parsing\expressions\OperationType.cs" />
     <Compile Include="parsing\expressions\Operator.cs" />
     <Compile Include="parsing\expressions\SuperVar.cs" />
+    <Compile Include="parsing\expressions\TypeCast.cs" />
     <Compile Include="parsing\statements\Body.cs" />
     <Compile Include="parsing\statements\BodyStatement.cs" />
     <Compile Include="parsing\statements\BreakStatement.cs" />
@@ -90,6 +91,7 @@
     <Compile Include="typesys\Field.cs" />
     <Compile Include="parsing\ts\File.cs" />
     <Compile Include="typesys\Function.cs" />
+    <Compile Include="typesys\GenericFunction.cs" />
     <Compile Include="typesys\IFunction.cs" />
     <Compile Include="typesys\IMember.cs" />
     <Compile Include="typesys\Interface.cs" />

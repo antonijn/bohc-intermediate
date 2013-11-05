@@ -19,18 +19,11 @@ namespace bohc
 		{
 			string[] filenames = new string[]
 			{
-				"src/String.boh",
-				"src/Exception.boh",
+				"src/Main.boh",
 				"src/Object.boh",
+				"src/String.boh",
 				"src/Type.boh",
-				"src/Array.boh",
-				"src/Package.boh",
-				"src/ICollection.boh", 
-				"src/IEnumerator.boh",
-				"src/IIndexedCollection.boh",
-				"src/IndexedEnumerator.boh",
-				"src/Character.boh",
-				"src/Vector3.boh",
+				"src/Exception.boh",
 			};
 			//string[] filenames = new string[] { "src/String.boh", "src/Exception.boh", "src/Object.boh", "src/Type.boh", "src/Class.boh", "src/Interface.boh" };
 			string[] files = new string[filenames.Length];

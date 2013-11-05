@@ -1,0 +1,18 @@
+package my.pack;
+
+import boh.std;
+
+public class MainClass
+{
+	private final String str;
+
+	public this(String str)
+	{
+		this.str = str;
+	}
+
+	public static void main()
+	{
+		
+	}
+}

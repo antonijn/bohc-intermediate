@@ -25,17 +25,17 @@ namespace bohc
 
 		private static string getIncludeGuardName(typesys.Type type)
 		{
-			return type.fullName().Replace('.', '_').ToUpperInvariant() + "_H";
+			return getCName(type) + "_H";
 		}
 
 		private static string getHeaderName(typesys.Type type)
 		{
-			return type.fullName().Replace('.', '_').ToLowerInvariant() + ".h";
+			return getCName(type) + ".h";
 		}
 
 		private static string getCodeFileName(typesys.Type type)
 		{
-			return type.fullName().Replace('.', '_').ToLowerInvariant() + ".c";
+			return getCName(type) + ".c";
 		}
 
 		private static string getThisParamTypeName(typesys.Type type)
@@ -91,8 +91,35 @@ namespace bohc
 
 		private static string getCName(typesys.Type type)
 		{
-			string fname = type.fullName();
-			return "c_" + fname.Replace(".", "_p_");
+			StringBuilder prefix = new StringBuilder();
+			StringBuilder tname = new StringBuilder();
+			foreach (string pkg in type.package.ToString().Split('.'))
+			{
+				prefix.Append("p");
+				prefix.Append(pkg.Length);
+			}
+
+			if (type is Class)
+			{
+				prefix.Append("c");
+			}
+			else if (type is typesys.Enum)
+			{
+				prefix.Append("e");
+			}
+			else if (type is Interface)
+			{
+				prefix.Append("i");
+			}
+			else if (type is Struct)
+			{
+				prefix.Append("s");
+			}
+			prefix.Append(type.name.Length.ToString("X"));
+
+			tname.Append(type.fullName().Replace(".", string.Empty));
+
+			return prefix.ToString() + "_" + tname.ToString();
 		}
 
 		private static string getNewName(typesys.Type type)
@@ -148,7 +175,7 @@ namespace bohc
 			}
 			string str = builder.ToString();
 			uint hash = hashString(str);
-			return "_" + hash;
+			return "_" + hash.ToString("X").ToLowerInvariant();
 		}
 
 		private static string getVFuncName(Function func)
@@ -966,6 +993,13 @@ namespace bohc
 				addNativeFCall(builder, nfcall);
 				return;
 			}
+
+			TypeCast tc = expression as TypeCast;
+			if (tc != null)
+			{
+				addTypeCast(builder, tc);
+				return;
+			}
 		}
 
 		private static int getStrLitLen(string str)
@@ -987,6 +1021,19 @@ namespace bohc
 				++len;
 			}
 			return len - 2;
+		}
+
+		private static void addTypeCast(StringBuilder builder, TypeCast tc)
+		{
+			// TODO: check if Object.cast<T> is needed
+			if (tc.onwhat.getType().extends(tc.towhat) > 0)
+			{
+				addExpressionImplCon(builder, tc.onwhat, tc.towhat);
+			}
+			else
+			{
+
+			}
 		}
 
 		private static void addLiteral(StringBuilder builder, Literal lit)

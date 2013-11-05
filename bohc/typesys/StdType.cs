@@ -14,7 +14,7 @@ namespace bohc.typesys
 {
 	public static class StdType
 	{
-		public static Package boh_lang = Package.getFromString("boh.lang");
+		public static Package boh_lang = Package.getFromString("boh.std");
 
 		public static readonly Class obj = (Class)Type.getExisting(boh_lang, "Object");
 		public static readonly Class str = (Class)Type.getExisting(boh_lang, "String");
