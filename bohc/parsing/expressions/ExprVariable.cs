@@ -33,8 +33,21 @@ namespace bohc.parsing
 			return refersto.type;
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
+			typesys.Field f = refersto as typesys.Field;
+			if (f != null)
+			{
+				// type is not modifiable if final, unless in constructor
+				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL) || ctx is typesys.Constructor;
+			}
+
+			typesys.Local l = refersto as typesys.Local;
+			if (l != null)
+			{
+				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL);
+			}
+
 			return true;
 		}
 

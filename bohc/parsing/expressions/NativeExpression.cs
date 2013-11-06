@@ -26,7 +26,7 @@ namespace bohc.parsing
 			throw new NotImplementedException();
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
 			return true;
 		}

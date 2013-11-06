@@ -21,6 +21,10 @@ namespace bohc.parsing.statements
 		public ForStatement(Statement initial, Expression condition, Statement final, Body body)
 			: base(body)
 		{
+			if (condition == null)
+			{
+				condition = new Literal(typesys.Primitive.BOOLEAN, "true");
+			}
 			boh.Exception.require<exceptions.ParserException>(condition.getType() == typesys.Primitive.BOOLEAN, "Condition must be boolean");
 
 			this.initial = initial;

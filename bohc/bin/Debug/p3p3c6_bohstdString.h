@@ -14,10 +14,16 @@ struct p3p3c6_bohstdString;
 
 extern struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdString(void);
 
-extern struct p3p3c6_bohstdString * new_p3p3c6_bohstdString(void);
+extern struct p3p3c6_bohstdString * new_p3p3c6_bohstdString_70fcd6e5(int32_t p_size);
 
-extern void p3p3c6_bohstdString_m_this_d5aca7eb(struct p3p3c6_bohstdString * const self);
+extern void p3p3c6_bohstdString_fi(struct p3p3c6_bohstdString * const self);
 
+extern _Bool p3p3c6_bohstdString_m_isNullOrEmpty_5bf6fcab(struct p3p3c6_bohstdString * p_str);
+extern _Bool p3p3c6_bohstdString_m_equals_5289cddf(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdObject * p_other);
+extern unsigned char p3p3c6_bohstdString_m_get_70fcd6e5(struct p3p3c6_bohstdString * const self, int32_t p_i);
+extern void p3p3c6_bohstdString_m_static_2d2816fe(void);
+
+extern struct p3p3c6_bohstdString * p3p3c6_bohstdString_sf_empty;
 
 struct vtable_p3p3c6_bohstdString
 {
@@ -32,8 +38,8 @@ extern const struct vtable_p3p3c6_bohstdString instance_vtable_p3p3c6_bohstdStri
 struct p3p3c6_bohstdString
 {
 	const struct vtable_p3p3c6_bohstdString * vtable;
-	struct p3p3c6_bohstdString * f_str;
+	int32_t f_offset;
 	int32_t f_length;
-	char16_t f_first;
+	boh_char* f_chars;
 };
 

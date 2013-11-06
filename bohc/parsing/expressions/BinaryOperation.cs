@@ -78,23 +78,27 @@ namespace bohc.parsing
 		public readonly typesys.OverloadedOperator overloaded;
 
 		public BinaryOperation(Expression left, Expression right, string rep)
+			: this(left, right, rep, null)
 		{
-			this.left = left;
-			this.right = right;
-			this.operation = Operator.getExisting(rep, OperationType.BINARY);
+		}
 
-			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(), "Not a modifiable lvalue");
-
-			overloaded = figureOutOverload();
+		public BinaryOperation(Expression left, Expression right, string rep, typesys.Function ctx)
+			: this(left, right, Operator.getExisting(rep, OperationType.BINARY), ctx)
+		{
 		}
 
 		public BinaryOperation(Expression left, Expression right, Operator operation)
+			: this(left, right, operation, null)
+		{
+		}
+
+		public BinaryOperation(Expression left, Expression right, Operator operation, typesys.Function ctx)
 		{
 			this.left = left;
 			this.right = right;
 			this.operation = operation;
 
-			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(), "Not a modifiable lvalue");
+			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(ctx), "Not a modifiable lvalue");
 
 			overloaded = figureOutOverload();
 		}
@@ -252,7 +256,7 @@ namespace bohc.parsing
 			return getTypeArith();
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
 			return false;
 		}

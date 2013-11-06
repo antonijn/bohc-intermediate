@@ -2,13 +2,62 @@ package boh.std;
 
 import my.pack;
 
-public class String extends MainClass
+public class String
 {
-	public this()
+	public static final String empty = "";
+	
+	private this(int size)
 	{
-		super("Hi!");
+		char dummy = default(char);
+		this.chars = native.GC_malloc(size * native.sizeof(dummy));
+		this.offset = 0;
+		this.length = size;
+	}
+	
+	public static boolean isNullOrEmpty(String str)
+	{
+		return str == null || str.length == 0;
+	}
+	
+	public override boolean equals(Object other)
+	{
+		if (other.getType() != typeof(String))
+		{
+			return false;
+		}
+		
+		String str = (String)other;
+		if (str.length != length)
+		{
+			return false;
+		}
+		
+		for (int i = 0; i < length; ++i)
+		{
+			if (str.get(i) != get(i))
+			{
+				return false;
+			}
+		}
+		
+		{
+			int i = 0;
+		}
+		
+		return true;
+	}
+	
+	public char get(int i)
+	{
+		return native.boh_deref_ptr(chars, offset + i);
+	}
+	
+	private char set(int i, char ch)
+	{
+		return native.boh_set_deref(chars, offset + i, ch);
 	}
 
+	private int offset;
 	private int length;
-	private char first;
+	private native.boh_char* chars;
 }

@@ -14,11 +14,14 @@ struct p3p3c4_bohstdType;
 
 extern struct p3p3c4_bohstdType * typeof_p3p3c4_bohstdType(void);
 
-extern struct p3p3c4_bohstdType * new_p3p3c4_bohstdType(struct p3p3c6_bohstdString * p_name);
+extern struct p3p3c4_bohstdType * new_p3p3c4_bohstdType_125bf9a2(struct p3p3c6_bohstdString * p_name);
+
+extern void p3p3c4_bohstdType_fi(struct p3p3c4_bohstdType * const self);
 
 extern void p3p3c4_bohstdType_m_this_125bf9a2(struct p3p3c4_bohstdType * const self, struct p3p3c6_bohstdString * p_name);
 extern struct p3p3c6_bohstdString * p3p3c4_bohstdType_m_getName_d5aca7eb(struct p3p3c4_bohstdType * const self);
 extern _Bool p3p3c4_bohstdType_m_isSubTypeOf_46dba1cc(struct p3p3c4_bohstdType * const self, struct p3p3c4_bohstdType * p_t);
+extern void p3p3c4_bohstdType_m_static_2d2816fe(void);
 
 
 struct vtable_p3p3c4_bohstdType

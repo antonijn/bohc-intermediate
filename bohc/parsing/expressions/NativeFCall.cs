@@ -28,7 +28,7 @@ namespace bohc.parsing
 			return new typesys.CompatibleWithAllType();
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
 			return false;
 		}

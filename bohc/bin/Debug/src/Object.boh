@@ -2,6 +2,11 @@ package boh.std;
 
 public class Object
 {
+	static()
+	{
+	
+	}
+
 	public virtual boolean equals(Object other)
 	{
 		return other r_eq this;
@@ -37,15 +42,5 @@ public class Object
 		}
 		
 		return left.equals(right);
-	}
-	
-	public static String cast(Object o)
-	{
-		if (!o.getType().isSubTypeOf(typeof(String)))
-		{
-			throw new Exception("Bla");
-		}
-		
-		throw new Exception();
 	}
 }

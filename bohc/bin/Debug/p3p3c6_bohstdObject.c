@@ -12,14 +12,31 @@ struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdObject(void)
 	}
 	return result;
 }
-struct p3p3c6_bohstdObject * new_p3p3c6_bohstdObject(void)
+struct p3p3c6_bohstdObject * new_p3p3c6_bohstdObject_d5aca7eb(void)
 {
 	struct p3p3c6_bohstdObject * result = GC_malloc(sizeof(struct p3p3c6_bohstdObject));
 	result->vtable = &instance_vtable_p3p3c6_bohstdObject;
+	p3p3c6_bohstdObject_m_static_2d2816fe();
+	p3p3c6_bohstdObject_fi(result);
 	p3p3c6_bohstdObject_m_this_d5aca7eb(result);
 	return result;
 }
 
+void p3p3c6_bohstdObject_fi(struct p3p3c6_bohstdObject * const self)
+{
+}
+
+void p3p3c6_bohstdObject_m_static_2d2816fe(void)
+{
+	static _Bool hasBeenCalled = 0;
+	if (hasBeenCalled)
+	{
+		return;
+	}
+	hasBeenCalled = 1;
+	{
+	}
+}
 _Bool p3p3c6_bohstdObject_m_equals_5289cddf(struct p3p3c6_bohstdObject * const self, struct p3p3c6_bohstdObject * p_other)
 {
 	return (p_other == self);
@@ -40,6 +57,7 @@ struct p3p3c6_bohstdString * p3p3c6_bohstdObject_m_toString_d5aca7eb(struct p3p3
 }
 _Bool p3p3c6_bohstdObject_m_valEquals_d237012d(struct p3p3c6_bohstdObject * p_left, struct p3p3c6_bohstdObject * p_right)
 {
+	p3p3c6_bohstdObject_m_static_2d2816fe();
 	_Bool l_lNull = (p_left == NULL);
 	_Bool l_rNull = (p_right == NULL);
 	if ((l_lNull && l_rNull))
@@ -52,16 +70,6 @@ _Bool p3p3c6_bohstdObject_m_valEquals_d237012d(struct p3p3c6_bohstdObject * p_le
 	}
 	struct p3p3c6_bohstdObject * temp2;
 	return (temp2 = p_left)->vtable->m_equals_5289cddf(temp2, p_right);
-}
-struct p3p3c6_bohstdString * p3p3c6_bohstdObject_m_cast_5ce6737a(struct p3p3c6_bohstdObject * p_o)
-{
-	struct p3p3c4_bohstdType * temp3;
-	struct p3p3c6_bohstdObject * temp4;
-	if ((!(temp3 = (temp4 = p_o)->vtable->m_getType_d5aca7eb(temp4))->vtable->m_isSubTypeOf_46dba1cc(temp3, (typeof_p3p3c6_bohstdString()))))
-	{
-		boh_throw_ex(new_p3p3c9_bohstdException(boh_create_string(u"Bla", 3)));
-	}
-	boh_throw_ex(new_p3p3c9_bohstdException());
 }
 void p3p3c6_bohstdObject_m_this_d5aca7eb(struct p3p3c6_bohstdObject * const self)
 {

@@ -18,17 +18,21 @@
 #include "boh_lang_exception.h"
 #include "boh_lang_string.h"
 
+typedef _Bool boh_bool;
+typedef uint8_t boh_byte;
+typedef int16_t boh_short;
+typedef int32_t boh_int;
+typedef int64_t boh_long;
+typedef unsigned char boh_char;
+typedef float boh_float;
+typedef double boh_double;
+
 extern struct c_boh_p_lang_p_Exception * exception;
 extern struct c_boh_p_lang_p_Type * exception_type;
 extern jmp_buf exception_buf;
 
-#if __STDC_VERSION__ >= 201112L
-void _Noreturn boh_throw_ex(struct c_boh_p_lang_p_Exception * const ex);
-struct c_boh_p_lang_p_String * boh_create_string(const char16_t * const str, size_t len);
-#else
 void boh_throw_ex(struct c_boh_p_lang_p_Exception * ex);
-struct c_boh_p_lang_p_String * boh_create_string(const wchar_t * const str, size_t len);
-#endif
+struct c_boh_p_lang_p_String * boh_create_string(const boh_char * const str, size_t len);
 
 struct c_boh_p_lang_p_String * boh_create_string_empty(size_t len);
 
@@ -38,10 +42,6 @@ struct c_boh_p_lang_p_String * boh_get_str_from_cstr(const char * const str);
 struct c_boh_p_lang_p_String * boh_get_str_from_wcstr(const wchar_t * const str);
 
 #define boh_force_cast(x) (x)
-#define boh_r_eq(x, y) ((x) == (y))
-
-#define boh_str_get_ch(str, offs) (&str->f_first)[offs]
-#define boh_str_set_ch(str, offs, ch) ((&str->f_first)[offs] = ch)
 
 #define boh_deref_ptr(x, y) (x[y])
 #define boh_set_deref(x, y, z) (x[y]=z)
@@ -49,19 +49,6 @@ struct c_boh_p_lang_p_String * boh_get_str_from_wcstr(const wchar_t * const str)
 typedef struct c_boh_p_lang_p_Object * boh_object;
 typedef struct c_boh_p_lang_p_String * boh_string;
 typedef struct c_boh_p_lang_p_Type * boh_type;
-
-typedef _Bool boh_bool;
-typedef uint8_t boh_byte;
-typedef int16_t boh_short;
-typedef int32_t boh_int;
-typedef int64_t boh_long;
-#if __STDC_VERSION__ >= 201112L
-typedef char16_t boh_char;
-#else
-typedef wchar_t boh_char;
-#endif
-typedef float boh_float;
-typedef double boh_double;
 
 #define BOHCALL
 

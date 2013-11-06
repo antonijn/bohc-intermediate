@@ -380,6 +380,10 @@ namespace bohc
 				{
 					c.addMember(new Constructor(Modifiers.PUBLIC, c, new List<Parameter>(), string.Empty));
 				}
+				if (c.staticConstr == null)
+				{
+					c.addMember(new StaticConstructor(c, string.Empty));
+				}
 			}
 			else if (f.type is Interface)
 			{
@@ -398,8 +402,6 @@ namespace bohc
 
 			// TODO: take the following special cases into account:
 			// public void(int, double) field = (x, y) => { };
-			// public void function(int x = 1337) {
-			// public void function(void() f = () => { doSomething(); }) {
 
 			if ((idxSemicol > idxCurly || idxSemicol == -1) && idxCurly != -1)
 			{
@@ -482,6 +484,12 @@ namespace bohc
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
 			}
+			else if (identifier == "static")
+			{
+				StaticConstructor func = new StaticConstructor((Class)f.type, body);
+				parseFunctionParamsTCS(f, fDec, func);
+				return func;
+			}
 			else if (parsing.Operator.isOperator(identifier))
 			{
 				boh.Exception.require<ParserException>(
@@ -520,10 +528,11 @@ namespace bohc
 			fDec = remDupW(fDec.Substring(0, idxParent).Trim());
 
 			string[] parts = fDec.Split(' ');
-			bool isConstr = parts.Last() == "this";
+			bool isStaticConstr = parts.Last() == "static";
+			bool isConstr = parts.Last() == "this" || isStaticConstr;
 
 			boh.Exception.require<ParserException>(
-				(isConstr && parts.Length >= 2) || parts.Length >= 3 || (!requiresAccess && parts.Length >= 2),
+				isStaticConstr || (isConstr && parts.Length >= 2) || parts.Length >= 3 || (!requiresAccess && parts.Length >= 2),
 				fDec + ": function access modifier and/or type expected");
 
 			identifier = parts[parts.Length - 1];
@@ -531,7 +540,7 @@ namespace bohc
 			IEnumerable<string> modifiers = parts.Take(parts.Length - (isConstr ? 1 : 2));
 
 			type = isConstr ? null : typesys.Type.getExisting(f.getContext(), typeName);
-			mods = ModifierHelper.getModifiersFromStrings(modifiers);
+			mods = isStaticConstr ? Modifiers.NONE : ModifierHelper.getModifiersFromStrings(modifiers);
 		}
 
 		private static void parseFunctionParamsTCS(File f, string fDec, Function func)
@@ -675,7 +684,7 @@ namespace bohc
 				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT))
 				{
 					func.body = parseBody(func.bodystr, func, f);
-					if (func.returnType != Primitive.VOID)
+					if (func.returnType != Primitive.VOID && func.returnType != null)
 					{
 						boh.Exception.require<ParserException>(hasReturned(func.body), "Function must return a value");
 					}
@@ -830,7 +839,14 @@ namespace bohc
 
 		private static void parseLine(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
-			if (startsWithKW(line, "if"))
+			if (line.StartsWith("{"))
+			{
+				int closing = getMatchingBraceChar(line, 0, '}');
+				string bod = line.Substring(1, closing - 1);
+				result.statements.Add(new Scope(parseBody(bod, func, f)));
+				line = line.Substring(closing + 1).TrimStart();
+			}
+			else if (startsWithKW(line, "if"))
 			{
 				result.statements.Add(parseIf(ref line, func, vars, f));
 			}
@@ -903,7 +919,7 @@ namespace bohc
 			{
 				int i = line.IndexOf("(") + 1;
 				IEnumerable<Expression> parameters;
-				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).constructors, out parameters);
+				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).constructors, out parameters, func);
 				line = line.Substring(i);
 				return new ExpressionStatement(new FunctionCall(constr, ((Class)func.owner).THISVAR, parameters));
 			}
@@ -911,7 +927,7 @@ namespace bohc
 			{
 				int i = line.IndexOf("(") + 1;
 				IEnumerable<Expression> parameters;
-				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).super.constructors, out parameters);
+				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).super.constructors, out parameters, func);
 				line = line.Substring(i);
 				return new ExpressionStatement(new FunctionCall(constr, ((Class)func.owner).THISVAR, parameters));
 			}
@@ -926,7 +942,7 @@ namespace bohc
 				return new ContinueStatement();
 			}
 
-			Expression expr = Expression.analyze(line, vars.SelectMany(x => x), f);
+			Expression expr = Expression.analyze(line, vars.SelectMany(x => x), f, func);
 			if (expr != null)
 			{
 				return new ExpressionStatement(expr);

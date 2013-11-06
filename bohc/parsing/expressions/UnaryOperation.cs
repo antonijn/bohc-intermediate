@@ -25,6 +25,7 @@ namespace bohc.parsing
 		public static readonly Operator INVERT = new Operator("!", 7, "inv");
 		public static readonly Operator NOT = new Operator("~", 7, "not");
 		public static readonly Operator TYPEOF = new Operator("typeof", 8, "typeof");
+		public static readonly Operator DEFAULT = new Operator("default", 8, "default");
 
 		public readonly Expression onwhat;
 		public readonly Operator operation;
@@ -41,10 +42,14 @@ namespace bohc.parsing
 			{
 				return typesys.StdType.type;
 			}
+			else if (operation == DEFAULT)
+			{
+				return (onwhat as ExprType).type;
+			}
 			return onwhat.getType();
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
 			return false;
 		}

@@ -9,7 +9,7 @@ public class Exception
 		return "Something went wrong in the application";
 	}
 	
-	public virtual String getDescription()
+	public String getDescription()
 	{
 		return description;
 	}

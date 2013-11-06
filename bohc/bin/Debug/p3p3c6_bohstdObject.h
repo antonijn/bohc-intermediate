@@ -14,14 +14,16 @@ struct p3p3c6_bohstdObject;
 
 extern struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdObject(void);
 
-extern struct p3p3c6_bohstdObject * new_p3p3c6_bohstdObject(void);
+extern struct p3p3c6_bohstdObject * new_p3p3c6_bohstdObject_d5aca7eb(void);
 
+extern void p3p3c6_bohstdObject_fi(struct p3p3c6_bohstdObject * const self);
+
+extern void p3p3c6_bohstdObject_m_static_2d2816fe(void);
 extern _Bool p3p3c6_bohstdObject_m_equals_5289cddf(struct p3p3c6_bohstdObject * const self, struct p3p3c6_bohstdObject * p_other);
 extern int64_t p3p3c6_bohstdObject_m_hash_d5aca7eb(struct p3p3c6_bohstdObject * const self);
 extern struct p3p3c4_bohstdType * p3p3c6_bohstdObject_m_getType_d5aca7eb(struct p3p3c6_bohstdObject * const self);
 extern struct p3p3c6_bohstdString * p3p3c6_bohstdObject_m_toString_d5aca7eb(struct p3p3c6_bohstdObject * const self);
 extern _Bool p3p3c6_bohstdObject_m_valEquals_d237012d(struct p3p3c6_bohstdObject * p_left, struct p3p3c6_bohstdObject * p_right);
-extern struct p3p3c6_bohstdString * p3p3c6_bohstdObject_m_cast_5ce6737a(struct p3p3c6_bohstdObject * p_o);
 extern void p3p3c6_bohstdObject_m_this_d5aca7eb(struct p3p3c6_bohstdObject * const self);
 
 

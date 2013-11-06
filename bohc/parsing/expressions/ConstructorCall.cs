@@ -28,7 +28,7 @@ namespace bohc.parsing
 			return function.owner;
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
 			return false;
 		}

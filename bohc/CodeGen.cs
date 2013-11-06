@@ -23,6 +23,11 @@ namespace bohc
 	{
 		#region Name Transformation
 
+		private static string getFieldInitName(Class c)
+		{
+			return getCName(c) + "_fi";
+		}
+
 		private static string getIncludeGuardName(typesys.Type type)
 		{
 			return getCName(type) + "_H";
@@ -122,9 +127,9 @@ namespace bohc
 			return prefix.ToString() + "_" + tname.ToString();
 		}
 
-		private static string getNewName(typesys.Type type)
+		private static string getNewName(Constructor constr)
 		{
-			return "new_" + getCName(type);
+			return "new_" + getCName(constr.owner) + getFuncAddition(constr);
 		}
 
 		private static string getVarName(Variable variable)
@@ -452,12 +457,21 @@ namespace bohc
 			builder.Append("}");
 		}
 
+		private static void addFieldInitSig(StringBuilder builder, Class c)
+		{
+			builder.Append("extern void ");
+			builder.Append(getFieldInitName(c));
+			builder.Append("(");
+			builder.Append(getCTypeName(c));
+			builder.AppendLine(" const self);");
+		}
+
 		private static void addNewOperatorSig(StringBuilder builder, Constructor constr)
 		{
 			builder.Append("extern ");
 			builder.Append(getCTypeName(constr.owner));
 			builder.Append(" ");
-			builder.Append(getNewName(constr.owner));
+			builder.Append(getNewName(constr));
 			builder.Append("(");
 			foreach (Parameter p in constr.parameters)
 			{
@@ -485,11 +499,48 @@ namespace bohc
 			}
 		}
 
+		private static void addFieldInit(StringBuilder builder, Class c)
+		{
+			builder.Append("void ");
+			builder.Append(getFieldInitName(c));
+			builder.Append("(");
+			builder.Append(getCTypeName(c));
+			builder.AppendLine(" const self)");
+			builder.AppendLine("{");
+			++indentation;
+			if (c.super != null && c.super != StdType.obj)
+			{
+				addIndent(builder);
+				builder.Append(getFieldInitName(c.super));
+				builder.AppendLine("(self);");
+			}
+
+			foreach (Field f in c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
+			{
+				addIndent(builder);
+				builder.Append("self->");
+				builder.Append(getVarName(f));
+				builder.Append(" = ");
+				if (f.initial != null)
+				{
+					addExpression(builder, f.initial);
+				}
+				else
+				{
+					addExpression(builder, f.type.defaultVal());
+				}
+				builder.AppendLine(";");
+			}
+
+			--indentation;
+			builder.AppendLine("}");
+		}
+
 		private static void addNewOperator(StringBuilder builder, Constructor constr)
 		{
 			builder.Append(getCTypeName(constr.owner));
 			builder.Append(" ");
-			builder.Append(getNewName(constr.owner));
+			builder.Append(getNewName(constr));
 			builder.Append("(");
 			foreach (Parameter p in constr.parameters)
 			{
@@ -524,28 +575,20 @@ namespace bohc
 				builder.AppendLine("));");
 			}
 
-			foreach (Field f in ((typesys.Class)constr.owner).getAllFields().Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
-			{
-				if (constr.owner is Struct)
-				{
-					builder.Append("\tresult.");
-				}
-				else
-				{
-					builder.Append("\tresult->");
-				}
-				builder.Append(getVarName(f));
-				builder.Append(" = ");
-				addExpression(builder, f.type.defaultVal());
-				builder.AppendLine(";");
-			}
-
 			if (!(constr.owner is Struct))
 			{
 				builder.Append("\tresult->vtable = &instance_");
 				builder.Append(getVtableName((typesys.Class)constr.owner));
 				builder.AppendLine(";");
 			}
+
+			builder.Append("\t");
+			builder.Append(getCFuncName(((Class)constr.owner).staticConstr));
+			builder.AppendLine("();");
+
+			builder.Append("\t");
+			builder.Append(getFieldInitName((Class)constr.owner));
+			builder.AppendLine("(result);");
 
 			builder.Append("\t");
 			builder.Append(getCFuncName(constr));
@@ -719,6 +762,9 @@ namespace bohc
 
 			addNewOperatorSigs(builder, c);
 			builder.AppendLine();
+
+			addFieldInitSig(builder, c);
+			builder.AppendLine();
 	
 			addFunctionSigs(builder, c.functions.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT)), "extern ");
 			builder.AppendLine();
@@ -802,7 +848,96 @@ namespace bohc
 
 			builder.AppendLine(")");
 
+			bool hasSuperBeenCalled = (Parser.hasSuperBeenCalled(func.body) || ((Class)func.owner).super == null);
+			if (!hasSuperBeenCalled && func is Constructor)
+			{
+				func.body.statements.Insert(0,
+					new ExpressionStatement(
+					new FunctionCall(
+						((Class)func.owner).super.constructors.Single(x => !(x.modifiers.HasFlag(Modifiers.PRIVATE) || x.modifiers.HasFlag(Modifiers.CVISIBLE)) && x.parameters.Count == 0),
+						((Class)func.owner).THISVAR, Enumerable.Empty<Expression>())));
+			}
+
+			if (func is StaticConstructor)
+			{
+				addStaticConstrPrebody(builder, func);
+			}
+
+			if (!(func is StaticConstructor) &&
+				func.modifiers.HasFlag(Modifiers.STATIC) &&
+				(func.modifiers.HasFlag(Modifiers.PUBLIC) ||
+				//func.modifiers.HasFlag(Modifiers.PACKAGE) ||
+				func.modifiers.HasFlag(Modifiers.CVISIBLE)))
+			{
+				func.body.statements.Insert(0, 
+					new ExpressionStatement(
+					new FunctionCall(((Class)func.owner).staticConstr, null, Enumerable.Empty<Expression>())));
+			}
+
 			addBody(builder, func.body);
+
+			if (!(func is StaticConstructor) &&
+				func.modifiers.HasFlag(Modifiers.STATIC) &&
+				(func.modifiers.HasFlag(Modifiers.PUBLIC) ||
+				//func.modifiers.HasFlag(Modifiers.PACKAGE) ||
+				func.modifiers.HasFlag(Modifiers.CVISIBLE)))
+			{
+				func.body.statements.RemoveAt(0);
+			}
+
+			if (func is StaticConstructor)
+			{
+				--indentation;
+				addIndent(builder);
+				builder.AppendLine("}");
+			}
+
+			if (!hasSuperBeenCalled && func is Constructor)
+			{
+				func.body.statements.RemoveAt(0);
+			}
+		}
+
+		private static void addStaticConstrPrebody(StringBuilder builder, Function func)
+		{
+			builder.AppendLine("{");
+			++indentation;
+			addIndent(builder);
+			builder.AppendLine("static _Bool hasBeenCalled = 0;");
+			addIndent(builder);
+			builder.AppendLine("if (hasBeenCalled)");
+			addIndent(builder);
+			builder.AppendLine("{");
+			++indentation;
+			addIndent(builder);
+			builder.AppendLine("return;");
+			--indentation;
+			addIndent(builder);
+			builder.AppendLine("}");
+			addIndent(builder);
+			builder.AppendLine("hasBeenCalled = 1;");
+			if (((Class)func.owner).super != null)
+			{
+				addIndent(builder);
+				builder.Append(getCFuncName(((Class)func.owner).super.staticConstr));
+				builder.AppendLine("();");
+			}
+
+			foreach (Field f in ((Class)func.owner).fields.Where(x => x.modifiers.HasFlag(Modifiers.STATIC)))
+			{
+				addIndent(builder);
+				builder.Append(getVarName(f));
+				builder.Append(" = ");
+				if (f.initial != null)
+				{
+					addExpression(builder, f.initial);
+				}
+				else
+				{
+					addExpression(builder, f.type.defaultVal());
+				}
+				builder.AppendLine(";");
+			}
 		}
 
 		private static void addFunctionDefs(StringBuilder builder, IEnumerable<Function> funcs)
@@ -1000,6 +1135,8 @@ namespace bohc
 				addTypeCast(builder, tc);
 				return;
 			}
+
+			throw new NotImplementedException();
 		}
 
 		private static int getStrLitLen(string str)
@@ -1026,7 +1163,8 @@ namespace bohc
 		private static void addTypeCast(StringBuilder builder, TypeCast tc)
 		{
 			// TODO: check if Object.cast<T> is needed
-			if (tc.onwhat.getType().extends(tc.towhat) > 0)
+			if (tc.towhat.extends(tc.onwhat.getType()) > 0 ||
+				tc.onwhat.getType().extends(tc.towhat) > 0)
 			{
 				addExpressionImplCon(builder, tc.onwhat, tc.towhat);
 			}
@@ -1045,7 +1183,7 @@ namespace bohc
 			{
                 if (prim == Primitive.CHAR)
                 {
-                    builder.Append("u");
+                    builder.Append("u8");
                     builder.Append(lit.representation);
                 }
                 else if (prim == Primitive.BOOLEAN)
@@ -1103,7 +1241,7 @@ namespace bohc
 
 		private static void addCCall(StringBuilder builder, ConstructorCall ccall)
 		{
-			builder.Append(getNewName(ccall.function.owner));
+			builder.Append(getNewName(ccall.function));
 			builder.Append("(");
 
 			IEnumerator<Parameter> fparams = ccall.function.parameters.GetEnumerator();
@@ -1239,7 +1377,8 @@ namespace bohc
 
 		private static void addEqualsBinOp(StringBuilder builder, Expression left, Expression right)
 		{
-			if (left.getType() is Primitive && right.getType() is Primitive)
+			if ((left.getType() is Primitive && right.getType() is Primitive) ||
+				(left.getType() is NullType || right.getType() is NullType))
 			{
 				builder.Append("(");
 				addExpression(builder, left);
@@ -1318,6 +1457,10 @@ namespace bohc
 			{
 				addTypeOf(builder, (unop.onwhat as ExprType).type);
 			}
+			else if (unop.operation == UnaryOperation.DEFAULT)
+			{
+				addExpression(builder, (unop.onwhat as ExprType).type.defaultVal());
+			}
 			else if (unop.operation == UnaryOperation.INCREMENT_POST ||
 				unop.operation == UnaryOperation.DECREMENT_POST)
 			{
@@ -1344,6 +1487,15 @@ namespace bohc
 				{
 					builder.Append("->");
 				}
+			}
+
+			Field f = exprvar.refersto as Field;
+			if (f != null && f.modifiers.HasFlag(Modifiers.STATIC | Modifiers.PUBLIC))
+			{
+				StringBuilder temp = new StringBuilder();
+				temp.Append(getCFuncName(f.owner.staticConstr));
+				temp.Append("();");
+				addPreStatStatement(temp.ToString());
 			}
 			builder.Append(getVarName(exprvar.refersto));
 		}
@@ -1400,6 +1552,9 @@ namespace bohc
 				if (addSpecStat<ContinueStatement>(statb, statement, (x, y) => addSingleString(x, "continue;"))) { break; }
 				if (addSpecStat<TryStatement>(statb, statement, addTry)) { break; }
 				if (addSpecStat<ThrowStatement>(statb, statement, addThrow)) { break; }
+				if (addSpecStat<Scope>(statb, statement, (x, y) => addBody(x, y.body))) { break; }
+
+				throw new NotImplementedException();
 			}
 			while (false);
 
@@ -1572,6 +1727,10 @@ namespace bohc
 			StringBuilder sbuild = new StringBuilder();
 			addStatement(sbuild, forstat.initial);
 			string str = sbuild.ToString().Trim();
+			if (str.Length == 0)
+			{
+				str = ";";
+			}
 			builder.Append(str);
 			builder.Append(" ");
 
@@ -1581,7 +1740,10 @@ namespace bohc
 			sbuild = new StringBuilder();
 			addStatement(sbuild, forstat.final);
 			str = sbuild.ToString().Trim();
-			builder.Append(str.Substring(0, str.Length - 1));
+			if (str.Length > 0)
+			{
+				builder.Append(str.Substring(0, str.Length - 1));
+			}
 			builder.AppendLine(")");
 
 			addBody(builder, forstat.body);
@@ -1734,6 +1896,9 @@ namespace bohc
 			builder.AppendLine();
 
 			addNewOperators(builder, c);
+			builder.AppendLine();
+
+			addFieldInit(builder, c);
 			builder.AppendLine();
 			
 			addFunctionDefs(builder, c.functions.Where(x => !x.modifiers.HasFlag(Modifiers.ABSTRACT)));

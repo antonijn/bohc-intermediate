@@ -28,6 +28,7 @@ namespace bohc.typesys
 		public List<Field> fields = new List<Field>();
 		public List<IMember> members = new List<IMember>();
 		public List<GenericFunction> genfuncs = new List<GenericFunction>();
+		public StaticConstructor staticConstr;
 
 		private class FuncComp : IEqualityComparer<Function>
 		{
@@ -102,6 +103,13 @@ namespace bohc.typesys
 			}
 		}
 
+		public void addMember(StaticConstructor f)
+		{
+			staticConstr = f;
+			functions.Add(f);
+			members.Add(f);
+		}
+
 		public void addMember(Constructor f)
 		{
 			functions.Add(f);
@@ -120,6 +128,7 @@ namespace bohc.typesys
 		{
 			Constructor constr = f as Constructor;
 			OverloadedOperator op = f as OverloadedOperator;
+			StaticConstructor sconstr = f as StaticConstructor;
 
 			if (constr != null)
 			{
@@ -128,6 +137,10 @@ namespace bohc.typesys
 			else if (op != null)
 			{
 				addMember(op);
+			}
+			else if (sconstr != null)
+			{
+				addMember(sconstr);
 			}
 			else
 			{

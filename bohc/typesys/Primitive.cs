@@ -70,7 +70,7 @@ namespace bohc.typesys
 		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
 		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
 		public static readonly Primitive DECIMAL = new Primitive("decimal", "_Decimal64", 8);
-		public static readonly Primitive CHAR = new Primitive("char", "char16_t", 2);
+		public static readonly Primitive CHAR = new Primitive("char", "unsigned char", 2);
 		public static readonly Primitive VOID = new Primitive("void", "void", 0);
 
 		static Primitive()

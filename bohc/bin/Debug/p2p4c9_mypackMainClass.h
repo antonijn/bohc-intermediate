@@ -14,10 +14,13 @@ struct p2p4c9_mypackMainClass;
 
 extern struct p3p3c4_bohstdType * typeof_p2p4c9_mypackMainClass(void);
 
-extern struct p2p4c9_mypackMainClass * new_p2p4c9_mypackMainClass(struct p3p3c6_bohstdString * p_str);
+extern struct p2p4c9_mypackMainClass * new_p2p4c9_mypackMainClass_d5aca7eb(void);
 
-extern void p2p4c9_mypackMainClass_m_this_125bf9a2(struct p2p4c9_mypackMainClass * const self, struct p3p3c6_bohstdString * p_str);
+extern void p2p4c9_mypackMainClass_fi(struct p2p4c9_mypackMainClass * const self);
+
 extern void p2p4c9_mypackMainClass_m_main_2d2816fe(void);
+extern void p2p4c9_mypackMainClass_m_this_d5aca7eb(struct p2p4c9_mypackMainClass * const self);
+extern void p2p4c9_mypackMainClass_m_static_2d2816fe(void);
 
 
 struct vtable_p2p4c9_mypackMainClass
@@ -33,6 +36,5 @@ extern const struct vtable_p2p4c9_mypackMainClass instance_vtable_p2p4c9_mypackM
 struct p2p4c9_mypackMainClass
 {
 	const struct vtable_p2p4c9_mypackMainClass * vtable;
-	struct p3p3c6_bohstdString * f_str;
 };
 

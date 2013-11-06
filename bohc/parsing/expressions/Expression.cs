@@ -88,23 +88,23 @@ namespace bohc.parsing
 			return sb.ToString();
 		}
 
-		private static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file, int opprec)
+		private static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file, int opprec, typesys.Function ctx)
 		{
 			string next = null;
 			int i = 0;
 
 			Expression last = null;
-			analyzeOp(ref last, vars, ref i, ref next, str, file, opprec);
+			analyzeOp(ref last, vars, ref i, ref next, str, file, opprec, ctx);
 
 			return last;
 		}
 
-		private static void analyzeOp(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec)
+		private static void analyzeOp(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec, typesys.Function ctx)
 		{
 			while ((next = readNext(str, ref i)) != null)
 			{
-				if (analyzeBrackets(ref last, vars, ref i, ref next, str, file, opprec)) { continue; }
-				OpBreakStat s = analyzeOperator(ref last, vars, ref i, ref next, str, file, opprec);
+				if (analyzeBrackets(ref last, vars, ref i, ref next, str, file, opprec, ctx)) { continue; }
+				OpBreakStat s = analyzeOperator(ref last, vars, ref i, ref next, str, file, opprec, ctx);
 				if (s == OpBreakStat.BREAK)
 				{
 					break;
@@ -114,16 +114,21 @@ namespace bohc.parsing
 					continue;
 				}
 				if (analyzeLiteral(ref last, ref i, ref next, str, file)) { continue; }
-				if (analyzeName(ref last, vars, ref i, ref next, str, file)) { continue; }
+				if (analyzeName(ref last, vars, ref i, ref next, str, file, ctx)) { continue; }
 			}
 		}
 
 		public static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file)
 		{
-			return analyze(str, vars, file, -1);
+			return analyze(str, vars, file, null);
 		}
 
-		private static bool analyzeBrackets(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec)
+		public static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file, typesys.Function ctx)
+		{
+			return analyze(str, vars, file, -1, ctx);
+		}
+
+		private static bool analyzeBrackets(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec, typesys.Function ctx)
 		{
 			if (next != "(")
 			{
@@ -143,7 +148,7 @@ namespace bohc.parsing
 			{
 				// a typecast has operator precedence 8, hence the 8
 				// TODO: or is it 7?
-				analyzeOp(ref last, vars, ref i, ref next, str, file, 8);
+				analyzeOp(ref last, vars, ref i, ref next, str, file, 8, ctx);
 				// only apply if it's actually followed by something
 				if (last != type)
 				{
@@ -161,7 +166,7 @@ namespace bohc.parsing
 			NOTHING,
 		}
 
-		private static OpBreakStat analyzeOperator(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec)
+		private static OpBreakStat analyzeOperator(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec, typesys.Function ctx)
 		{
 			// TODO: unary operators
 			if (!Operator.isOperator(next))
@@ -182,7 +187,7 @@ namespace bohc.parsing
 				string nxt = null;
 				int _i = 0;
 				Expression right = null;
-				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence);
+				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence, ctx);
 				i += _i;
 
 				last = new UnaryOperation(right, op);
@@ -212,10 +217,10 @@ namespace bohc.parsing
 				string nxt = null;
 				int _i = 0;
 				Expression right = null;
-				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence);
+				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence, ctx);
 				i += _i;
 
-				last = new BinaryOperation(left, right, op);
+				last = new BinaryOperation(left, right, op, ctx);
 			}
 
 			return OpBreakStat.CONTINUE;
@@ -312,14 +317,14 @@ namespace bohc.parsing
 			return false;
 		}
 
-		private static bool analyzeNative(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file)
+		private static bool analyzeNative(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file, typesys.Function ctx)
 		{
 			if (nxt.StartsWith("native."))
 			{
 				string after = readNext(str, ref i);
 				if (after == "(")
 				{
-					last = new NativeFCall(nxt.Substring("native.".Length), getStringParams(str, i, vars, file).ToArray());
+					last = new NativeFCall(nxt.Substring("native.".Length), getStringParams(str, i, vars, file, ctx).ToArray());
 					i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
 				}
 				else
@@ -336,9 +341,9 @@ namespace bohc.parsing
 			return false;
 		}
 
-		private static bool analyzeName(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file)
+		private static bool analyzeName(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, ts.File file, typesys.Function ctx)
 		{
-			if (analyzeNative(ref last, vars, ref i, ref nxt, str, file))
+			if (analyzeNative(ref last, vars, ref i, ref nxt, str, file, ctx))
 			{
 				return true;
 			}
@@ -351,7 +356,7 @@ namespace bohc.parsing
 			{
 				next = nxt.Substring(1);
 				//++i;
-				return analyzeName(ref last, vars, ref i, ref next, str, file);
+				return analyzeName(ref last, vars, ref i, ref next, str, file, ctx);
 			}
 			else if (idxDot != -1)
 			{
@@ -374,7 +379,7 @@ namespace bohc.parsing
 				int backup = i;
 				try
 				{
-					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr));
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr), ctx);
 				}
 				catch (NullReferenceException)
 				{
@@ -388,7 +393,7 @@ namespace bohc.parsing
 					int greaterThan = Parser.getMatchingBraceChar(str, i - 1, '>');
 					string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
 					i = greaterThan + 1;
-					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr + "<" + genpars + ">"));
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr + "<" + genpars + ">"), ctx);
 				}
 				FunctionCall flast = (FunctionCall)last;
 				typesys.Constructor constr = (typesys.Constructor)flast.refersto;
@@ -397,16 +402,16 @@ namespace bohc.parsing
 			else if (last is ExprVariable)
 			{
 				ExprVariable exprLast = (ExprVariable)last;
-				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.refersto.type);
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.refersto.type, ctx);
 			}
 			else if (last is ExprType)
 			{
 				ExprType exprLast = (ExprType)last;
-				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.type);
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.type, ctx);
 			}
 			else if (last is FunctionCall || last is ConstructorCall)
 			{
-				i = solveIdentifierForType(ref last, vars, i, next, str, file, last.getType());
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, last.getType(), ctx);
 			}
 			else if (vars.Any(x => x.identifier == next))
 			{
@@ -422,7 +427,7 @@ namespace bohc.parsing
 			{
 				// thisvar
 				last = ((typesys.Class)file.type).THISVAR;
-				i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type);
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type, ctx);
 			}
 
 			// recursively parse stuff
@@ -430,14 +435,14 @@ namespace bohc.parsing
 			{
 				string after = nxt.Substring(idxDot + 1);
 				int j = ibackup;
-				analyzeName(ref last, vars, ref j, ref after, str, file);
+				analyzeName(ref last, vars, ref j, ref after, str, file, ctx);
 				i = j;
 			}
 
 			return true;
 		}
 
-		private static int solveIdentifierForType(ref Expression expr, IEnumerable<typesys.Variable> vars, int i, string next, string str, ts.File file, typesys.Type type)
+		private static int solveIdentifierForType(ref Expression expr, IEnumerable<typesys.Variable> vars, int i, string next, string str, ts.File file, typesys.Type type, typesys.Function ctx)
 		{
 			// TOOD: callable variables
 
@@ -457,6 +462,10 @@ namespace bohc.parsing
 				typesys.Class _class = (typesys.Class)type;
 				functions = _class.getFunctions(next, (typesys.Class)file.type);
 				field = _class.getField(next, (typesys.Class)file.type);
+				if (field == null)
+				{
+					field = vars.SingleOrDefault(x => x.identifier == next);
+				}
 			}
 			else if (vars.Any(x => x.identifier == next))
 			{
@@ -476,7 +485,7 @@ namespace bohc.parsing
 			{
 				// function
 				IEnumerable<Expression> parameters;
-				typesys.Function f = getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters);
+				typesys.Function f = getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx);
 				FunctionCall call = new FunctionCall(f, expr, parameters);
 				expr = call;
 
@@ -506,27 +515,27 @@ namespace bohc.parsing
 			return i;
 		}
 
-		private static IEnumerable<Expression> getStringParams(string str, int i, IEnumerable<typesys.Variable> locals, ts.File file)
+		private static IEnumerable<Expression> getStringParams(string str, int i, IEnumerable<typesys.Variable> locals, ts.File file, typesys.Function ctx)
 		{
 			int close = Parser.getMatchingBraceChar(str, i - 1, ')');
 			string paramstring = str.Substring(i - 1, close - i + 2);
 			return Parser.split(paramstring, 0, ')', ',')
 							.Select(x => x.Trim())
 							.Where(x => !string.IsNullOrEmpty(x))
-							.Select(x => Expression.analyze(x, locals, file))
+							.Select(x => Expression.analyze(x, locals, file, ctx))
 							.Where(x => x != null);
 		}
 
 		/// <summary>
 		/// Selects the function compatible with the given expressions.
 		/// </summary>
-		public static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters)
+		public static typesys.Function getCompatibleFunction(ref int i, string next, string str, ts.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters, typesys.Function ctx)
 		{
 			/*typesys.Function compatible = functions
 				.Where(x => x.parameters.Count == parameters.Count())
 				.SingleOrDefault(x => areParamsCompatible(parameters, x));*/
 
-			parameters = getStringParams(str, i, locals, file);
+			parameters = getStringParams(str, i, locals, file, ctx);
 			IEnumerable<Expression> _parameters = parameters;
 			typesys.Function compatible = functions
 				.Where(x => x.parameters.Count == _parameters.Count())
@@ -568,7 +577,7 @@ namespace bohc.parsing
 		}
 
 		public abstract typesys.Type getType();
-		public abstract bool isLvalue();
+		public abstract bool isLvalue(typesys.Function ctx);
 		public abstract bool isStatement();
 	}
 }

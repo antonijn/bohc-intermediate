@@ -14,13 +14,16 @@ struct p3p3c9_bohstdException;
 
 extern struct p3p3c4_bohstdType * typeof_p3p3c9_bohstdException(void);
 
-extern struct p3p3c9_bohstdException * new_p3p3c9_bohstdException(struct p3p3c6_bohstdString * p_description);
-extern struct p3p3c9_bohstdException * new_p3p3c9_bohstdException(void);
+extern struct p3p3c9_bohstdException * new_p3p3c9_bohstdException_125bf9a2(struct p3p3c6_bohstdString * p_description);
+extern struct p3p3c9_bohstdException * new_p3p3c9_bohstdException_d5aca7eb(void);
+
+extern void p3p3c9_bohstdException_fi(struct p3p3c9_bohstdException * const self);
 
 extern struct p3p3c6_bohstdString * p3p3c9_bohstdException_m_what_d5aca7eb(struct p3p3c9_bohstdException * const self);
 extern struct p3p3c6_bohstdString * p3p3c9_bohstdException_m_getDescription_d5aca7eb(struct p3p3c9_bohstdException * const self);
 extern void p3p3c9_bohstdException_m_this_125bf9a2(struct p3p3c9_bohstdException * const self, struct p3p3c6_bohstdString * p_description);
 extern void p3p3c9_bohstdException_m_this_d5aca7eb(struct p3p3c9_bohstdException * const self);
+extern void p3p3c9_bohstdException_m_static_2d2816fe(void);
 
 
 struct vtable_p3p3c9_bohstdException
@@ -30,7 +33,6 @@ struct vtable_p3p3c9_bohstdException
 	struct p3p3c4_bohstdType * (*m_getType_d5aca7eb)(struct p3p3c6_bohstdObject * const self);
 	struct p3p3c6_bohstdString * (*m_toString_d5aca7eb)(struct p3p3c6_bohstdObject * const self);
 	struct p3p3c6_bohstdString * (*m_what_d5aca7eb)(struct p3p3c9_bohstdException * const self);
-	struct p3p3c6_bohstdString * (*m_getDescription_d5aca7eb)(struct p3p3c9_bohstdException * const self);
 };
 
 extern const struct vtable_p3p3c9_bohstdException instance_vtable_p3p3c9_bohstdException;

@@ -74,6 +74,7 @@
     <Compile Include="parsing\statements\IfStatement.cs" />
     <Compile Include="parsing\expressions\NativeExpression.cs" />
     <Compile Include="parsing\statements\ReturnStatement.cs" />
+    <Compile Include="parsing\statements\Scope.cs" />
     <Compile Include="parsing\statements\Statement.cs" />
     <Compile Include="parsing\statements\ThrowStatement.cs" />
     <Compile Include="parsing\statements\TryStatement.cs" />
@@ -104,6 +105,7 @@
     <Compile Include="typesys\OverloadedOperator.cs" />
     <Compile Include="typesys\Package.cs" />
     <Compile Include="typesys\Parameter.cs" />
+    <Compile Include="typesys\StaticConstructor.cs" />
     <Compile Include="typesys\StdType.cs" />
     <Compile Include="typesys\Struct.cs" />
     <Compile Include="typesys\Type.cs" />

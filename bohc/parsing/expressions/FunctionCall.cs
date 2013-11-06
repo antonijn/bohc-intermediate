@@ -30,7 +30,7 @@ namespace bohc.parsing
 			return refersto.returnType;
 		}
 
-		public override bool isLvalue()
+		public override bool isLvalue(typesys.Function ctx)
 		{
 			return false;
 		}
