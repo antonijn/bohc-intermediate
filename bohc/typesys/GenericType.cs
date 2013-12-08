@@ -82,7 +82,7 @@ namespace bohc.typesys
 				string gtname = genTypeNames[i];
 				Type w = what[i];
 
-				code = code.Replace(gtname, w.name);
+				code = code.Replace(gtname, w.fullName());
 			}
 
 			StringBuilder replaceWhat = new StringBuilder();
@@ -90,7 +90,7 @@ namespace bohc.typesys
 			replaceWhat.Append("<");
 			foreach (Type t in what)
 			{
-				replaceWhat.Append(t.name);
+				replaceWhat.Append(t.fullName());
 				replaceWhat.Append(",");
 			}
 			replaceWhat.Remove(replaceWhat.Length - 1, 1);
@@ -110,11 +110,22 @@ namespace bohc.typesys
 
 			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
+
 			parsing.ts.File newf = Parser.parseFileTS(code);
+			Program.genTypes.Add(code, newf);
 			Parser.parseFileTP(newf, code);
-			Parser.parseFileTCS(newf, code);
-			Parser.parseFileTCP(newf, code);
-			Parser.parseFileCP(newf, code);
+			if (Program.pstate >= ParserState.TCS)
+			{
+				Parser.parseFileTCS(newf, code);
+			}
+			if (Program.pstate >= ParserState.TCP)
+			{
+				Parser.parseFileTCP(newf, code);
+			}
+			if (Program.pstate >= ParserState.CP)
+			{
+				Parser.parseFileCP(newf, code);
+			}
 
 			newf.type.setFile(newf);
 

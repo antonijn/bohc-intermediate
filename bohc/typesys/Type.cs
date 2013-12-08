@@ -91,13 +91,14 @@ namespace bohc.typesys
 				this is NullType ||
 				this is CompatibleWithAllType ||
 				this is NativeType ||
+				this is FunctionRefType ||
 				isValidName(name, this is Primitive), name + " is not a valid typename");
 
 			this.package = package;
 			this.modifiers = modifiers;
 			this.name = name;
 
-			if (!(this is NullType || this is CompatibleWithAllType))
+			if (!(this is NullType || this is CompatibleWithAllType || this is FunctionRefType || name.StartsWith("native.")))
 			{
 				lock (types)
 				{
@@ -105,6 +106,14 @@ namespace bohc.typesys
 					types.Add(this);
 				}
 			}
+		}
+
+		public static Type getExisting(string name)
+		{
+			int lidxDot = name.LastIndexOf('.');
+			string pkg = name.Substring(0, lidxDot != -1 ? lidxDot : 0);
+			string cname = name.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
+			return typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname);
 		}
 
 		/// <returns>null on failure</returns>
@@ -125,6 +134,24 @@ namespace bohc.typesys
 
 			lock (types)
 			{
+				// function pointer type
+				string nameTrimEnd = name.TrimEnd();
+				if (nameTrimEnd.EndsWith(")"))
+				{
+					int startParent = Parser.getMatchingBraceCharBackwards(nameTrimEnd, nameTrimEnd.Length - 1, '(');
+					IEnumerable<Type> fParamTypes = Parser.split(nameTrimEnd, startParent, ')', ',').Select(x => getExisting(packages, x));
+					if (string.IsNullOrWhiteSpace(nameTrimEnd.Substring(startParent + 1, nameTrimEnd.Length - startParent - 2)))
+					{
+						fParamTypes = Enumerable.Empty<Type>();
+					}
+					string retTypeStr = nameTrimEnd.Substring(0, startParent);
+					Type retType = getExisting(packages, retTypeStr);
+					if (fParamTypes.Any(x => x == null) || retType == null)
+					{
+						return null;
+					}
+					return FunctionRefType.get(retType, fParamTypes.ToArray());
+				}
 				int idxL = name.IndexOf('<');
 				if (idxL != -1)
 				{
@@ -140,7 +167,7 @@ namespace bohc.typesys
 					GenericType gType = options.Single(x => x.name == actName);
 					return gType.getTypeFor(genTypes);
 				}
-				return types.SingleOrDefault(x => x.package == package && x.name == name);
+				return types.SingleOrDefault(x => x.package == package && x.name == name) ?? (name.Contains('.') ? getExisting(name) : null);
 			}
 		}
 

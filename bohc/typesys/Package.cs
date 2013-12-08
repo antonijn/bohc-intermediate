@@ -55,8 +55,29 @@ namespace bohc.typesys
 			}
 		}
 
+		public static Package getFromStringExisting(string str)
+		{
+			if (str == "")
+			{
+				return GLOBAL;
+			}
+			string[] parts = str.Split('.');
+			Package last = GLOBAL;
+
+			foreach (string part in parts)
+			{
+				last = instances.SingleOrDefault(x => (x.parent == last && x.name == part));
+			}
+
+			return last;
+		}
+
 		public static Package getFromString(string str)
 		{
+			if (str == "")
+			{
+				return GLOBAL;
+			}
 			string[] parts = str.Split('.');
 			Package last = GLOBAL;
 

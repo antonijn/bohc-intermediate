@@ -1,17 +1,15 @@
 package boh.std;
 
-import my.pack;
-
 public class String
 {
 	public static final String empty = "";
 	
-	private this(int size)
+	private this(String str, int offset, int length)
 	{
 		char dummy = default(char);
-		this.chars = native.GC_malloc(size * native.sizeof(dummy));
-		this.offset = 0;
-		this.length = size;
+		this.chars = str.chars;
+		this.offset = offset + str.offset;
+		this.length = length;
 	}
 	
 	public static boolean isNullOrEmpty(String str)
@@ -40,10 +38,6 @@ public class String
 			}
 		}
 		
-		{
-			int i = 0;
-		}
-		
 		return true;
 	}
 	
@@ -56,8 +50,60 @@ public class String
 	{
 		return native.boh_set_deref(chars, offset + i, ch);
 	}
+	
+	public String substring(int idx)
+	{
+		return new String(this, idx, length - idx);
+	}
+	
+	public String substring(int idx, int len)
+	{
+		return new String(this, idx, len - idx);
+	}
+	
+	public int indexOf(char ch)
+	{
+		for (int i = 0; i < length; ++i)
+		{
+			if (get(i) == ch)
+			{
+				return i;
+			}
+		}
+		
+		return -1;
+	}
+	
+	public int count(char ch)
+	{
+		int result = 0;
+		for (int i = 0; i < length; ++i)
+		{
+			if (get(i) == ch)
+			{
+				++result;
+			}
+		}
+		return result;
+	}
+	
+	public Array<String> split(char ch)
+	{
+		Array<String> res = new Array<String>();
+		int i = 0;
+		int idx = 0;
+		int prev = 0;
+		while ((idx = indexOf(ch)) != -1)
+		{
+			res.set(i, substring(prev, idx - prev));
+			++i;
+			prev = idx;
+		}
+		res.set(i, substring(idx, length - idx));
+		return res;
+	}
 
 	private int offset;
 	private int length;
-	private native.boh_char* chars;
+	private native.char* chars;
 }

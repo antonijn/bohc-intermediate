@@ -14,6 +14,27 @@ namespace bohc.parsing
 {
 	public abstract class Expression
 	{
+		// the stack to which enclosed variables may be added
+		private static readonly Stack<List<typesys.Variable>> enclosedVars = new Stack<List<typesys.Variable>>();
+
+		// lambda stack
+		// if greater than 0, lambdas are being generated
+		public static int lambdaStack = 0;
+
+		// push lambda onto lambda stack
+		private static void pushLambda()
+		{
+			enclosedVars.Push(new List<typesys.Variable>());
+			lambdaStack += 2;
+		}
+
+		// pop lambda off of lambda stack
+		private static void popLambda()
+		{
+			enclosedVars.Pop();
+			lambdaStack -= 2;
+		}
+
 		private static string readNext(string str, ref int pos)
 		{
 			bool instring = false;
@@ -103,6 +124,7 @@ namespace bohc.parsing
 		{
 			while ((next = readNext(str, ref i)) != null)
 			{
+				if (analyzeLambda(ref last, vars, ref i, ref next, str, file, opprec, ctx)) { continue; }
 				if (analyzeBrackets(ref last, vars, ref i, ref next, str, file, opprec, ctx)) { continue; }
 				OpBreakStat s = analyzeOperator(ref last, vars, ref i, ref next, str, file, opprec, ctx);
 				if (s == OpBreakStat.BREAK)
@@ -118,6 +140,66 @@ namespace bohc.parsing
 			}
 		}
 
+		private static bool analyzeLambda(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec, typesys.Function ctx)
+		{
+			if (next != "(")
+			{
+				return false;
+			}
+
+			if (!(last is ExprType))
+			{
+				return false;
+			}
+
+			pushLambda();
+			IEnumerable<typesys.LambdaParam> parameters = Parser.split(str, i - 1, ')', ',').Select(x =>
+				{
+					if (string.IsNullOrWhiteSpace(x))
+					{
+						return null;
+					}
+
+					string id;
+					typesys.Modifiers mods;
+					typesys.Type type;
+					Parser.parseParam(file, x.Trim(), out id, out mods, out type);
+					typesys.LambdaParam res = new typesys.LambdaParam(id, type);
+					res.lambdaLevel = lambdaStack/* - 1*/;
+					return res;
+				}).Where(x => x != null).ToArray();
+
+			typesys.Type retType = ((last as ExprType).type);
+			typesys.Type[] paramTypes = parameters.Select(x => x.type).ToArray();
+
+			typesys.FunctionRefType fRefType = typesys.FunctionRefType.get(retType, paramTypes);
+			i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
+			string afterParams = str.Substring(i).TrimStart();
+			i += str.Length - afterParams.Length - i + 2;
+			boh.Exception.require<exceptions.ParserException>(afterParams.StartsWith("->"), "Lambda operator expected");
+			string exprOrBod = afterParams.Substring(2);
+			if (exprOrBod.TrimStart().StartsWith("{"))
+			{
+				Stack<List<typesys.Variable>> varStack = new Stack<List<typesys.Variable>>();
+				varStack.Push(parameters.Cast<typesys.Variable>().ToList());
+				varStack.Push(vars.ToList());
+				last = new Lambda(fRefType, Parser.parseBody(exprOrBod.TrimStart(), ctx, varStack, file), null, parameters);
+				((Lambda)last).lambdaLevel = lambdaStack - 1;
+				((Lambda)last).enclosed = enclosedVars.Peek();
+				i += exprOrBod.Length;
+			}
+			else
+			{
+				last = new Lambda(fRefType, null,
+					Expression.analyze(exprOrBod.TrimStart(), vars.Concat(parameters), file), parameters);
+				((Lambda)last).lambdaLevel = lambdaStack - 1;
+				((Lambda)last).enclosed = enclosedVars.Peek();
+				i += exprOrBod.Length;
+			}
+			popLambda();
+			return true;
+		}
+
 		public static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file)
 		{
 			return analyze(str, vars, file, null);
@@ -126,6 +208,14 @@ namespace bohc.parsing
 		public static Expression analyze(string str, IEnumerable<typesys.Variable> vars, ts.File file, typesys.Function ctx)
 		{
 			return analyze(str, vars, file, -1, ctx);
+		}
+
+		private static Expression analyzeFunctionCall(ref Expression last, IEnumerable<typesys.Variable> vars, ts.File file, string parameters)
+		{
+			Expression[] exprs = Parser.split("(" + parameters + ")", 0, ')', ',')
+				.Where(x => !string.IsNullOrWhiteSpace(x))
+				.Select(x => Expression.analyze(x, vars, file)).ToArray();
+			return new FunctionVarCall(last, exprs);
 		}
 
 		private static bool analyzeBrackets(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec, typesys.Function ctx)
@@ -137,22 +227,31 @@ namespace bohc.parsing
 
 			int closingParam = Parser.getMatchingBraceChar(str, i - 1, ')');
 			string between = str.Substring(i, closingParam - i);
-			Expression betweenBrackets = analyze(between, vars, file);
-			i += between.Length + 1;
 
-			last = betweenBrackets;
-
-			// typecast
-			ExprType type = betweenBrackets as ExprType;
-			if (type != null && opprec != UnaryOperation.TYPEOF.precedence)
+			if (last != null)
 			{
-				// a typecast has operator precedence 8, hence the 8
-				// TODO: or is it 7?
-				analyzeOp(ref last, vars, ref i, ref next, str, file, 8, ctx);
-				// only apply if it's actually followed by something
-				if (last != type)
+				last = analyzeFunctionCall(ref last, vars, file, between);
+				i += between.Length + 1;
+			}
+			else
+			{
+				Expression betweenBrackets = analyze(between, vars, file, ctx);
+				i += between.Length + 1;
+
+				last = betweenBrackets;
+
+				// typecast
+				ExprType type = betweenBrackets as ExprType;
+				if (type != null && opprec != UnaryOperation.TYPEOF.precedence)
 				{
-					last = new TypeCast(type.type, last);
+					// a typecast has operator precedence 8, hence the 8
+					// TODO: or is it 7?
+					analyzeOp(ref last, vars, ref i, ref next, str, file, 8, ctx);
+					// only apply if it's actually followed by something
+					if (last != type)
+					{
+						last = new TypeCast(type.type, last);
+					}
 				}
 			}
 
@@ -348,6 +447,7 @@ namespace bohc.parsing
 				return true;
 			}
 
+			ExprPackage exprPack = last as ExprPackage;
 			int ibackup = i;
 
 			string next = nxt;
@@ -375,11 +475,13 @@ namespace bohc.parsing
 			{
 				// constructor call
 
-				string typeConstr = readNext(str, ref i);
+				string typeStr = str.Substring(i + 1, str.IndexOf('(') - i - 1);
+				typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr);
+				i += typeStr.Length + 1;
 				int backup = i;
 				try
 				{
-					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr), ctx);
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
 				}
 				catch (NullReferenceException)
 				{
@@ -393,7 +495,8 @@ namespace bohc.parsing
 					int greaterThan = Parser.getMatchingBraceChar(str, i - 1, '>');
 					string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
 					i = greaterThan + 1;
-					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typesys.Class.getExisting(file.getContext(), typeConstr + "<" + genpars + ">"), ctx);
+
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
 				}
 				FunctionCall flast = (FunctionCall)last;
 				typesys.Constructor constr = (typesys.Constructor)flast.refersto;
@@ -415,19 +518,46 @@ namespace bohc.parsing
 			}
 			else if (vars.Any(x => x.identifier == next))
 			{
-				// TODO: callable variables
 				typesys.Variable v = vars.Single(x => x.identifier == next);
+				if (v.lambdaLevel < lambdaStack && !v.enclosed/* && !(v is typesys.LambdaParam)*/)
+				{
+					v.enclosed = true;
+					enclosedVars.Peek().Add(v);
+				}
 				last = new ExprVariable(v, null);
 			}
-			else if ((type = typesys.Type.getExisting(file.getContext(), next)) != null)
+			else if ((exprPack != null && (type = typesys.Type.getExisting(exprPack.refersto, next)) != null) ||
+				((type = typesys.Type.getExisting(file.getContext(), next)) != null))
 			{
 				last = new ExprType(type);
 			}
 			else
 			{
-				// thisvar
-				last = ((typesys.Class)file.type).THISVAR;
-				i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type, ctx);
+				// it's either a package or field
+				Expression lastBackup = last;
+				try
+				{
+					// thisvar
+					last = ((typesys.Class)file.type).THISVAR;
+					i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type, ctx);
+				}
+				catch
+				{
+					last = lastBackup;
+					ExprPackage prevPack = last as ExprPackage;
+					if (prevPack != null)
+					{
+						typesys.Package pack = typesys.Package.getFromStringExisting(prevPack.refersto.ToString() + "." + next);
+						boh.Exception.require<exceptions.ParserException>(pack != null, "Invalid identifier: " + next);
+						last = new ExprPackage(pack);
+					}
+					else
+					{
+						typesys.Package pack = typesys.Package.getFromStringExisting(next);
+						boh.Exception.require<exceptions.ParserException>(pack != null, "Invalid identifier: " + next);
+						last = new ExprPackage(pack);
+					}
+				}
 			}
 
 			// recursively parse stuff
@@ -483,11 +613,31 @@ namespace bohc.parsing
 			string nextnext = readNext(str, ref i);
 			if (nextnext == "(")
 			{
+
+				// if belongsto is thisvar, the thisvar has to be enclosed
+				if (expr is ThisVar)
+				{
+					ThisVar tv = ((typesys.Class)file.type).THISVAR;
+					if (lambdaStack > tv.refersto.lambdaLevel)
+					{
+						tv.refersto.enclosed = true;
+						enclosedVars.Peek().Add(tv.refersto);
+					}
+				}
+
 				// function
 				IEnumerable<Expression> parameters;
-				typesys.Function f = getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx);
-				FunctionCall call = new FunctionCall(f, expr, parameters);
-				expr = call;
+				if (field == null)
+				{
+					typesys.Function f = getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx);
+					FunctionCall call = new FunctionCall(f, expr, parameters);
+					expr = call;
+				}
+				else
+				{
+					FunctionVarCall call = new FunctionVarCall(expr, getStringParams(str, i, vars, file, ctx));
+					expr = call;
+				}
 
 				//i -= nextnext.Length;
 				//i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
@@ -496,14 +646,37 @@ namespace bohc.parsing
 			{
 				if (next == "this")
 				{
-					expr = ((typesys.Class)file.type).THISVAR;
+					ThisVar tv = ((typesys.Class)file.type).THISVAR;
+					if (lambdaStack > tv.refersto.lambdaLevel)
+					{
+						tv.refersto.enclosed = true;
+						enclosedVars.Peek().Add(tv.refersto);
+					}
+					expr = tv;
 				}
 				else if (next == "super")
 				{
-					expr = new SuperVar((typesys.Class)file.type);
+					SuperVar sv = new SuperVar((typesys.Class)file.type);
+					if (lambdaStack > sv.refersto.lambdaLevel)
+					{
+						sv.refersto.enclosed = true;
+						enclosedVars.Peek().Add(sv.refersto);
+					}
+					expr = sv;
 				}
 				else
 				{
+					// if belongsto is thisvar, the thisvar has to be enclosed
+					if (expr is ThisVar)
+					{
+						ThisVar tv = ((typesys.Class)file.type).THISVAR;
+						if (lambdaStack > tv.refersto.lambdaLevel)
+						{
+							tv.refersto.enclosed = true;
+							enclosedVars.Peek().Add(tv.refersto);
+						}
+					}
+
 					expr = new ExprVariable(field, expr);
 					if (nextnext != null)
 					{
@@ -523,7 +696,8 @@ namespace bohc.parsing
 							.Select(x => x.Trim())
 							.Where(x => !string.IsNullOrEmpty(x))
 							.Select(x => Expression.analyze(x, locals, file, ctx))
-							.Where(x => x != null);
+							.Where(x => x != null)
+							.ToArray();
 		}
 
 		/// <summary>

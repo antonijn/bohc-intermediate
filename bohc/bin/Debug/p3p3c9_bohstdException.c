@@ -46,7 +46,6 @@ struct p3p3c6_bohstdString * p3p3c9_bohstdException_m_getDescription_d5aca7eb(st
 }
 void p3p3c9_bohstdException_m_this_125bf9a2(struct p3p3c9_bohstdException * const self, struct p3p3c6_bohstdString * p_description)
 {
-	p3p3c6_bohstdObject_m_this_d5aca7eb(self);
 	(self->f_description = p_description);
 }
 void p3p3c9_bohstdException_m_this_d5aca7eb(struct p3p3c9_bohstdException * const self)

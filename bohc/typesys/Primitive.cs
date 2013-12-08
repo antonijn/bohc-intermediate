@@ -100,6 +100,10 @@ namespace bohc.typesys
 		{
 			if (this == VOID)
 			{
+				if (other == VOID)
+				{
+					return 1;
+				}
 				return 0;
 			}
 

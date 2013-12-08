@@ -12,42 +12,30 @@ using System.Text;
 
 namespace bohc.parsing
 {
-	public class ExprVariable : Expression
+	public class FunctionVarCall : Expression
 	{
-		public readonly typesys.Variable refersto;
-
-		// NOTE:
-		// belongsto is null for static variables
-		// the class to which it belongs should be sought through "refersto"
-		// refersto will be a field in that case, so the container class can be found out
 		public readonly Expression belongsto;
+		public readonly Expression[] parameters;
 
-		public ExprVariable(typesys.Variable refersto, Expression belongsto)
+		public FunctionVarCall(Expression belongsto, IEnumerable<Expression> parameters)
 		{
-			this.refersto = refersto;
 			this.belongsto = belongsto;
+			this.parameters = parameters.ToArray();
 		}
 
 		public override typesys.Type getType()
 		{
-			return refersto.type;
+			return ((typesys.FunctionRefType)belongsto.getType()).retType;
 		}
 
 		public override bool isLvalue(typesys.Function ctx)
 		{
-			typesys.Field f = refersto as typesys.Field;
-			if (f != null)
-			{
-				// type is not modifiable if final, unless in constructor
-				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL) || ctx is typesys.Constructor;
-			}
-
-			return true;
+			return false;
 		}
 
 		public override bool isStatement()
 		{
-			return false;
+			return true;
 		}
 	}
 }

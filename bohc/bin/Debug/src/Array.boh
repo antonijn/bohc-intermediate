@@ -1,0 +1,34 @@
+package boh.std;
+
+public final class Array<T> implements IIndexedCollection<T>
+{
+	private int length;
+	private native.T* items;
+	
+	public this(int length)
+	{
+		this.length = length;
+		T dummy = default(T);
+		this.items = native.GC_malloc(length * native.sizeof(dummy));
+	}
+	
+	public int size()
+	{
+		return length;
+	}
+	
+	public T get(int i)
+	{
+		return native.boh_deref_ptr(items, i);
+	}
+	
+	public void set(int i, T value)
+	{
+		native.boh_set_deref(items, i, value);
+	}
+	
+	public IIterator<T> iterator()
+	{
+		throw new Exception();
+	}
+}

@@ -3,6 +3,7 @@
 struct p3p3c9_bohstdException;
 
 #include "boh_internal.h"
+#include "function_types.h"
 #include <stdint.h>
 #include <stddef.h>
 #include <uchar.h>
@@ -11,6 +12,10 @@ struct p3p3c9_bohstdException;
 #include "p3p3c6_bohstdObject.h"
 #include "p3p3c6_bohstdString.h"
 #include "p3p3c4_bohstdType.h"
+#include "p3p3c14_bohstdArray_boh_std_String.h"
+#include "p3p3i1A_bohstdICollection_boh_std_String.h"
+#include "p3p3i21_bohstdIIndexedCollection_boh_std_String.h"
+#include "p3p3i18_bohstdIIterator_boh_std_String.h"
 
 extern struct p3p3c4_bohstdType * typeof_p3p3c9_bohstdException(void);
 

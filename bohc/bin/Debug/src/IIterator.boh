@@ -1,0 +1,10 @@
+package boh.std;
+
+public interface IIterator<T>
+{
+	boolean next();
+	boolean previous();
+	void moveLast();
+	void reset();
+	T current();
+}

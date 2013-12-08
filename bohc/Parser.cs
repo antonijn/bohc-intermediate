@@ -566,25 +566,33 @@ namespace bohc
 
 			foreach (string part in parts)
 			{
-				string[] paramParts = part.Split(' ');
-				boh.Exception.require<ParserException>(paramParts.Length >= 2, "Parameter type expected");
-				boh.Exception.require<ParserException>(paramParts.Length <= 3, "Parameters may only have one modifier");
-
-				string identifier = paramParts[paramParts.Length - 1];
-				string typeName = paramParts[paramParts.Length - 2];
-
-				Modifiers mods = Modifiers.NONE;
-				if (paramParts.Length > 2)
-				{
-					boh.Exception.require<ParserException>(paramParts.First() == "final", "'final' is the only legal modifier for parameters");
-					mods = Modifiers.FINAL;
-				}
-
-				typesys.Type type = typesys.Type.getExisting(f.getContext(), typeName);
+				string identifier;
+				Modifiers mods;
+				typesys.Type type;
+				parseParam(f, part, out identifier, out mods, out type);
 
 				Parameter param = new Parameter(func, mods, identifier, type);
 				func.parameters.Add(param);
 			}
+		}
+
+		public static void parseParam(File f, string part, out string identifier, out Modifiers mods, out typesys.Type type)
+		{
+			string[] paramParts = part.Split(' ');
+			boh.Exception.require<ParserException>(paramParts.Length >= 2, "Parameter type expected");
+			boh.Exception.require<ParserException>(paramParts.Length <= 3, "Parameters may only have one modifier");
+
+			identifier = paramParts[paramParts.Length - 1];
+			string typeName = paramParts[paramParts.Length - 2];
+
+			mods = Modifiers.NONE;
+			if (paramParts.Length > 2)
+			{
+				boh.Exception.require<ParserException>(paramParts.First() == "final", "'final' is the only legal modifier for parameters");
+				mods = Modifiers.FINAL;
+			}
+
+			type = typesys.Type.getExisting(f.getContext(), typeName);
 		}
 
 		private static void parseFieldTCS(File f, string fDec)
@@ -809,11 +817,15 @@ namespace bohc
 		public static Body parseBody(string body, Function func, File f)
 		{
 			Stack<List<Variable>> vars = new Stack<List<Variable>>();
-			vars.Push(func.parameters.ToList<typesys.Variable>());
+			// TODO: remove this if it doesn't work?
+			if (func != null)
+			{
+				vars.Push(func.parameters.ToList<typesys.Variable>());
+			}
 			return parseBody(body, func, vars, f);
 		}
 
-		private static Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f)
+		public static Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f)
 		{
 			Body result = new Body();
 			vars.Push(new List<Variable>());
@@ -843,7 +855,7 @@ namespace bohc
 			{
 				int closing = getMatchingBraceChar(line, 0, '}');
 				string bod = line.Substring(1, closing - 1);
-				result.statements.Add(new Scope(parseBody(bod, func, f)));
+				result.statements.Add(new Scope(parseBody(bod, func, vars, f)));
 				line = line.Substring(closing + 1).TrimStart();
 			}
 			else if (startsWithKW(line, "if"))
@@ -868,7 +880,10 @@ namespace bohc
 			}
 			else
 			{
-				int semicol = indexOf(line, '(', ')', ';');
+				// FIXME: void() f = void () -> { doSth(); };
+				int semicol1 = indexOf(line, '(', ')', ';');
+				int semicol2 = indexOf(line, '{', '}', ';');
+				int semicol = Math.Max(semicol1, semicol2);
 				string stat = line.Substring(0, semicol);
 				result.statements.Add(parseStatement(stat, func, vars, f));
 				line = line.Substring(semicol + 1).TrimStart();
@@ -901,6 +916,7 @@ namespace bohc
 						id = line.Substring(wspace + 1).Trim();
 					}
 					Local variable = new Local(id, type);
+					variable.lambdaLevel = Expression.lambdaStack;
 					vars.Peek().Add(variable);
 
 					return new VarDeclaration(variable, initial);
@@ -953,8 +969,8 @@ namespace bohc
 
 		private static ThrowStatement parseThrow(string line, Function func, Stack<List<Variable>> vars, File f)
 		{
-			line = line.Substring("throw".Length);
-			Expression thr = Expression.analyze(line, vars.SelectMany(x => x), f);
+			line = line.Substring("throw ".Length);
+			Expression thr = Expression.analyze(line, vars.SelectMany(x => x), f, func);
 			boh.Exception.require<ParserException>(thr.getType().extends(typesys.Type.getExisting(StdType.boh_lang, "Exception")) != 0, "Expression after throw must be an exception");
 			return new ThrowStatement(thr);
 		}
@@ -962,7 +978,7 @@ namespace bohc
 		private static ReturnStatement parseReturn(string line, Function func, Stack<List<Variable>> vars, File f)
 		{
 			line = line.Substring("return".Length);
-			Expression ret = Expression.analyze(line, vars.SelectMany(x => x), f);
+			Expression ret = Expression.analyze(line, vars.SelectMany(x => x), f, func);
 			boh.Exception.require<ParserException>(ret.getType().extends(func.returnType) != 0, "Return statement incompatible with function return type");
 			return new ReturnStatement(ret);
 		}
@@ -988,7 +1004,7 @@ namespace bohc
 			boh.Exception.require<ParserException>(line.StartsWith("("), "Condition must be placed between parentheses");
 
 			string condstr = getBrackets(line);
-			condition = Expression.analyze(condstr, vars.SelectMany(x => x), f);
+			condition = Expression.analyze(condstr, vars.SelectMany(x => x), f, func);
 			line = line.Substring(condstr.Length + 2).TrimStart();
 
 			parseStatBody(ref line, func, vars, f, out body);
@@ -1127,7 +1143,7 @@ namespace bohc
 			{
 				line = line.Substring("while".Length).TrimStart();
 				string pars = getBrackets(line);
-				Expression condition = Expression.analyze(pars, vars.SelectMany(x => x), f);
+				Expression condition = Expression.analyze(pars, vars.SelectMany(x => x), f, func);
 
 				line = line.Substring(pars.Length + 2).TrimStart().Substring(1);
 
@@ -1137,7 +1153,7 @@ namespace bohc
 			return new DoWhileStatement(new parsing.Literal(Primitive.BOOLEAN, "false"), body);
 		}
 
-		private static string getBrackets(string line)
+		public static string getBrackets(string line)
 		{
 			int lbrack = line.IndexOf('(');
 			int rbrack = getMatchingBraceChar(line, lbrack, ')');

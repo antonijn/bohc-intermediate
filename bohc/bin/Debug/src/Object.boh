@@ -2,11 +2,6 @@ package boh.std;
 
 public class Object
 {
-	static()
-	{
-	
-	}
-
 	public virtual boolean equals(Object other)
 	{
 		return other r_eq this;

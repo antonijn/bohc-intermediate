@@ -15,8 +15,8 @@
 #include <uchar.h>
 #endif
 
-#include "boh_lang_exception.h"
-#include "boh_lang_string.h"
+#include "p3p3c9_bohstdException.h"
+#include "p3p3c6_bohstdString.h"
 
 typedef _Bool boh_bool;
 typedef uint8_t boh_byte;

@@ -17,6 +17,10 @@ namespace bohc.typesys
 		public readonly string identifier;
 		public readonly typesys.Type type;
 
+		// 0 if not in lambda, 1 if in lambda, 2 if in lambda in lambda, etc.
+		public int lambdaLevel = 0;
+		public bool enclosed = false;
+
 		public Variable(string identifier, typesys.Type type)
 		{
 			this.identifier = identifier;
