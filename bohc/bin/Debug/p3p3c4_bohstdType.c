@@ -6,7 +6,7 @@ const struct vtable_p3p3c4_bohstdType instance_vtable_p3p3c4_bohstdType = { &p3p
 
 struct p3p3c4_bohstdType * typeof_p3p3c4_bohstdType(void)
 {
-	static struct p3p3c4_bohstdType * result = NULL;
+	struct p3p3c4_bohstdType * result = NULL;
 	if (result == NULL)
 	{
 	}
@@ -42,7 +42,7 @@ _Bool p3p3c4_bohstdType_m_isSubTypeOf_46dba1cc(struct p3p3c4_bohstdType * const 
 }
 void p3p3c4_bohstdType_m_static_2d2816fe(void)
 {
-	static _Bool hasBeenCalled = 0;
+	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
 	{
 		return;

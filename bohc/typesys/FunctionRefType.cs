@@ -19,7 +19,7 @@ namespace bohc.typesys
 
 		public override parsing.Expression defaultVal()
 		{
-			return new parsing.Literal(this, "*(" + CodeGen.getCTypeName(this) + "*)&BOH_FP_NULL");
+			return new parsing.Literal(this, "BOH_FP_NULL");
 		}
 
 		public override int extends(Type other)

@@ -6,7 +6,7 @@ const struct vtable_p3p3c9_bohstdArray_int instance_vtable_p3p3c9_bohstdArray_in
 
 struct p3p3c4_bohstdType * typeof_p3p3c9_bohstdArray_int(void)
 {
-	static struct p3p3c4_bohstdType * result = NULL;
+	struct p3p3c4_bohstdType * result = NULL;
 	if (result == NULL)
 	{
 	}
@@ -52,7 +52,7 @@ struct p3p3iD_bohstdIIterator_int * p3p3c9_bohstdArray_int_m_iterator_d5aca7eb(s
 }
 void p3p3c9_bohstdArray_int_m_static_2d2816fe(void)
 {
-	static _Bool hasBeenCalled = 0;
+	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
 	{
 		return;

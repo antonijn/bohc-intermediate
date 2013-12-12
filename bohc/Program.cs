@@ -161,16 +161,19 @@ namespace bohc
 
 			Console.WriteLine("Generating code");
 
+			IMangler mangler = new CMangler();
+			ICodeGen codegen = new CodeGen(mangler);
+
 			IEnumerable<typesys.Type> types = filesassoc.Values.Select(x => x.type as typesys.Type).Where(x => x != null).Concat(
 				filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).SelectMany(x => x.types.Values));
 
 			Console.WriteLine("Generating lambdas");
-			CodeGen.generateGeneralBit(types);
+			codegen.generateGeneralBit(types);
 
 			foreach (typesys.Type type in types)
 			{
 				Console.WriteLine("Generating code for: {0}", type.fullName());
-				CodeGen.generateFor(type, types);
+				codegen.generateFor(type, types);
 			}
 
 			sw.Stop();

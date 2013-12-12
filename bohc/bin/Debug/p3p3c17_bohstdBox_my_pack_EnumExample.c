@@ -6,7 +6,7 @@ const struct vtable_p3p3c17_bohstdBox_my_pack_EnumExample instance_vtable_p3p3c1
 
 struct p3p3c4_bohstdType * typeof_p3p3c17_bohstdBox_my_pack_EnumExample(void)
 {
-	static struct p3p3c4_bohstdType * result = NULL;
+	struct p3p3c4_bohstdType * result = NULL;
 	if (result == NULL)
 	{
 	}
@@ -37,7 +37,7 @@ struct p3p3c6_bohstdString * p3p3c17_bohstdBox_my_pack_EnumExample_m_toString_d5
 }
 void p3p3c17_bohstdBox_my_pack_EnumExample_m_static_2d2816fe(void)
 {
-	static _Bool hasBeenCalled = 0;
+	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
 	{
 		return;

@@ -9,7 +9,7 @@ const struct vtable_p3p3c6_bohstdString instance_vtable_p3p3c6_bohstdString = { 
 
 struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdString(void)
 {
-	static struct p3p3c4_bohstdType * result = NULL;
+	struct p3p3c4_bohstdType * result = NULL;
 	if (result == NULL)
 	{
 	}
@@ -32,7 +32,7 @@ void p3p3c6_bohstdString_fi(struct p3p3c6_bohstdString * const self)
 	self->f_chars = NULL;
 }
 
-static void p3p3c6_bohstdString_m_this_e2fdbca8(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
+void p3p3c6_bohstdString_m_this_e2fdbca8(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
 {
 	unsigned char l_dummy = (u8'\0');
 	(self->f_chars = p_str->f_chars);
@@ -69,7 +69,7 @@ unsigned char p3p3c6_bohstdString_m_get_70fcd6e5(struct p3p3c6_bohstdString * co
 {
 	return boh_deref_ptr(self->f_chars, (self->f_offset + p_i));
 }
-static unsigned char p3p3c6_bohstdString_m_set_f076e8e0(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch)
+unsigned char p3p3c6_bohstdString_m_set_f076e8e0(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch)
 {
 	return boh_set_deref(self->f_chars, (self->f_offset + p_i), p_ch);
 }
@@ -121,7 +121,7 @@ struct p3p3c14_bohstdArray_boh_std_String * p3p3c6_bohstdString_m_split_d8de2e33
 }
 void p3p3c6_bohstdString_m_static_2d2816fe(void)
 {
-	static _Bool hasBeenCalled = 0;
+	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
 	{
 		return;

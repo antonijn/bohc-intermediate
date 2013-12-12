@@ -20,353 +20,29 @@ using System.Collections;
 
 namespace bohc
 {
-	public class CodeGen
+	public class CodeGen : ICodeGen
 	{
-		#region Name Transformation
-
-		public static string getFieldInitName(Class c)
+		public CodeGen(IMangler mangler)
 		{
-			return getCName(c) + "_fi";
+			this.mangler = mangler;
 		}
-
-		public static string getIncludeGuardName(typesys.Type type)
-		{
-			return getCName(type) + "_H";
-		}
-
-		public static string getHeaderName(typesys.Type type)
-		{
-			return getCName(type) + ".h";
-		}
-
-		public static string getCodeFileName(typesys.Type type)
-		{
-			return getCName(type) + ".c";
-		}
-
-		public static string getThisParamTypeName(typesys.Type type)
-		{
-			if (type is Struct)
-			{
-				return getCTypeName(type) + " * const";
-			}
-
-			if (type is Interface)
-			{
-				return getCTypeName(StdType.obj) + " const";
-			}
-
-			return getCTypeName(type) + " const";
-		}
-
-		public static string getCTypeName(typesys.Type type)
-		{
-			NativeType nt = type as NativeType;
-			if (nt != null)
-			{
-				int idxPtr = nt.crep.IndexOf('*');
-				if (idxPtr != -1)
-				{
-					string prePtr = nt.crep.Substring(0, idxPtr != -1 ? idxPtr : nt.crep.Length);
-
-					int lidxDot = prePtr.LastIndexOf('.');
-					string pkg = prePtr.Substring(0, lidxDot != -1 ? lidxDot : 0);
-					string cname = prePtr.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
-					typesys.Type t = typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname);
-					string ptrs = nt.crep.Substring(idxPtr);
-					return (t != null ? getCTypeName(t) : prePtr) + ptrs;
-				}
-
-				return nt.crep;
-			}
-
-			if (type is Struct || type is FunctionRefType || type is typesys.Enum)
-			{
-				return getCStructName(type);
-			}
-
-			if (type is Class || type is Interface)
-			{
-				return getCStructName(type) + " *";
-			}
-
-			if (type is Primitive)
-			{
-				return ((Primitive)type).cname;
-			}
-
-			if (type is NullType)
-			{
-				return "NULL";
-			}
-
-			throw new NotImplementedException();
-		}
-
-		public static string getCStructName(typesys.Type type)
-		{
-			if (type is typesys.Enum)
-			{
-				return "enum " + getCName(type);
-			}
-			return "struct " + getCName(type);
-		}
-
-		public static string getCName(typesys.Type type)
-		{
-			StringBuilder prefix = new StringBuilder();
-			StringBuilder tname = new StringBuilder();
-			foreach (string pkg in type.package.ToString().Split('.'))
-			{
-				prefix.Append("p");
-				prefix.Append(pkg.Length);
-			}
-
-			if (type is Class)
-			{
-				prefix.Append("c");
-			}
-			else if (type is typesys.Enum)
-			{
-				prefix.Append("e");
-			}
-			else if (type is Interface)
-			{
-				prefix.Append("i");
-			}
-			else if (type is Struct)
-			{
-				prefix.Append("s");
-			}
-			else if (type is FunctionRefType)
-			{
-				prefix.Append("f");
-			}
-			prefix.Append(type.name.Length.ToString("X"));
-
-			FunctionRefType fRefType = type as FunctionRefType;
-			if (fRefType != null)
-			{
-				tname.Append(getCName(fRefType.retType));
-				foreach (typesys.Type t in fRefType.paramTypes)
-				{
-					tname.Append(getCName(t));
-				}
-				prefix.Clear();
-				prefix.Append("f");
-				prefix.Append(tname.ToString().Length.ToString("X"));
-			}
-			else
-			{
-				tname.Append(type.fullName().Replace(".", string.Empty));
-			}
-
-			return prefix.ToString() + "_" + tname.ToString();
-		}
-
-		public static string getNewName(Constructor constr)
-		{
-			return "new_" + getCName(constr.owner) + getFuncAddition(constr);
-		}
-
-		public static string getVarName(Variable variable)
-		{
-			/*if (varUsageCallback != null)
-			{
-				varUsageCallback(variable);
-			}*/
-
-			if (variable is Local)
-			{
-				// FIXME: won't work if the local was created in the lambda itself
-				return "l_" + variable.identifier;
-			}
-
-			if (variable is Parameter || variable is LambdaParam)
-			{
-				return "p_" + variable.identifier;
-			}
-
-			if (variable is Field)
-			{
-				Field f = (Field)variable;
-				if (f.modifiers.HasFlag(Modifiers.STATIC))
-				{
-					return getCName(f.owner) + "_sf_" + variable.identifier;
-				}
-				return "f_" + variable.identifier;
-			}
-
-			if (variable.identifier == "this")
-			{
-				if (variable.type is Struct)
-				{
-					return "(*self)";
-				}
-				return "self";
-			}
-
-			throw new NotImplementedException();
-		}
-
-		// to be used when an enclosed variable is declared (in the context struct)
-		public static string getHeapVarDeclName(Variable variable)
-		{
-			if (variable.identifier == "this")
-			{
-				return "self";
-			}
-
-			if (variable is Parameter || variable is LambdaParam)
-			{
-				return "*e" + getVarName(variable);
-			}
-
-			return "*" + getVarName(variable);
-		}
-
-		public static string getHeapVarAssignName(Variable variable)
-		{
-			if (variable is Parameter || variable is LambdaParam)
-			{
-				return "e" + getVarName(variable);
-			}
-
-			return getVarName(variable);
-		}
-
-		public static string getVarUsageName(Variable variable)
-		{
-			if (variable.enclosed)
-			{
-				if (variable.lambdaLevel == lambdaStack)
-				{
-					if (variable.identifier == "this")
-					{
-						return getVarName(variable);
-					}
-					if (variable is Parameter || variable is LambdaParam)
-					{
-						return "(*e" + getVarName(variable) + ")";
-					}
-					return "(*" + getVarName(variable) + ")";
-				}
-				else
-				{
-					if (variable.identifier == "this")
-					{
-						return "ctx->self";
-					}
-					if (variable is Parameter || variable is LambdaParam)
-					{
-						return "ctx->*e" + getVarName(variable);
-					}
-					return "ctx->*" + getVarName(variable);
-				}
-			}
-
-			Parameter param = variable as Parameter;
-			if (param != null)
-			{
-				if (param.modifiers.HasFlag(Modifiers.REF))
-				{
-					return "(*" + getVarName(variable) + ")";
-				}
-			}
-			return getVarName(variable);
-		}
-
-		private static string getParamTypeName(Parameter param)
-		{
-			if (param.modifiers.HasFlag(Modifiers.REF))
-			{
-				return getCTypeName(param.type) + "* const";
-			}
-			if (param.modifiers.HasFlag(Modifiers.FINAL))
-			{
-				return getCTypeName(param.type) + " const";
-			}
-			return getCTypeName(param.type);
-		}
-
-		private static string getParamTypeName(LambdaParam param)
-		{
-			// TODO: implement this
-			/*if (param.modifiers.HasFlag(Modifiers.REF))
-			{
-				return getCTypeName(param.type) + "*";
-			}*/
-			return getCTypeName(param.type);
-		}
-
-		public static uint hashString(string str)
-		{
-			return (uint)str.GetHashCode();
-		}
-
-		public static string getFuncAddition(Function func)
-		{
-			StringBuilder builder = new StringBuilder();
-			if (!func.modifiers.HasFlag(Modifiers.STATIC))
-			{
-				builder.Append("self");
-			}
-			foreach (typesys.Type type in func.parameters.Select(x => x.type))
-			{
-				builder.Append(getCName(type));
-			}
-			string str = builder.ToString();
-			uint hash = hashString(str);
-			return "_" + hash.ToString("X").ToLowerInvariant();
-		}
-
-		public static string getVFuncName(Function func)
-		{
-			return "m_" + func.identifier + getFuncAddition(func);
-		}
-
-		public static string getOpName(Operator op)
-		{
-			return op.overloadName;
-		}
-
-		public static string getCFuncName(Function func)
-		{
-			if (func is OverloadedOperator)
-			{
-				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which) + getFuncAddition(func);
-			}
-			return getCName(func.owner) + "_m_" + func.identifier + getFuncAddition(func);
-		}
-
-		public static string getVtableName(Class c)
-		{
-			return "vtable_" + getCName(c);
-		}
-
-		private static string getEnumeratorName(Enumerator e)
-		{
-			return getCName(e.enumType) + e.name;
-		}
-
-		#endregion
 
 		// this is used to keep track of the variables enclosed by the lambdas
 		// OBSOLETE: this is now done in the parser, as it should be
-		// private static Action<Variable> varUsageCallback;
+		// private Action<Variable> varUsageCallback;
 
-		public static void generateGeneralBit(IEnumerable<typesys.Type> others)
+		public void generateGeneralBit(IEnumerable<typesys.Type> others)
 		{
 			//Primitive.figureOutFunctionsForAll();
 			generateFunctionRefTypes(others);
 		}
 
 		// associates lambdas with the names of their context types
-		private static readonly Dictionary<Lambda, string> lambdaCtxNames = new Dictionary<Lambda, string>();
+		private readonly Dictionary<Lambda, string> lambdaCtxNames = new Dictionary<Lambda, string>();
 		// unanonyfies the lambdas
-		private static readonly Dictionary<Lambda, string> lambdaNames = new Dictionary<Lambda, string>();
+		private readonly Dictionary<Lambda, string> lambdaNames = new Dictionary<Lambda, string>();
 
-		public static void generateFunctionRefTypes(IEnumerable<typesys.Type> others)
+		public void generateFunctionRefTypes(IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 			builder.AppendLine("#pragma once");
@@ -374,17 +50,17 @@ namespace bohc
 			foreach (FunctionRefType fRefType in FunctionRefType.instances)
 			{
 				builder.Append("struct ");
-				builder.AppendLine(getCName(fRefType));
+				builder.AppendLine(mangler.getCName(fRefType));
 				builder.AppendLine("{");
 
 				++indentation;
 				addIndent(builder);
-				builder.Append(getCTypeName(fRefType.retType));
+				builder.Append(mangler.getCTypeName(fRefType.retType));
 				builder.Append(" (* function)(void *, ");
 
 				foreach (typesys.Type t in fRefType.paramTypes)
 				{
-					builder.Append(getCTypeName(t));
+					builder.Append(mangler.getCTypeName(t));
 					builder.Append(", ");
 				}
 
@@ -408,15 +84,15 @@ namespace bohc
 			foreach (Lambda l in Lambda.lambdas)
 			{
 				lambdaStack = l.lambdaLevel;
-				builder.Append(getCTypeName(l.type.retType));
+				builder.Append(mangler.getCTypeName(l.type.retType));
 				builder.Append(" " + lambdaNames[l]);
 				builder.Append("(struct ");
 				builder.Append(lambdaCtxNames[l] + " * ctx, ");
 				foreach (LambdaParam lParam in l.lambdaParams)
 				{
-					builder.Append(getCTypeName(lParam.type));
+					builder.Append(mangler.getCTypeName(lParam.type));
 					builder.Append(" ");
-					builder.Append(getVarName(lParam));
+					builder.Append(mangler.getVarName(lParam));
 					builder.Append(", ");
 				}
 				builder.Remove(builder.Length - 2, 2);
@@ -464,7 +140,7 @@ namespace bohc
 			System.IO.File.WriteAllText("function_types.c", builder.ToString());
 		}
 
-		private static void generateLambdas(StringBuilder builder)
+		private void generateLambdas(StringBuilder builder)
 		{
 			int i = 0;
 			foreach (Lambda l in Lambda.lambdas)
@@ -481,9 +157,9 @@ namespace bohc
 				foreach (Variable v in l.enclosed)
 				{
 					addIndent(builder);
-					builder.Append(getCTypeName(v.type));
+					builder.Append(mangler.getCTypeName(v.type));
 					builder.Append(" ");
-					builder.Append(getHeapVarDeclName(v));
+					builder.Append(mangler.getHeapVarDeclName(v));
 					builder.AppendLine(";");
 				}
 				--indentation;
@@ -491,15 +167,15 @@ namespace bohc
 
 				lambdaNames[l] = "l" + i.ToString();
 
-				builder.Append(getCTypeName(l.type.retType));
+				builder.Append(mangler.getCTypeName(l.type.retType));
 				builder.Append(" l" + (i++).ToString());
 				builder.Append("(struct ");
 				builder.Append(ctxName + " * ctx, ");
 				foreach (LambdaParam lParam in l.lambdaParams)
 				{
-					builder.Append(getParamTypeName(lParam));
+					builder.Append(mangler.getParamTypeName(lParam));
 					builder.Append(" ");
-					builder.Append(getVarName(lParam));
+					builder.Append(mangler.getVarName(lParam));
 					builder.Append(", ");
 				}
 				builder.Remove(builder.Length - 2, 2);
@@ -507,7 +183,7 @@ namespace bohc
 			}
 		}
 
-		/*private static void figureOutEnclosed(Lambda l)
+		/*private void figureOutEnclosed(Lambda l)
 		{
 			List<Variable> enclosed = new List<Variable>();
 
@@ -543,15 +219,17 @@ namespace bohc
 			varUsageCallback = backup;
 		}*/
 
-		public static void generateFor(typesys.Type type, IEnumerable<typesys.Type> others)
+		private IMangler mangler;
+
+		public void generateFor(typesys.Type type, IEnumerable<typesys.Type> others)
 		{
 			others = others.Except(new[] { type });
 
 			string header = generateHeader(type, others);
-			System.IO.File.WriteAllText(getHeaderName(type), header);
+			System.IO.File.WriteAllText(mangler.getHeaderName(type), header);
 
 			string code = generateCode(type, others);
-			System.IO.File.WriteAllText(getCodeFileName(type), code);
+			System.IO.File.WriteAllText(mangler.getCodeFileName(type), code);
 
 			if (!System.IO.File.Exists("boh_internal.h"))
 			{
@@ -559,7 +237,7 @@ namespace bohc
 			}
 		}
 
-		private static string generateHeader(typesys.Type type, IEnumerable<typesys.Type> others)
+		private string generateHeader(typesys.Type type, IEnumerable<typesys.Type> others)
 		{
 			Struct s = type as Struct;
 			if (s != null)
@@ -588,14 +266,14 @@ namespace bohc
 			throw new NotImplementedException();
 		}
 
-		private static string generateEnumHeader(typesys.Enum e, IEnumerable<typesys.Type> others)
+		private string generateEnumHeader(typesys.Enum e, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 
 			addIncludeGuard(builder, e);
 			builder.AppendLine();
 
-			builder.AppendLine(getCStructName(e));
+			builder.AppendLine(mangler.getCStructName(e));
 			builder.AppendLine("{");
 			
 			++indentation;
@@ -604,7 +282,7 @@ namespace bohc
 			foreach (Enumerator enumerator in e.enumerators)
 			{
 				addIndent(builder);
-				builder.Append(getEnumeratorName(enumerator));
+				builder.Append(mangler.getEnumeratorName(enumerator));
 				builder.Append(" = ");
 				builder.Append(i++);
 				builder.AppendLine(",");
@@ -622,14 +300,14 @@ namespace bohc
 			return builder.ToString();
 		}
 
-		private static string generateInterfaceHeader(Interface iface, IEnumerable<typesys.Type> others)
+		private string generateInterfaceHeader(Interface iface, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 
 			addIncludeGuard(builder, iface);
 			builder.AppendLine();
 
-			builder.Append(getCStructName(iface));
+			builder.Append(mangler.getCStructName(iface));
 			builder.AppendLine(";");
 			builder.AppendLine();
 
@@ -645,17 +323,17 @@ namespace bohc
 			return builder.ToString();
 		}
 
-		private static void addInterfaceFunc(StringBuilder builder, Function f)
+		private void addInterfaceFunc(StringBuilder builder, Function f)
 		{
-			builder.Append(getCTypeName(f.returnType));
+			builder.Append(mangler.getCTypeName(f.returnType));
 			builder.Append(" (*");
-			builder.Append(getVFuncName(f));
+			builder.Append(mangler.getVFuncName(f));
 			builder.Append(")(");
 			addFunctionParams(builder, f);
 			builder.Append(")");
 		}
 
-		private static void addInterfaceFuncs(StringBuilder builder, Interface iface)
+		private void addInterfaceFuncs(StringBuilder builder, Interface iface)
 		{
 			foreach (Interface impl in iface.implements)
 			{
@@ -670,19 +348,19 @@ namespace bohc
 			}
 		}
 
-		private static void addInterfaceStruct(StringBuilder builder, Interface iface)
+		private void addInterfaceStruct(StringBuilder builder, Interface iface)
 		{
-			builder.AppendLine(getCStructName(iface));
+			builder.AppendLine(mangler.getCStructName(iface));
 			builder.AppendLine("{");
 
 			builder.Append("\t");
-			builder.Append(getCTypeName(StdType.obj));
+			builder.Append(mangler.getCTypeName(StdType.obj));
 			builder.AppendLine(" object;");
 			addInterfaceFuncs(builder, iface);
 			builder.AppendLine("};");
 		}
 
-		private static void addInterfaceNewOpParams(StringBuilder builder, Interface iface)
+		private void addInterfaceNewOpParams(StringBuilder builder, Interface iface)
 		{
 			foreach (Interface impl in iface.implements)
 			{
@@ -696,14 +374,14 @@ namespace bohc
 			}
 		}
 
-		private static void addInterfaceNewOpSig(StringBuilder builder, Interface iface)
+		private void addInterfaceNewOpSig(StringBuilder builder, Interface iface)
 		{
 			builder.Append("extern ");
-			builder.Append(getCTypeName(iface));
+			builder.Append(mangler.getCTypeName(iface));
 			builder.Append(" new_");
-			builder.Append(getCName(iface));
+			builder.Append(mangler.getCName(iface));
 			builder.Append("(");
-			builder.Append(getCTypeName(StdType.obj));
+			builder.Append(mangler.getCTypeName(StdType.obj));
 			builder.Append(" object, ");
 
 			addInterfaceNewOpParams(builder, iface);
@@ -713,20 +391,20 @@ namespace bohc
 			builder.AppendLine(");");
 		}
 
-		private static void addIncludeGuard(StringBuilder builder, typesys.Type type)
+		private void addIncludeGuard(StringBuilder builder, typesys.Type type)
 		{
 			builder.AppendLine("#pragma once");
 		}
 
-		private static void addIncludesOnlySpecified(StringBuilder builder, IEnumerable<typesys.Type> others)
+		private void addIncludesOnlySpecified(StringBuilder builder, IEnumerable<typesys.Type> others)
 		{
 			foreach (typesys.Type type in others)
 			{
-				builder.AppendLine("#include \"" + getHeaderName(type) + "\"");
+				builder.AppendLine("#include \"" + mangler.getHeaderName(type) + "\"");
 			}
 		}
 
-		private static void addIncludes(StringBuilder builder, IEnumerable<typesys.Type> others)
+		private void addIncludes(StringBuilder builder, IEnumerable<typesys.Type> others)
 		{
 			builder.AppendLine("#include \"boh_internal.h\"");
 			builder.AppendLine("#include \"function_types.h\"");
@@ -738,34 +416,34 @@ namespace bohc
 			addIncludesOnlySpecified(builder, others);
 		}
 
-		private static void addStructPrototype(StringBuilder builder, typesys.Type c)
+		private void addStructPrototype(StringBuilder builder, typesys.Type c)
 		{
 			if (c is Struct)
 			{
 				builder.Append("#include \"");
-				builder.Append(getHeaderName(c));
+				builder.Append(mangler.getHeaderName(c));
 				builder.AppendLine("\"");
 			}
 			else
 			{
-				builder.Append(getCStructName(c));
+				builder.Append(mangler.getCStructName(c));
 				builder.AppendLine(";");
 			}
 		}
 
-		private static void addFunctionParams(StringBuilder builder, Function func)
+		private void addFunctionParams(StringBuilder builder, Function func)
 		{
 			if (!func.modifiers.HasFlag(Modifiers.STATIC))
 			{
-				builder.Append(getThisParamTypeName(func.owner));
+				builder.Append(mangler.getThisParamTypeName(func.owner));
 				builder.Append(" self, ");
 			}
 
 			foreach (Parameter p in func.parameters)
 			{
-				builder.Append(getParamTypeName(p));
+				builder.Append(mangler.getParamTypeName(p));
 				builder.Append(" ");
-				builder.Append(getVarName(p));
+				builder.Append(mangler.getVarName(p));
 				builder.Append(", ");
 			}
 
@@ -779,12 +457,12 @@ namespace bohc
 			}
 		}
 
-		private static void addFunctionSig(StringBuilder builder, Function func, string prefix)
+		private void addFunctionSig(StringBuilder builder, Function func, string prefix)
 		{
 			builder.Append(prefix);
-			builder.Append(getCTypeName(func.returnType));
+			builder.Append(mangler.getCTypeName(func.returnType));
 			builder.Append(" ");
-			builder.Append(getCFuncName(func));
+			builder.Append(mangler.getCFuncName(func));
 			builder.Append("(");
 
 			addFunctionParams(builder, func);
@@ -793,7 +471,7 @@ namespace bohc
 			builder.AppendLine();
 		}
 
-		private static void addFunctionSigs(StringBuilder builder, IEnumerable<Function> funcs, string prefix)
+		private void addFunctionSigs(StringBuilder builder, IEnumerable<Function> funcs, string prefix)
 		{
 			foreach (Function f in funcs)
 			{
@@ -801,10 +479,10 @@ namespace bohc
 			}
 		}
 
-		private static void addTypeOfSig(StringBuilder builder, typesys.Type type)
+		private void addTypeOfSig(StringBuilder builder, typesys.Type type)
 		{
-			string cname = getCName(type);
-			string ctype = getCTypeName(StdType.type);
+			string cname = mangler.getCName(type);
+			string ctype = mangler.getCTypeName(StdType.type);
 
 			builder.Append("extern ");
 			builder.Append(ctype);
@@ -814,17 +492,17 @@ namespace bohc
 			
 		}
 
-		private static void addTypeOfDef(StringBuilder builder, typesys.Type type)
+		private void addTypeOfDef(StringBuilder builder, typesys.Type type)
 		{
-			string cname = getCName(type);
-			string ctype = getCTypeName(StdType.type);
+			string cname = mangler.getCName(type);
+			string ctype = mangler.getCTypeName(StdType.type);
 
 			builder.Append(ctype);
 			builder.Append(" typeof_");
 			builder.Append(cname);
 			builder.AppendLine("(void)");
 			builder.AppendLine("{");
-			builder.Append("\tstatic ");
+			builder.Append("\t");
 			builder.Append(ctype);
 			builder.AppendLine(" result = NULL;");
 			builder.AppendLine("\tif (result == NULL)");
@@ -835,27 +513,27 @@ namespace bohc
 			builder.Append("}");
 		}
 
-		private static void addFieldInitSig(StringBuilder builder, Class c)
+		private void addFieldInitSig(StringBuilder builder, Class c)
 		{
 			builder.Append("extern void ");
-			builder.Append(getFieldInitName(c));
+			builder.Append(mangler.getFieldInitName(c));
 			builder.Append("(");
-			builder.Append(getCTypeName(c));
+			builder.Append(mangler.getCTypeName(c));
 			builder.AppendLine(" const self);");
 		}
 
-		private static void addNewOperatorSig(StringBuilder builder, Constructor constr)
+		private void addNewOperatorSig(StringBuilder builder, Constructor constr)
 		{
 			builder.Append("extern ");
-			builder.Append(getCTypeName(constr.owner));
+			builder.Append(mangler.getCTypeName(constr.owner));
 			builder.Append(" ");
-			builder.Append(getNewName(constr));
+			builder.Append(mangler.getNewName(constr));
 			builder.Append("(");
 			foreach (Parameter p in constr.parameters)
 			{
-				builder.Append(getCTypeName(p.type));
+				builder.Append(mangler.getCTypeName(p.type));
 				builder.Append(" ");
-				builder.Append(getVarUsageName(p));
+				builder.Append(mangler.getVarUsageName(p, lambdaStack));
 				builder.Append(", ");
 			}
 			if (constr.parameters.Count > 0)
@@ -869,7 +547,7 @@ namespace bohc
 			builder.AppendLine(");");
 		}
 
-		private static void addNewOperatorSigs(StringBuilder builder, Class c)
+		private void addNewOperatorSigs(StringBuilder builder, Class c)
 		{
 			foreach (Constructor constr in c.constructors)
 			{
@@ -877,19 +555,19 @@ namespace bohc
 			}
 		}
 
-		private static void addFieldInit(StringBuilder builder, Class c)
+		private void addFieldInit(StringBuilder builder, Class c)
 		{
 			builder.Append("void ");
-			builder.Append(getFieldInitName(c));
+			builder.Append(mangler.getFieldInitName(c));
 			builder.Append("(");
-			builder.Append(getThisParamTypeName(c));
+			builder.Append(mangler.getThisParamTypeName(c));
 			builder.AppendLine(" self)");
 			builder.AppendLine("{");
 			++indentation;
 			if (c.super != null && c.super != StdType.obj)
 			{
 				addIndent(builder);
-				builder.Append(getFieldInitName(c.super));
+				builder.Append(mangler.getFieldInitName(c.super));
 				builder.AppendLine("(self);");
 			}
 
@@ -897,7 +575,7 @@ namespace bohc
 			{
 				addIndent(builder);
 				builder.Append("self->");
-				builder.Append(getVarUsageName(f));
+				builder.Append(mangler.getVarUsageName(f, lambdaStack));
 				builder.Append(" = ");
 				if (f.initial != null)
 				{
@@ -914,17 +592,17 @@ namespace bohc
 			builder.AppendLine("}");
 		}
 
-		private static void addNewOperator(StringBuilder builder, Constructor constr)
+		private void addNewOperator(StringBuilder builder, Constructor constr)
 		{
-			builder.Append(getCTypeName(constr.owner));
+			builder.Append(mangler.getCTypeName(constr.owner));
 			builder.Append(" ");
-			builder.Append(getNewName(constr));
+			builder.Append(mangler.getNewName(constr));
 			builder.Append("(");
 			foreach (Parameter p in constr.parameters)
 			{
-				builder.Append(getCTypeName(p.type));
+				builder.Append(mangler.getCTypeName(p.type));
 				builder.Append(" ");
-				builder.Append(getVarUsageName(p));
+				builder.Append(mangler.getVarUsageName(p, lambdaStack));
 				builder.Append(", ");
 			}
 			if (constr.parameters.Count > 0)
@@ -940,7 +618,7 @@ namespace bohc
 			builder.AppendLine("{");
 
 			builder.Append("\t");
-			builder.Append(getCTypeName(constr.owner));
+			builder.Append(mangler.getCTypeName(constr.owner));
 			builder.Append(" result");
 			if (constr.owner is Struct)
 			{
@@ -949,23 +627,23 @@ namespace bohc
 			else
 			{
 				builder.Append(" = GC_malloc(sizeof(");
-				builder.Append(getCStructName(constr.owner));
+				builder.Append(mangler.getCStructName(constr.owner));
 				builder.AppendLine("));");
 			}
 
 			if (!(constr.owner is Struct))
 			{
 				builder.Append("\tresult->vtable = &instance_");
-				builder.Append(getVtableName((typesys.Class)constr.owner));
+				builder.Append(mangler.getVtableName((typesys.Class)constr.owner));
 				builder.AppendLine(";");
 			}
 
 			builder.Append("\t");
-			builder.Append(getCFuncName(((Class)constr.owner).staticConstr));
+			builder.Append(mangler.getCFuncName(((Class)constr.owner).staticConstr));
 			builder.AppendLine("();");
 
 			builder.Append("\t");
-			builder.Append(getFieldInitName((Class)constr.owner));
+			builder.Append(mangler.getFieldInitName((Class)constr.owner));
 			builder.Append("(");
 			if (constr.owner is Struct)
 			{
@@ -974,7 +652,7 @@ namespace bohc
 			builder.AppendLine("result);");
 
 			builder.Append("\t");
-			builder.Append(getCFuncName(constr));
+			builder.Append(mangler.getCFuncName(constr));
 			builder.Append("(");
 			if (constr.owner is Struct)
 			{
@@ -985,7 +663,7 @@ namespace bohc
 			foreach (Parameter p in constr.parameters)
 			{
 				builder.Append(", ");
-				builder.Append(getVarUsageName(p));
+				builder.Append(mangler.getVarUsageName(p, lambdaStack));
 			}
 
 			builder.AppendLine(");");
@@ -994,7 +672,7 @@ namespace bohc
 			builder.AppendLine("}");
 		}
 
-		private static void addNewOperators(StringBuilder builder, Class c)
+		private void addNewOperators(StringBuilder builder, Class c)
 		{
 			foreach (Constructor constr in c.constructors)
 			{
@@ -1002,16 +680,16 @@ namespace bohc
 			}
 		}
 
-		private static void addStaticFieldProto(StringBuilder builder, Field field, string prefix)
+		private void addStaticFieldProto(StringBuilder builder, Field field, string prefix)
 		{
 			builder.Append(prefix);
-			builder.Append(getCTypeName(field.type));
+			builder.Append(mangler.getCTypeName(field.type));
 			builder.Append(" ");
-			builder.Append(getVarUsageName(field));
+			builder.Append(mangler.getVarUsageName(field, lambdaStack));
 			builder.AppendLine(";");
 		}
 
-		private static void addStaticFieldProtos(StringBuilder builder, IEnumerable<Field> fields, string prefix)
+		private void addStaticFieldProtos(StringBuilder builder, IEnumerable<Field> fields, string prefix)
 		{
 			foreach (Field f in fields.Where(x => x.modifiers.HasFlag(Modifiers.STATIC)))
 			{
@@ -1019,7 +697,7 @@ namespace bohc
 			}
 		}
 
-		private static void addVtableMembers(StringBuilder builder, typesys.Class c)
+		private void addVtableMembers(StringBuilder builder, typesys.Class c)
 		{
 			typesys.Class super = c.super;
 			if (super != null)
@@ -1030,31 +708,31 @@ namespace bohc
 			foreach (Function f in c.functions.Where(x => x.modifiers.HasFlag(Modifiers.VIRTUAL) || x.modifiers.HasFlag(Modifiers.ABSTRACT)))
 			{
 				builder.Append("\t");
-				builder.Append(getCTypeName(f.returnType));
+				builder.Append(mangler.getCTypeName(f.returnType));
 				builder.Append(" (*");
-				builder.Append(getVFuncName(f));
+				builder.Append(mangler.getVFuncName(f));
 				builder.Append(")(");
 				addFunctionParams(builder, f);
 				builder.AppendLine(");");
 			}
 		}
 
-		private static void addVtable(StringBuilder builder, Class c)
+		private void addVtable(StringBuilder builder, Class c)
 		{
 			builder.Append("struct ");
-			builder.AppendLine(getVtableName(c));
+			builder.AppendLine(mangler.getVtableName(c));
 			builder.AppendLine("{");
 			addVtableMembers(builder, c);
 			builder.AppendLine("};");
 			builder.AppendLine();
 			builder.Append("extern const struct ");
-			builder.Append(getVtableName(c));
+			builder.Append(mangler.getVtableName(c));
 			builder.Append(" instance_");
-			builder.Append(getVtableName(c));
+			builder.Append(mangler.getVtableName(c));
 			builder.AppendLine(";");
 		}
 
-		private static void addStructFields(StringBuilder builder, typesys.Class c)
+		private void addStructFields(StringBuilder builder, typesys.Class c)
 		{
 			if (c.super != null)
 			{
@@ -1064,14 +742,14 @@ namespace bohc
 			foreach (Field f in c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
 			{
 				builder.Append("\t");
-				builder.Append(getCTypeName(f.type));
+				builder.Append(mangler.getCTypeName(f.type));
 				builder.Append(" ");
-				builder.Append(getVarUsageName(f));
+				builder.Append(mangler.getVarUsageName(f, lambdaStack));
 				builder.AppendLine(";");
 			}
 		}
 
-		private static void addStructDefinition(StringBuilder builder, typesys.Class c)
+		private void addStructDefinition(StringBuilder builder, typesys.Class c)
 		{
 			if (!(c is Struct))
 			{
@@ -1080,13 +758,13 @@ namespace bohc
 				builder.AppendLine();
 			}
 
-			builder.AppendLine(getCStructName(c));
+			builder.AppendLine(mangler.getCStructName(c));
 			builder.AppendLine("{");
 
 			if (!(c is Struct))
 			{
 				builder.Append("\tconst struct ");
-				builder.Append(getVtableName(c));
+				builder.Append(mangler.getVtableName(c));
 				builder.AppendLine(" * vtable;");
 			}
 
@@ -1095,7 +773,7 @@ namespace bohc
 			builder.AppendLine("};");
 		}
 
-		private static string generateStructHeader(typesys.Struct c, IEnumerable<typesys.Type> others)
+		private string generateStructHeader(typesys.Struct c, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 			addIncludeGuard(builder, c);
@@ -1128,7 +806,7 @@ namespace bohc
 			return builder.ToString();
 		}
 
-		private static string generateClassHeader(typesys.Class c, IEnumerable<typesys.Type> others)
+		private string generateClassHeader(typesys.Class c, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 			addIncludeGuard(builder, c);
@@ -1175,7 +853,7 @@ namespace bohc
 			}
 		}
 
-		private static void addVtableInit(StringBuilder builder, Class c, IEnumerable<Function> overriden)
+		private void addVtableInit(StringBuilder builder, Class c, IEnumerable<Function> overriden)
 		{
 			Class super = c.super;
 			if (super != null)
@@ -1190,7 +868,7 @@ namespace bohc
 				Function overridenf = overriden.SingleOrDefault(x => new FEqualComp().Equals(x, f));
 				if (overridenf != null)
 				{
-					builder.Append("&" + getCFuncName(overridenf) + ", ");
+					builder.Append("&" + mangler.getCFuncName(overridenf) + ", ");
 				}
 				else
 				{
@@ -1200,23 +878,23 @@ namespace bohc
 					}
 					else
 					{
-						builder.Append("&" + getCFuncName(f) + ", ");
+						builder.Append("&" + mangler.getCFuncName(f) + ", ");
 					}
 				}
 			}
 		}
 
-		private static void addVtableDefinition(StringBuilder builder, Class c)
+		private void addVtableDefinition(StringBuilder builder, Class c)
 		{
-			builder.Append("const struct " + getVtableName(c));
-			builder.Append(" instance_" + getVtableName(c));
+			builder.Append("const struct " + mangler.getVtableName(c));
+			builder.Append(" instance_" + mangler.getVtableName(c));
 			builder.Append(" = { ");
 			addVtableInit(builder, c, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.OVERRIDE)));
 			builder.Remove(builder.Length - 2, 2);
 			builder.AppendLine(" };");
 		}
 
-		private static void addFunctionDef(StringBuilder builder, Function func)
+		private void addFunctionDef(StringBuilder builder, Function func)
 		{
 			// TODO: String[] also allowed
 			if (func.identifier == "main")
@@ -1226,7 +904,7 @@ namespace bohc
 				builder.AppendLine("{");
 				++indentation;
 				addIndent(builder);
-				builder.Append(getCFuncName(func));
+				builder.Append(mangler.getCFuncName(func));
 				builder.AppendLine("();");
 				addIndent(builder);
 				builder.AppendLine("return 0;");
@@ -1236,11 +914,11 @@ namespace bohc
 
 			if (func.modifiers.HasFlag(Modifiers.PRIVATE))
 			{
-				builder.Append("static ");
+				builder.Append("");
 			}
-			builder.Append(getCTypeName(func.returnType));
+			builder.Append(mangler.getCTypeName(func.returnType));
 			builder.Append(" ");
-			builder.Append(getCFuncName(func));
+			builder.Append(mangler.getCFuncName(func));
 			builder.Append("(");
 
 			addFunctionParams(builder, func);
@@ -1301,7 +979,7 @@ namespace bohc
 			}
 		}
 
-		private static void addFnHeapParamClose(StringBuilder builder, IEnumerable<Variable> parameters)
+		private void addFnHeapParamClose(StringBuilder builder, IEnumerable<Variable> parameters)
 		{
 			if (parameters.Where(x => x.enclosed).Count() > 0)
 			{
@@ -1310,7 +988,7 @@ namespace bohc
 			}
 		}
 
-		private static void addFnHeapParams(StringBuilder builder, IEnumerable<Variable> parameters)
+		private void addFnHeapParams(StringBuilder builder, IEnumerable<Variable> parameters)
 		{
 			if (parameters.Where(x => x.enclosed).Count() > 0)
 			{
@@ -1322,27 +1000,27 @@ namespace bohc
 				{
 					addIndent(builder);
 
-					builder.Append(getCTypeName(param.type));
+					builder.Append(mangler.getCTypeName(param.type));
 					builder.Append("* e");
-					builder.Append(getVarName(param));
+					builder.Append(mangler.getVarName(param));
 					builder.Append(" = GC_malloc(sizeof(");
-					builder.Append(getCTypeName(param.type));
+					builder.Append(mangler.getCTypeName(param.type));
 					builder.AppendLine("));");
 					addIndent(builder);
-					builder.Append(getVarUsageName(param));
+					builder.Append(mangler.getVarUsageName(param, lambdaStack));
 					builder.Append(" = ");
-					builder.Append(getVarName(param));
+					builder.Append(mangler.getVarName(param));
 					builder.AppendLine(";");
 				}
 			}
 		}
 
-		private static void addStaticConstrPrebody(StringBuilder builder, Function func)
+		private void addStaticConstrPrebody(StringBuilder builder, Function func)
 		{
 			builder.AppendLine("{");
 			++indentation;
 			addIndent(builder);
-			builder.AppendLine("static _Bool hasBeenCalled = 0;");
+			builder.AppendLine("_Bool hasBeenCalled = 0;");
 			addIndent(builder);
 			builder.AppendLine("if (hasBeenCalled)");
 			addIndent(builder);
@@ -1358,14 +1036,14 @@ namespace bohc
 			if (((Class)func.owner).super != null)
 			{
 				addIndent(builder);
-				builder.Append(getCFuncName(((Class)func.owner).super.staticConstr));
+				builder.Append(mangler.getCFuncName(((Class)func.owner).super.staticConstr));
 				builder.AppendLine("();");
 			}
 
 			foreach (Field f in ((Class)func.owner).fields.Where(x => x.modifiers.HasFlag(Modifiers.STATIC)))
 			{
 				addIndent(builder);
-				builder.Append(getVarUsageName(f));
+				builder.Append(mangler.getVarUsageName(f, lambdaStack));
 				builder.Append(" = ");
 				if (f.initial != null)
 				{
@@ -1379,7 +1057,7 @@ namespace bohc
 			}
 		}
 
-		private static void addFunctionDefs(StringBuilder builder, IEnumerable<Function> funcs)
+		private void addFunctionDefs(StringBuilder builder, IEnumerable<Function> funcs)
 		{
 			foreach (Function f in funcs)
 			{
@@ -1389,11 +1067,11 @@ namespace bohc
 
 		#region Misc
 
-		private static int indentation = 0;
+		private int indentation = 0;
 
 		public const string INDENT_SEQ = "\t";
 
-		private static void addIndent(StringBuilder builder)
+		private void addIndent(StringBuilder builder)
 		{
 			for (int i = 0; i < indentation; ++i)
 			{
@@ -1401,48 +1079,48 @@ namespace bohc
 			}
 		}
 
-		private static Stack<List<string>> prestatstack = new Stack<List<string>>();
-		private static int tempvcounter = 0;
+		private Stack<List<string>> prestatstack = new Stack<List<string>>();
+		private int tempvcounter = 0;
 		// the lambda stack, see Expression.cs for exact definition
-		private static int lambdaStack = 0;
+		private int lambdaStack = 0;
 
-		private static void addPreStatStatement(string txt)
+		private void addPreStatStatement(string txt)
 		{
 			prestatstack.Peek().Add(txt);
 		}
 
-		private static string addTemp(string prefix, string suffix)
+		private string addTemp(string prefix, string suffix)
 		{
 			string name = "temp" + tempvcounter++;
 			addPreStatStatement(prefix + name + suffix);
 			return name;
 		}
 
-		private static string addTemp(Expression value)
+		private string addTemp(Expression value)
 		{
-			return addTemp(getCTypeName(value.getType()) + " ", ";");
+			return addTemp(mangler.getCTypeName(value.getType()) + " ", ";");
 		}
 
 		#endregion
 
 		#region Expressions
 
-		private static void addInterfaceNewCallFunc(StringBuilder builder, Function f, string tempn)
+		private void addInterfaceNewCallFunc(StringBuilder builder, Function f, string tempn)
 		{
 			builder.Append("&");
 			if (f.modifiers.HasFlag(Modifiers.OVERRIDE) || f.modifiers.HasFlag(Modifiers.VIRTUAL) || f.modifiers.HasFlag(Modifiers.ABSTRACT))
 			{
 				builder.Append(tempn);
 				builder.Append("->vtable->");
-				builder.Append(getVFuncName(f));
+				builder.Append(mangler.getVFuncName(f));
 			}
 			else
 			{
-				builder.Append(getCFuncName(f));
+				builder.Append(mangler.getCFuncName(f));
 			}
 		}
 
-		private static void addInterfaceNewCallFuncs(StringBuilder builder, Interface iface, Class c, string tempn)
+		private void addInterfaceNewCallFuncs(StringBuilder builder, Interface iface, Class c, string tempn)
 		{
 			// leaves ", " at the end of the string
 
@@ -1467,7 +1145,7 @@ namespace bohc
 			}
 		}
 
-		private static void addExpressionImplCon(StringBuilder builder, Expression expression, typesys.Type towhat)
+		private void addExpressionImplCon(StringBuilder builder, Expression expression, typesys.Type towhat)
 		{
 			typesys.Type type = expression.getType();
 			if (type == towhat)
@@ -1477,18 +1155,18 @@ namespace bohc
 			else if (type is Interface && towhat is Class)
 			{
 				builder.Append("(");
-				builder.Append(getCTypeName(towhat));
+				builder.Append(mangler.getCTypeName(towhat));
 				builder.Append(")");
 				addExpression(builder, expression);
 				builder.Append("->object");
 			}
 			else if (type is Class && towhat is Interface)
 			{
-				string tempn = addTemp(getCTypeName(type), ";");
+				string tempn = addTemp(mangler.getCTypeName(type), ";");
 
 				Interface towi = towhat as Interface;
 				builder.Append("new_");
-				builder.Append(getCName(towhat));
+				builder.Append(mangler.getCName(towhat));
 				builder.Append("(");
 				builder.Append(tempn);
 				builder.Append(" = (");
@@ -1501,14 +1179,14 @@ namespace bohc
 			else
 			{
 				builder.Append("(");
-				builder.Append(getCTypeName(towhat));
+				builder.Append(mangler.getCTypeName(towhat));
 				builder.Append(")(");
 				addExpression(builder, expression);
 				builder.Append(")");
 			}
 		}
 
-		private static void addExpression(StringBuilder builder, Expression expression)
+		private void addExpression(StringBuilder builder, Expression expression)
 		{
 			BinaryOperation binop = expression as BinaryOperation;
 			if (binop != null)
@@ -1608,18 +1286,18 @@ namespace bohc
 			throw new NotImplementedException();
 		}
 
-		private static void addRefExpr(StringBuilder builder, RefExpression refExpr)
+		private void addRefExpr(StringBuilder builder, RefExpression refExpr)
 		{
 			builder.Append("&");
 			addExpression(builder, refExpr.onwhat);
 		}
 
-		private static void addEnumerator(StringBuilder builder, ExprEnumerator en)
+		private void addEnumerator(StringBuilder builder, ExprEnumerator en)
 		{
-			builder.Append(getEnumeratorName(en.enumerator));
+			builder.Append(mangler.getEnumeratorName(en.enumerator));
 		}
 
-		private static void addLambda(StringBuilder builder, Lambda lambda)
+		private void addLambda(StringBuilder builder, Lambda lambda)
 		{
 			string tmp = addTemp(lambda);
 			addPreStatStatement(tmp + ".function = &" + lambdaNames[lambda] + ";");
@@ -1632,20 +1310,20 @@ namespace bohc
 				preStat.Append(" *)");
 				preStat.Append(tmp);
 				preStat.Append(".context)->");
-				preStat.Append(getHeapVarAssignName(v));
+				preStat.Append(mangler.getHeapVarAssignName(v));
 				preStat.Append(" = ");
 				if (v.identifier != "this")
 				{
 					preStat.Append("&");
 				}
-				preStat.Append(getVarUsageName(v));
+				preStat.Append(mangler.getVarUsageName(v, lambdaStack));
 				preStat.Append(";");
 				addPreStatStatement(preStat.ToString());
 			}
 			builder.Append(tmp);
 		}
 
-		private static int getStrLitLen(string str)
+		private int getStrLitLen(string str)
 		{
 			int len = 0;
 			for (int i = 0; i < str.Length; ++i)
@@ -1666,7 +1344,7 @@ namespace bohc
 			return len - 2;
 		}
 
-		private static void addFvCall(StringBuilder builder, FunctionVarCall fvCall)
+		private void addFvCall(StringBuilder builder, FunctionVarCall fvCall)
 		{
 			string tmp = addTemp(fvCall.belongsto);
 			StringBuilder tempBuild = new StringBuilder();
@@ -1690,7 +1368,7 @@ namespace bohc
 			builder.Append(")");
 		}
 
-		private static void addTypeCast(StringBuilder builder, TypeCast tc)
+		private void addTypeCast(StringBuilder builder, TypeCast tc)
 		{
 			// TODO: check if Object.cast<T> is needed
 			if (tc.towhat.extends(tc.onwhat.getType()) > 0 ||
@@ -1704,7 +1382,7 @@ namespace bohc
 			}
 		}
 
-		private static void addLiteral(StringBuilder builder, Literal lit)
+		private void addLiteral(StringBuilder builder, Literal lit)
 		{
 			typesys.Type type = lit.getType();
 
@@ -1769,9 +1447,9 @@ namespace bohc
 			}
 		}
 
-		private static void addCCall(StringBuilder builder, ConstructorCall ccall)
+		private void addCCall(StringBuilder builder, ConstructorCall ccall)
 		{
-			builder.Append(getNewName(ccall.function));
+			builder.Append(mangler.getNewName(ccall.function));
 			builder.Append("(");
 
 			IEnumerator<Parameter> fparams = ccall.function.parameters.GetEnumerator();
@@ -1791,12 +1469,12 @@ namespace bohc
 			builder.Append(")");
 		}
 
-		private static void addNativeExpression(StringBuilder builder, NativeExpression nexpr)
+		private void addNativeExpression(StringBuilder builder, NativeExpression nexpr)
 		{
 			builder.Append(nexpr.str);
 		}
 
-		private static void addNativeFCall(StringBuilder builder, NativeFCall fcall)
+		private void addNativeFCall(StringBuilder builder, NativeFCall fcall)
 		{
 			builder.Append(fcall.str);
 			builder.Append("(");
@@ -1814,7 +1492,7 @@ namespace bohc
 			builder.Append(")");
 		}
 
-		private static void addFCall(StringBuilder builder, FunctionCall fcall)
+		private void addFCall(StringBuilder builder, FunctionCall fcall)
 		{
 			if ((fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) ||
 				fcall.refersto.modifiers.HasFlag(Modifiers.ABSTRACT) ||
@@ -1824,9 +1502,9 @@ namespace bohc
 				if (fcall.belongsto is SuperVar)
 				{
 					builder.Append("instance_");
-					builder.Append(getVtableName((Class)fcall.belongsto.getType()));
+					builder.Append(mangler.getVtableName((Class)fcall.belongsto.getType()));
 					builder.Append(".");
-					builder.Append(getVFuncName(fcall.refersto));
+					builder.Append(mangler.getVFuncName(fcall.refersto));
 					builder.Append("(");
 					builder.Append("self, ");
 				}
@@ -1840,7 +1518,7 @@ namespace bohc
 					addExpression(builder, fcall.belongsto);
 					builder.Append(")->vtable->");
 
-					builder.Append(getVFuncName(fcall.refersto));
+					builder.Append(mangler.getVFuncName(fcall.refersto));
 					builder.Append("(");
 					builder.Append(temp);
 					builder.Append(", ");
@@ -1850,9 +1528,9 @@ namespace bohc
 			{
 				if (fcall.refersto.owner is Struct)
 				{
-					string tempname = addTemp(getCTypeName(fcall.refersto.owner) + " ", ";");
+					string tempname = addTemp(mangler.getCTypeName(fcall.refersto.owner) + " ", ";");
 
-					builder.Append(getCFuncName(fcall.refersto));
+					builder.Append(mangler.getCFuncName(fcall.refersto));
 					builder.Append("((");
 					builder.Append(tempname);
 					builder.Append(" = ");
@@ -1865,7 +1543,7 @@ namespace bohc
 					|| fcall.refersto.owner is typesys.Enum
 					|| fcall.refersto.owner is typesys.Primitive)
 				{
-					builder.Append(getCFuncName(fcall.refersto));
+					builder.Append(mangler.getCFuncName(fcall.refersto));
 					builder.Append("(");
 					addExpression(builder, fcall.belongsto);
 					builder.Append(", ");
@@ -1878,7 +1556,7 @@ namespace bohc
 					builder.Append(" = ");
 					addExpression(builder, fcall.belongsto);
 					builder.Append(")->");
-					builder.Append(getVFuncName(fcall.refersto));
+					builder.Append(mangler.getVFuncName(fcall.refersto));
 					builder.Append("(");
 					builder.Append(temp);
 					builder.Append("->object, ");
@@ -1886,7 +1564,7 @@ namespace bohc
 			}
 			else
 			{
-				builder.Append(getCFuncName(fcall.refersto));
+				builder.Append(mangler.getCFuncName(fcall.refersto));
 				builder.Append("(");
 			}
 
@@ -1907,7 +1585,7 @@ namespace bohc
 			builder.Append(")");
 		}
 
-		private static void addEqualsBinOp(StringBuilder builder, Expression left, Expression right)
+		private void addEqualsBinOp(StringBuilder builder, Expression left, Expression right)
 		{
 			if ((left.getType() is Primitive && right.getType() is Primitive) ||
 				(left.getType() is NullType || right.getType() is NullType))
@@ -1921,7 +1599,7 @@ namespace bohc
 			else
 			{
 				Function objEq = StdType.obj.functions.Single(x => x.identifier == "valEquals");
-				builder.Append(getCFuncName(objEq));
+				builder.Append(mangler.getCFuncName(objEq));
 				builder.Append("(");
 				addExpressionImplCon(builder, left, StdType.obj);
 				builder.Append(", ");
@@ -1930,7 +1608,7 @@ namespace bohc
 			}
 		}
 
-		private static string getOpRep(Operator op)
+		private string getOpRep(Operator op)
 		{
 			if (op == BinaryOperation.R_EQ)
 			{
@@ -1940,7 +1618,7 @@ namespace bohc
 			return op.representation;
 		}
 
-		private static void addBinOp(StringBuilder builder, BinaryOperation binop)
+		private void addBinOp(StringBuilder builder, BinaryOperation binop)
 		{
 			if (binop.operation == BinaryOperation.EQUAL || binop.operation == BinaryOperation.NOT_EQUAL)
 			{
@@ -1952,7 +1630,7 @@ namespace bohc
 			}
 			else if (binop.overloaded != null)
 			{
-				builder.Append(getCFuncName(binop.overloaded));
+				builder.Append(mangler.getCFuncName(binop.overloaded));
 				builder.Append("(");
 				addExpression(builder, binop.left);
 				builder.Append(", ");
@@ -1976,14 +1654,14 @@ namespace bohc
 			}
 		}
 
-		private static void addTypeOf(StringBuilder builder, typesys.Type type)
+		private void addTypeOf(StringBuilder builder, typesys.Type type)
 		{
 			builder.Append("typeof_");
-			builder.Append(getCName(type));
+			builder.Append(mangler.getCName(type));
 			builder.Append("()");
 		}
 
-		private static void addUnOp(StringBuilder builder, UnaryOperation unop)
+		private void addUnOp(StringBuilder builder, UnaryOperation unop)
 		{
 			if (unop.operation == UnaryOperation.TYPEOF)
 			{
@@ -2006,7 +1684,7 @@ namespace bohc
 			}
 		}
 
-		private static void addExprVar(StringBuilder builder, ExprVariable exprvar)
+		private void addExprVar(StringBuilder builder, ExprVariable exprvar)
 		{
 			if (exprvar.belongsto is ExprVariable)
 			{
@@ -2025,18 +1703,18 @@ namespace bohc
 			if (f != null && f.modifiers.HasFlag(Modifiers.STATIC | Modifiers.PUBLIC))
 			{
 				StringBuilder temp = new StringBuilder();
-				temp.Append(getCFuncName(f.owner.staticConstr));
+				temp.Append(mangler.getCFuncName(f.owner.staticConstr));
 				temp.Append("();");
 				addPreStatStatement(temp.ToString());
 			}
-			builder.Append(getVarUsageName(exprvar.refersto));
+			builder.Append(mangler.getVarUsageName(exprvar.refersto, lambdaStack));
 		}
 
 		#endregion
 
 		#region Statements
 
-		private static void addBody(StringBuilder builder, Body body)
+		private void addBody(StringBuilder builder, Body body)
 		{
 			addIndent(builder);
 			builder.AppendLine("{");
@@ -2052,7 +1730,7 @@ namespace bohc
 			builder.AppendLine("}");
 		}
 
-		private static bool addSpecStat<T>(StringBuilder builder, Statement stat, Action<StringBuilder, T> act)
+		private bool addSpecStat<T>(StringBuilder builder, Statement stat, Action<StringBuilder, T> act)
 			where T : Statement
 		{
 			T spec = stat as T;
@@ -2065,7 +1743,7 @@ namespace bohc
 			return false;
 		}
 
-		private static void addStatement(StringBuilder builder, Statement statement)
+		private void addStatement(StringBuilder builder, Statement statement)
 		{
 			prestatstack.Push(new List<string>());
 
@@ -2099,7 +1777,7 @@ namespace bohc
 			builder.Append(statb.ToString());
 		}
 
-		private static void addThrow(StringBuilder builder, ThrowStatement thr)
+		private void addThrow(StringBuilder builder, ThrowStatement thr)
 		{
 			addIndent(builder);
 			builder.Append("boh_throw_ex(");
@@ -2107,7 +1785,7 @@ namespace bohc
 			builder.AppendLine(");");
 		}
 
-		private static void addReturn(StringBuilder builder, ReturnStatement ret)
+		private void addReturn(StringBuilder builder, ReturnStatement ret)
 		{
 			addIndent(builder);
 			builder.Append("return ");
@@ -2116,27 +1794,27 @@ namespace bohc
 		}
 
 		// used for continue and break, usage otherwise discouraged
-		private static void addSingleString(StringBuilder builder, string str)
+		private void addSingleString(StringBuilder builder, string str)
 		{
 			addIndent(builder);
 			builder.AppendLine(str);
 		}
 
-		private static void addCatch(StringBuilder builder, CatchStatement cstat, string finname)
+		private void addCatch(StringBuilder builder, CatchStatement cstat, string finname)
 		{
 			builder.Append("if (exception_type == typeof_");
-			builder.Append(getCName(cstat.param.type));
+			builder.Append(mangler.getCName(cstat.param.type));
 			builder.AppendLine("())");
 
 			addIndent(builder);
 			builder.AppendLine("{");
 			++indentation;
 
-			string typeusename = getCTypeName(cstat.param.type);
+			string typeusename = mangler.getCTypeName(cstat.param.type);
 			addIndent(builder);
 			builder.Append(typeusename);
 			builder.Append(" ");
-			builder.Append(getVarUsageName(cstat.param));
+			builder.Append(mangler.getVarUsageName(cstat.param, lambdaStack));
 			builder.Append(" = (");
 			builder.Append(typeusename);
 			builder.AppendLine(")exception;");
@@ -2157,7 +1835,7 @@ namespace bohc
 			builder.Append("else ");
 		}
 
-		private static void addTry(StringBuilder builder, TryStatement trys)
+		private void addTry(StringBuilder builder, TryStatement trys)
 		{
 			string finname = null;
 			if (trys.fin != null)
@@ -2232,7 +1910,7 @@ namespace bohc
 			builder.AppendLine("}");
 		}
 
-		private static void addJmpReset(StringBuilder builder, string tempname)
+		private void addJmpReset(StringBuilder builder, string tempname)
 		{
 			addIndent(builder);
 			builder.Append("memcpy(&exception_buf, &");
@@ -2240,7 +1918,7 @@ namespace bohc
 			builder.AppendLine(", sizeof(jmp_buf));");
 		}
 
-		private static void addDoWhile(StringBuilder builder, DoWhileStatement dostat)
+		private void addDoWhile(StringBuilder builder, DoWhileStatement dostat)
 		{
 			addIndent(builder);
 			builder.AppendLine("do");
@@ -2251,7 +1929,7 @@ namespace bohc
 			builder.AppendLine(");");
 		}
 
-		private static void addFor(StringBuilder builder, ForStatement forstat)
+		private void addFor(StringBuilder builder, ForStatement forstat)
 		{
 			addIndent(builder);
 			builder.Append("for (");
@@ -2281,14 +1959,14 @@ namespace bohc
 			addBody(builder, forstat.body);
 		}
 
-		private static void addElse(StringBuilder builder, ElseStatement elsestat)
+		private void addElse(StringBuilder builder, ElseStatement elsestat)
 		{
 			addIndent(builder);
 			builder.AppendLine("else");
 			addBody(builder, elsestat.body);
 		}
 
-		private static void addVarDec(StringBuilder builder, VarDeclaration vdec)
+		private void addVarDec(StringBuilder builder, VarDeclaration vdec)
 		{
 			// REMEMBER
 			// Enclosed variable are ALWAYS heap allocated
@@ -2296,24 +1974,24 @@ namespace bohc
 			// If they're already reference types, the reference shall be heap-allocated as well
 
 			addIndent(builder);
-			builder.Append(getCTypeName(vdec.refersto.type));
+			builder.Append(mangler.getCTypeName(vdec.refersto.type));
 			if (vdec.refersto.enclosed)
 			{
 				builder.Append("*");
 			}
 			builder.Append(" ");
-			builder.Append(getVarName(vdec.refersto));
+			builder.Append(mangler.getVarName(vdec.refersto));
 
 			if (vdec.refersto.enclosed)
 			{
 				builder.Append(" = GC_malloc(sizeof(");
-				builder.Append(getCTypeName(vdec.refersto.type));
+				builder.Append(mangler.getCTypeName(vdec.refersto.type));
 				builder.Append("))");
 				if (vdec.initial != null)
 				{
 					builder.AppendLine(";");
 					addIndent(builder);
-					builder.Append(getVarUsageName(vdec.refersto));
+					builder.Append(mangler.getVarUsageName(vdec.refersto, lambdaStack));
 				}
 			}
 
@@ -2326,14 +2004,14 @@ namespace bohc
 			builder.AppendLine(";");
 		}
 
-		private static void addEStat(StringBuilder builder, ExpressionStatement estat)
+		private void addEStat(StringBuilder builder, ExpressionStatement estat)
 		{
 			addIndent(builder);
 			addExpression(builder, estat.expression);
 			builder.AppendLine(";");
 		}
 
-		private static void addWhileStat(StringBuilder builder, WhileStatement stat)
+		private void addWhileStat(StringBuilder builder, WhileStatement stat)
 		{
 			addIndent(builder);
 			builder.Append("while (");
@@ -2342,7 +2020,7 @@ namespace bohc
 			addBody(builder, stat.body);
 		}
 
-		private static void addIfStat(StringBuilder builder, IfStatement stat)
+		private void addIfStat(StringBuilder builder, IfStatement stat)
 		{
 			addIndent(builder);
 			builder.Append("if (");
@@ -2357,7 +2035,7 @@ namespace bohc
 
 		#endregion
 
-		private static string generateCode(typesys.Type type, IEnumerable<typesys.Type> others)
+		private string generateCode(typesys.Type type, IEnumerable<typesys.Type> others)
 		{
 			Class c = type as Class;
 			if (c != null)
@@ -2380,12 +2058,12 @@ namespace bohc
 			throw new NotImplementedException();
 		}
 
-		private static string generateEnumCode(typesys.Enum e, IEnumerable<typesys.Type> others)
+		private string generateEnumCode(typesys.Enum e, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 
 			builder.Append("#include \"");
-			builder.Append(getHeaderName(e));
+			builder.Append(mangler.getHeaderName(e));
 			builder.AppendLine("\"");
 
 			addFunctionDef(builder, e.toString);
@@ -2393,22 +2071,22 @@ namespace bohc
 			return builder.ToString();
 		}
 
-		private static void addInterfaceConstructor(StringBuilder builder, Interface iface)
+		private void addInterfaceConstructor(StringBuilder builder, Interface iface)
 		{
-			builder.Append(getCTypeName(iface));
+			builder.Append(mangler.getCTypeName(iface));
 			builder.Append(" new_");
-			builder.Append(getCName(iface));
+			builder.Append(mangler.getCName(iface));
 			builder.Append("(");
-			builder.Append(getCTypeName(StdType.obj));
+			builder.Append(mangler.getCTypeName(StdType.obj));
 			builder.Append(" object, ");
 			addInterfaceNewOpParams(builder, iface);
 			builder.Remove(builder.Length - 2, 2);
 			builder.AppendLine(")");
 			builder.AppendLine("{");
 			builder.Append("\t");
-			builder.Append(getCTypeName(iface));
+			builder.Append(mangler.getCTypeName(iface));
 			builder.Append(" result = GC_malloc(sizeof(");
-			builder.Append(getCStructName(iface));
+			builder.Append(mangler.getCStructName(iface));
 			builder.AppendLine("));");
 			builder.AppendLine("\tresult->object = object;");
 			addInterfaceAssignments(builder, iface);
@@ -2416,7 +2094,7 @@ namespace bohc
 			builder.AppendLine("}");
 		}
 
-		private static void addInterfaceAssignments(StringBuilder builder, Interface iface)
+		private void addInterfaceAssignments(StringBuilder builder, Interface iface)
 		{
 			foreach (Interface impl in iface.implements)
 			{
@@ -2426,19 +2104,19 @@ namespace bohc
 			foreach (Function f in iface.functions)
 			{
 				builder.Append("\tresult->");
-				builder.Append(getVFuncName(f));
+				builder.Append(mangler.getVFuncName(f));
 				builder.Append(" = ");
-				builder.Append(getVFuncName(f));
+				builder.Append(mangler.getVFuncName(f));
 				builder.AppendLine(";");
 			}
 		}
 
-		private static string generateInterfaceCode(Interface iface, IEnumerable<typesys.Type> others)
+		private string generateInterfaceCode(Interface iface, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 
 			builder.Append("#include \"");
-			builder.Append(getHeaderName(iface));
+			builder.Append(mangler.getHeaderName(iface));
 			builder.AppendLine("\"");
 			builder.AppendLine();
 
@@ -2447,12 +2125,12 @@ namespace bohc
 			return builder.ToString();
 		}
 
-		private static string generateClassCode(Class c, IEnumerable<typesys.Type> others)
+		private string generateClassCode(Class c, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 
 			builder.Append("#include \"");
-			builder.Append(getHeaderName(c));
+			builder.Append(mangler.getHeaderName(c));
 			builder.AppendLine("\"");
 			builder.AppendLine();
 

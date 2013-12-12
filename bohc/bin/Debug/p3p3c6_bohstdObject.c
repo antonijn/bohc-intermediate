@@ -6,7 +6,7 @@ const struct vtable_p3p3c6_bohstdObject instance_vtable_p3p3c6_bohstdObject = { 
 
 struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdObject(void)
 {
-	static struct p3p3c4_bohstdType * result = NULL;
+	struct p3p3c4_bohstdType * result = NULL;
 	if (result == NULL)
 	{
 	}
@@ -65,7 +65,7 @@ void p3p3c6_bohstdObject_m_this_d5aca7eb(struct p3p3c6_bohstdObject * const self
 }
 void p3p3c6_bohstdObject_m_static_2d2816fe(void)
 {
-	static _Bool hasBeenCalled = 0;
+	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
 	{
 		return;

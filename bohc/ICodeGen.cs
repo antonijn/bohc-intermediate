@@ -1,0 +1,13 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+
+namespace bohc
+{
+	public interface ICodeGen
+	{
+		void generateGeneralBit(IEnumerable<typesys.Type> types);
+		void generateFor(typesys.Type t, IEnumerable<typesys.Type> others);
+	}
+}

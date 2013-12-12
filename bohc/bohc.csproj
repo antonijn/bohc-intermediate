@@ -43,9 +43,12 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="boh\Exception.cs" />
+    <Compile Include="CMangler.cs" />
     <Compile Include="CodeGen.cs" />
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
+    <Compile Include="ICodeGen.cs" />
+    <Compile Include="IMangler.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="parsing\expressions\ConstructorCall.cs" />
     <Compile Include="parsing\expressions\ExprEnumerator.cs" />
