@@ -136,8 +136,24 @@ namespace bohc.parsing
 					continue;
 				}
 				if (analyzeLiteral(ref last, ref i, ref next, str, file)) { continue; }
+				if (analyzeRef(ref last, vars, ref i, ref next, str, file, ctx)) { continue; }
 				if (analyzeName(ref last, vars, ref i, ref next, str, file, ctx)) { continue; }
 			}
+		}
+
+		private static bool analyzeRef(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, typesys.Function ctx)
+		{
+			if (next != "ref")
+			{
+				return false;
+			}
+
+			string after = str.Substring(i);
+			Expression onwhat = Expression.analyze(after, vars, file, ctx);
+
+			last = new RefExpression(onwhat, ctx);
+			i = str.Length;
+			return true;
 		}
 
 		private static bool analyzeLambda(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string next, string str, ts.File file, int opprec, typesys.Function ctx)
@@ -475,32 +491,55 @@ namespace bohc.parsing
 			{
 				// constructor call
 
-				string typeStr = str.Substring(i + 1, str.IndexOf('(') - i - 1);
-				typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr);
-				i += typeStr.Length + 1;
-				int backup = i;
-				try
-				{
-					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
-				}
-				catch (NullReferenceException)
-				{
-					// generic type
-					i = backup;
-					string after = readNext(str, ref i);
-					if (after != "<")
-					{
-						throw;
-					}
-					int greaterThan = Parser.getMatchingBraceChar(str, i - 1, '>');
-					string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
-					i = greaterThan + 1;
+				int idxOpen = str.IndexOf('(', i);
+				int idxIndexer = str.IndexOf('[', i);
 
-					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
+				if (idxIndexer != -1 && idxIndexer < idxOpen || idxOpen == -1)
+				{
+					string typeStr = str.Substring(i + 1, idxIndexer - i - 1);
+					typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr);
+					typesys.Class arrayType = (typesys.Class)typesys.StdType.array.getTypeFor(new[] { typeExpr });
+					int idxClose = Parser.getMatchingBraceChar(str, idxIndexer, ']');
+					int len = idxClose - idxIndexer;
+					string paramStr = str.Substring(idxIndexer, len);
+					Expression paramExpr = Expression.analyze(paramStr, vars, file, ctx);
+					boh.Exception.require<exceptions.ParserException>((paramExpr.getType() as typesys.Primitive).isInt(),
+						"Array size must be an integer");
+					last = new ConstructorCall(
+						arrayType.constructors.Single(
+						x => x.parameters.Count == 1 && x.parameters.Single().type == typesys.Primitive.INT),
+						new[] { paramExpr });
+					i = idxClose + 1;
 				}
-				FunctionCall flast = (FunctionCall)last;
-				typesys.Constructor constr = (typesys.Constructor)flast.refersto;
-				last = new ConstructorCall(constr, flast.parameters);
+				else
+				{
+					string typeStr = str.Substring(i + 1, idxOpen - i - 1);
+					typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr);
+					i += typeStr.Length + 1;
+					int backup = i;
+					try
+					{
+						i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
+					}
+					catch (NullReferenceException)
+					{
+						// generic type
+						i = backup;
+						string after = readNext(str, ref i);
+						if (after != "<")
+						{
+							throw;
+						}
+						int greaterThan = Parser.getMatchingBraceChar(str, i - 1, '>');
+						string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
+						i = greaterThan + 1;
+
+						i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
+					}
+					FunctionCall flast = (FunctionCall)last;
+					typesys.Constructor constr = (typesys.Constructor)flast.refersto;
+					last = new ConstructorCall(constr, flast.parameters);
+				}
 			}
 			else if (last is ExprVariable)
 			{
@@ -521,6 +560,9 @@ namespace bohc.parsing
 				typesys.Variable v = vars.Single(x => x.identifier == next);
 				if (v.lambdaLevel < lambdaStack && !v.enclosed/* && !(v is typesys.LambdaParam)*/)
 				{
+					typesys.Parameter param = v as typesys.Parameter;
+					boh.Exception.require<exceptions.ParserException>(param == null || !param.modifiers.HasFlag(typesys.Modifiers.REF),
+						"ref parameters may not be used inside lambdas");
 					v.enclosed = true;
 					enclosedVars.Peek().Add(v);
 				}
@@ -597,6 +639,32 @@ namespace bohc.parsing
 					field = vars.SingleOrDefault(x => x.identifier == next);
 				}
 			}
+			else if (type is typesys.Enum)
+			{
+				typesys.Enum _enum = (typesys.Enum)type;
+				typesys.Enumerator enumerator = _enum.enumerators.SingleOrDefault(x => x.name == next);
+				if (enumerator != null)
+				{
+					expr = new ExprEnumerator(enumerator);
+					return i;
+				}
+
+				switch (next)
+				{
+					case "toString":
+						functions = new[] { _enum.toString };
+						break;
+					case "getType":
+						functions = new[] { _enum.getType };
+						break;
+					case "equals":
+						functions = new[] { _enum.equals };
+						break;
+					case "hash":
+						functions = new[] { _enum.hash };
+						break;
+				}
+			}
 			else if (vars.Any(x => x.identifier == next))
 			{
 				field = vars.SingleOrDefault(x => x.identifier == next);
@@ -610,6 +678,13 @@ namespace bohc.parsing
 				(next == "this" || next == "super") || (functions != null && functions.Count() != 0) || field != null,
 				"Invalid identifier: " + next);
 
+			solveIdentifierWithInfo(ref expr, vars, ref i, next, str, file, ctx, functions, field);
+
+			return i;
+		}
+
+		private static void solveIdentifierWithInfo(ref Expression expr, IEnumerable<typesys.Variable> vars, ref int i, string next, string str, ts.File file, typesys.Function ctx, IEnumerable<typesys.Function> functions, typesys.Variable field)
+		{
 			string nextnext = readNext(str, ref i);
 			if (nextnext == "(")
 			{
@@ -684,20 +759,19 @@ namespace bohc.parsing
 					}
 				}
 			}
-
-			return i;
 		}
 
 		private static IEnumerable<Expression> getStringParams(string str, int i, IEnumerable<typesys.Variable> locals, ts.File file, typesys.Function ctx)
 		{
 			int close = Parser.getMatchingBraceChar(str, i - 1, ')');
 			string paramstring = str.Substring(i - 1, close - i + 2);
-			return Parser.split(paramstring, 0, ')', ',')
+			Expression[] result = Parser.split(paramstring, 0, ')', ',')
 							.Select(x => x.Trim())
 							.Where(x => !string.IsNullOrEmpty(x))
 							.Select(x => Expression.analyze(x, locals, file, ctx))
 							.Where(x => x != null)
 							.ToArray();
+			return result;
 		}
 
 		/// <summary>

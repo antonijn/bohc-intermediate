@@ -32,7 +32,9 @@ namespace bohc
 		{
 			string[] filenames = new string[]
 			{
+				"src/EnumExample.boh",
 				"src/Main.boh",
+				"src/Box.boh",
 				"src/Object.boh",
 				"src/String.boh",
 				"src/Type.boh",
@@ -53,10 +55,20 @@ namespace bohc
 
 			Dictionary<string, parsing.ts.File> filesassoc = new Dictionary<string, parsing.ts.File>();
 
+			Stopwatch sw = new Stopwatch();
+			sw.Start();
+
 			pstate = ParserState.TS;
-			foreach (string file in files)
+			for (int i = 0; i < files.Length; ++i)
 			{
-				filesassoc[file] = Parser.parseFileTS(file);
+				string file = files[i];
+				parsing.ts.File f = Parser.parseFileTS(ref file);
+				files[i] = file;
+				filesassoc[file] = f;
+				if (f.type is typesys.Type)
+				{
+					Console.WriteLine("Type skimming for: {0}", ((typesys.Type)f.type).fullName());
+				}
 			}
 
 			pstate = ParserState.TP;
@@ -66,8 +78,11 @@ namespace bohc
 				if (f.type is typesys.Type)
 				{
 					Parser.parseFileTP(f, file);
+					Console.WriteLine("Type parsing for: {0}", ((typesys.Type)f.type).fullName());
 				}
 			}
+
+			typesys.Primitive.figureOutFunctionsForAll();
 
 			pstate = ParserState.TCS;
 			KeyValuePair<string, parsing.ts.File>[] vpairs = genTypes.ToArray();
@@ -78,6 +93,7 @@ namespace bohc
 					vpairs = genTypes.ToArray();
 				}
 				KeyValuePair<string, parsing.ts.File> v = vpairs.ToArray()[i];
+				Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)v.Value.type).fullName());
 				Parser.parseFileTCS(v.Value, v.Key);
 			}
 
@@ -86,8 +102,14 @@ namespace bohc
 				parsing.ts.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
+					Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)f.type).fullName());
 					Parser.parseFileTCS(f, file);
 				}
+			}
+
+			foreach (typesys.Enum e in typesys.Enum.instances)
+			{
+				e.sortOutFunctions();
 			}
 
 			pstate = ParserState.TCP;
@@ -98,6 +120,7 @@ namespace bohc
 					vpairs = genTypes.ToArray();
 				}
 				KeyValuePair<string, parsing.ts.File> v = vpairs.ToArray()[i];
+				Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
 				Parser.parseFileTCP(v.Value, v.Key);
 			}
 
@@ -106,6 +129,7 @@ namespace bohc
 				parsing.ts.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
+					Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)f.type).fullName());
 					Parser.parseFileTCP(f, file);
 				}
 			}
@@ -118,6 +142,7 @@ namespace bohc
 					vpairs = genTypes.ToArray();
 				}
 				KeyValuePair<string, parsing.ts.File> v = vpairs.ToArray()[i];
+				Console.WriteLine("Code parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
 				Parser.parseFileCP(v.Value, v.Key);
 			}
 
@@ -126,6 +151,7 @@ namespace bohc
 				parsing.ts.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
+					Console.WriteLine("Code parsing for: {0}", ((typesys.Type)f.type).fullName());
 					Parser.parseFileCP(f, file);
 				}
 			}
@@ -133,15 +159,24 @@ namespace bohc
 			//typesys.GenericType arrayt = filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).Single();
 			//arrayt.getTypeFor(new[] { typesys.Primitive.BOOLEAN });
 
+			Console.WriteLine("Generating code");
+
 			IEnumerable<typesys.Type> types = filesassoc.Values.Select(x => x.type as typesys.Type).Where(x => x != null).Concat(
 				filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).SelectMany(x => x.types.Values));
 
+			Console.WriteLine("Generating lambdas");
 			CodeGen.generateGeneralBit(types);
 
 			foreach (typesys.Type type in types)
 			{
+				Console.WriteLine("Generating code for: {0}", type.fullName());
 				CodeGen.generateFor(type, types);
 			}
+
+			sw.Stop();
+
+			Console.WriteLine("Done generating code");
+			Console.WriteLine("Compilation of {0} files took: {1} milliseconds", files.Length, sw.Elapsed.TotalMilliseconds);
 
 			Console.ReadKey();
 		}

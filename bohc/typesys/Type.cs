@@ -123,6 +123,11 @@ namespace bohc.typesys
 		}
 		public static Type getExisting(Package package, IEnumerable<Package> packages, string name)
 		{
+			if (name.EndsWith("[]"))
+			{
+				return StdType.array.getTypeFor(new[] { getExisting(packages, name.Substring(0, name.Length - 2).TrimEnd()) });
+			}
+
 			if (name.StartsWith("native."))
 			{
 				if (isValidName(name.Replace(".", string.Empty).Replace("*", string.Empty), true))

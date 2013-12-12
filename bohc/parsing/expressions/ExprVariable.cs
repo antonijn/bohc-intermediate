@@ -42,6 +42,12 @@ namespace bohc.parsing
 				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL) || ctx is typesys.Constructor;
 			}
 
+			typesys.Parameter param = refersto as typesys.Parameter;
+			if (param != null)
+			{
+				return !param.modifiers.HasFlag(typesys.Modifiers.FINAL);
+			}
+
 			return true;
 		}
 

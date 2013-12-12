@@ -48,6 +48,7 @@
     <Compile Include="exceptions\ParserException.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="parsing\expressions\ConstructorCall.cs" />
+    <Compile Include="parsing\expressions\ExprEnumerator.cs" />
     <Compile Include="parsing\expressions\Expression.cs" />
     <Compile Include="parsing\expressions\ExprType.cs" />
     <Compile Include="parsing\expressions\ExprVariable.cs" />
@@ -61,6 +62,7 @@
     <Compile Include="parsing\expressions\OperationType.cs" />
     <Compile Include="parsing\expressions\Operator.cs" />
     <Compile Include="parsing\expressions\ExprPackage.cs" />
+    <Compile Include="parsing\expressions\RefExpression.cs" />
     <Compile Include="parsing\expressions\SuperVar.cs" />
     <Compile Include="parsing\expressions\TypeCast.cs" />
     <Compile Include="parsing\statements\Body.cs" />

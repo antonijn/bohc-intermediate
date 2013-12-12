@@ -47,6 +47,7 @@ namespace bohc.typesys
 		{
 			this.owner = owner;
 			this.modifiers = modifiers;
+			this.returnType = returnType;
 			this.identifier = identifier;
 			this.parameters = parameters;
 			this.body = body;

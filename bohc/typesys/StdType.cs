@@ -19,5 +19,9 @@ namespace bohc.typesys
 		public static readonly Class obj = (Class)Type.getExisting(boh_lang, "Object");
 		public static readonly Class str = (Class)Type.getExisting(boh_lang, "String");
 		public static readonly Class type = (Class)Type.getExisting(boh_lang, "Type");
+
+		// TODO: check that package is boh.std
+		public static readonly GenericType array = GenericType.allGenTypes.Single(x => x.name == "Array");
+		public static readonly GenericType box = GenericType.allGenTypes.Single(x => x.name == "Box");
 	}
 }

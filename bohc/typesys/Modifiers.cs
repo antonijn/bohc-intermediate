@@ -26,5 +26,6 @@ namespace bohc.typesys
 		OVERRIDE     = 0x0080,
 		NOCONTEXT    = 0x0100,
 		CVISIBLE     = 0x0200,
+		REF          = 0x0400,
 	}
 }

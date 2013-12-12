@@ -80,7 +80,7 @@ namespace bohc
 				return nt.crep;
 			}
 
-			if (type is Struct || type is FunctionRefType)
+			if (type is Struct || type is FunctionRefType || type is typesys.Enum)
 			{
 				return getCStructName(type);
 			}
@@ -105,6 +105,10 @@ namespace bohc
 
 		public static string getCStructName(typesys.Type type)
 		{
+			if (type is typesys.Enum)
+			{
+				return "enum " + getCName(type);
+			}
 			return "struct " + getCName(type);
 		}
 
@@ -260,7 +264,39 @@ namespace bohc
 					return "ctx->*" + getVarName(variable);
 				}
 			}
+
+			Parameter param = variable as Parameter;
+			if (param != null)
+			{
+				if (param.modifiers.HasFlag(Modifiers.REF))
+				{
+					return "(*" + getVarName(variable) + ")";
+				}
+			}
 			return getVarName(variable);
+		}
+
+		private static string getParamTypeName(Parameter param)
+		{
+			if (param.modifiers.HasFlag(Modifiers.REF))
+			{
+				return getCTypeName(param.type) + "* const";
+			}
+			if (param.modifiers.HasFlag(Modifiers.FINAL))
+			{
+				return getCTypeName(param.type) + " const";
+			}
+			return getCTypeName(param.type);
+		}
+
+		private static string getParamTypeName(LambdaParam param)
+		{
+			// TODO: implement this
+			/*if (param.modifiers.HasFlag(Modifiers.REF))
+			{
+				return getCTypeName(param.type) + "*";
+			}*/
+			return getCTypeName(param.type);
 		}
 
 		public static uint hashString(string str)
@@ -308,6 +344,11 @@ namespace bohc
 			return "vtable_" + getCName(c);
 		}
 
+		private static string getEnumeratorName(Enumerator e)
+		{
+			return getCName(e.enumType) + e.name;
+		}
+
 		#endregion
 
 		// this is used to keep track of the variables enclosed by the lambdas
@@ -316,6 +357,7 @@ namespace bohc
 
 		public static void generateGeneralBit(IEnumerable<typesys.Type> others)
 		{
+			//Primitive.figureOutFunctionsForAll();
 			generateFunctionRefTypes(others);
 		}
 
@@ -455,7 +497,7 @@ namespace bohc
 				builder.Append(ctxName + " * ctx, ");
 				foreach (LambdaParam lParam in l.lambdaParams)
 				{
-					builder.Append(getCTypeName(lParam.type));
+					builder.Append(getParamTypeName(lParam));
 					builder.Append(" ");
 					builder.Append(getVarName(lParam));
 					builder.Append(", ");
@@ -537,7 +579,47 @@ namespace bohc
 				return generateInterfaceHeader(i, others);
 			}
 
+			typesys.Enum e = type as typesys.Enum;
+			if (e != null)
+			{
+				return generateEnumHeader(e, others);
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private static string generateEnumHeader(typesys.Enum e, IEnumerable<typesys.Type> others)
+		{
+			StringBuilder builder = new StringBuilder();
+
+			addIncludeGuard(builder, e);
+			builder.AppendLine();
+
+			builder.AppendLine(getCStructName(e));
+			builder.AppendLine("{");
+			
+			++indentation;
+
+			int i = 0;
+			foreach (Enumerator enumerator in e.enumerators)
+			{
+				addIndent(builder);
+				builder.Append(getEnumeratorName(enumerator));
+				builder.Append(" = ");
+				builder.Append(i++);
+				builder.AppendLine(",");
+			}
+
+			if (e.enumerators.Count > 0)
+			{
+				builder.Remove(builder.Length - Environment.NewLine.Length - 1, 1);
+			}
+
+			builder.AppendLine("};");
+
+			--indentation;
+
+			return builder.ToString();
 		}
 
 		private static string generateInterfaceHeader(Interface iface, IEnumerable<typesys.Type> others)
@@ -681,7 +763,7 @@ namespace bohc
 
 			foreach (Parameter p in func.parameters)
 			{
-				builder.Append(getCTypeName(p.type));
+				builder.Append(getParamTypeName(p));
 				builder.Append(" ");
 				builder.Append(getVarName(p));
 				builder.Append(", ");
@@ -1165,7 +1247,7 @@ namespace bohc
 
 			builder.AppendLine(")");
 
-			bool hasSuperBeenCalled = (Parser.hasSuperBeenCalled(func.body) || ((Class)func.owner).super == null);
+			bool hasSuperBeenCalled = (Parser.hasSuperBeenCalled(func.body) || (!(func.owner is Class) || ((Class)func.owner).super == null));
 			if (!hasSuperBeenCalled && func is Constructor && ((Class)func.owner).super != StdType.obj)
 			{
 				func.body.statements.Insert(0,
@@ -1509,7 +1591,32 @@ namespace bohc
 				return;
 			}
 
+			ExprEnumerator en = expression as ExprEnumerator;
+			if (en != null)
+			{
+				addEnumerator(builder, en);
+				return;
+			}
+
+			RefExpression refExpr = expression as RefExpression;
+			if (refExpr != null)
+			{
+				addRefExpr(builder, refExpr);
+				return;
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private static void addRefExpr(StringBuilder builder, RefExpression refExpr)
+		{
+			builder.Append("&");
+			addExpression(builder, refExpr.onwhat);
+		}
+
+		private static void addEnumerator(StringBuilder builder, ExprEnumerator en)
+		{
+			builder.Append(getEnumeratorName(en.enumerator));
 		}
 
 		private static void addLambda(StringBuilder builder, Lambda lambda)
@@ -1754,7 +1861,9 @@ namespace bohc
 					builder.Append(tempname);
 					builder.Append("), ");
 				}
-				else if (fcall.refersto.owner is Class)
+				else if (fcall.refersto.owner is Class
+					|| fcall.refersto.owner is typesys.Enum
+					|| fcall.refersto.owner is typesys.Primitive)
 				{
 					builder.Append(getCFuncName(fcall.refersto));
 					builder.Append("(");
@@ -2262,7 +2371,26 @@ namespace bohc
 				return generateInterfaceCode(i, others);
 			}
 
+			typesys.Enum e = type as typesys.Enum;
+			if (e != null)
+			{
+				return generateEnumCode(e, others);
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private static string generateEnumCode(typesys.Enum e, IEnumerable<typesys.Type> others)
+		{
+			StringBuilder builder = new StringBuilder();
+
+			builder.Append("#include \"");
+			builder.Append(getHeaderName(e));
+			builder.AppendLine("\"");
+
+			addFunctionDef(builder, e.toString);
+
+			return builder.ToString();
 		}
 
 		private static void addInterfaceConstructor(StringBuilder builder, Interface iface)

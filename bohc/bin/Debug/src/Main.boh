@@ -4,22 +4,8 @@ import boh.std;
 
 public class MainClass
 {
-	private float asdfghjkl = 2.0f;
-	private void func(float param)
+	private static void main(final String[] args)
 	{
-		float(float) function = float (float x) -> x / param;
-		float result = function(10);
-		
-		void(float) action = void (float what) ->
-		{
-			void() other = void () -> function(what * asdfghjkl);
-			other();
-		};
-	}
-
-	private static void main()
-	{
-		MainClass mc = new MainClass();
-		mc.func(1.0f);
+		int[] integers = new int[10];
 	}
 }

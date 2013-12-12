@@ -15,10 +15,12 @@ namespace bohc.typesys
 	public sealed class Enumerator
 	{
 		public readonly string name;
+		public readonly Enum enumType;
 
-		public Enumerator(string name)
+		public Enumerator(string name, Enum enumType)
 		{
 			this.name = name;
+			this.enumType = enumType;
 		}
 	}
 }

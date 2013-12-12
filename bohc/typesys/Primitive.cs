@@ -14,6 +14,33 @@ namespace bohc.typesys
 {
 	public class Primitive : typesys.Type
 	{
+		public Function toString;
+		public Function getType;
+		public Function equals;
+		public Function hash;
+
+		public static void figureOutFunctionsForAll()
+		{
+			BYTE.figureOutFunctions();
+			SHORT.figureOutFunctions();
+			INT.figureOutFunctions();
+			LONG.figureOutFunctions();
+			CHAR.figureOutFunctions();
+			DECIMAL.figureOutFunctions();
+			FLOAT.figureOutFunctions();
+			DOUBLE.figureOutFunctions();
+			BOOLEAN.figureOutFunctions();
+		}
+
+		private void figureOutFunctions()
+		{
+			toString = new Function(this, Modifiers.PUBLIC, StdType.type, "toString", new List<Parameter>(), default(parsing.statements.Body));
+			getType = new Function(this, Modifiers.PUBLIC, StdType.type, "getType", new List<Parameter>(), default(parsing.statements.Body));
+			equals = new Function(this, Modifiers.PUBLIC, Primitive.BOOLEAN, "equals", new List<Parameter>(), default(parsing.statements.Body));
+			equals.parameters.Add(new Parameter(equals, Modifiers.FINAL, "other", StdType.obj));
+			hash = new Function(this, Modifiers.PUBLIC, Primitive.LONG, "hash", new List<Parameter>(), default(parsing.statements.Body));
+		}
+
 		public readonly int size;
 		public readonly string cname;
 		public parsing.Literal initval;
@@ -110,6 +137,11 @@ namespace bohc.typesys
 			if (this == other)
 			{
 				return 1;
+			}
+
+			if (isInt() && (other is typesys.Enum))
+			{
+				return 3;
 			}
 
 			Primitive oPrim = other as Primitive;

@@ -18,5 +18,10 @@ namespace bohc.parsing
 			: base(c.THIS, null)
 		{
 		}
+
+		public ThisVar(typesys.Enum e)
+			: base(e.THIS, null)
+		{
+		}
 	}
 }

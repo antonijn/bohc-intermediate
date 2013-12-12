@@ -46,8 +46,8 @@ _Bool p3p3c6_bohstdString_m_isNullOrEmpty_5bf6fcab(struct p3p3c6_bohstdString * 
 }
 _Bool p3p3c6_bohstdString_m_equals_5289cddf(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdObject * p_other)
 {
-	struct p3p3c6_bohstdObject * temp9;
-	if ((!p3p3c6_bohstdObject_m_valEquals_d237012d((struct p3p3c6_bohstdObject *)((temp9 = p_other)->vtable->m_getType_d5aca7eb(temp9)), (struct p3p3c6_bohstdObject *)((typeof_p3p3c6_bohstdString())))))
+	struct p3p3c6_bohstdObject * temp3;
+	if ((!p3p3c6_bohstdObject_m_valEquals_d237012d((struct p3p3c6_bohstdObject *)((temp3 = p_other)->vtable->m_getType_d5aca7eb(temp3)), (struct p3p3c6_bohstdObject *)((typeof_p3p3c6_bohstdString())))))
 	{
 		return 0;
 	}

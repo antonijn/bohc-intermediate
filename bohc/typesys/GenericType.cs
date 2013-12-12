@@ -111,7 +111,7 @@ namespace bohc.typesys
 			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
 
-			parsing.ts.File newf = Parser.parseFileTS(code);
+			parsing.ts.File newf = Parser.parseFileTS(ref code);
 			Program.genTypes.Add(code, newf);
 			Parser.parseFileTP(newf, code);
 			if (Program.pstate >= ParserState.TCS)

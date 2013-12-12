@@ -164,11 +164,78 @@ namespace bohc
 			return Regex.Replace(str, "\\s+", " ");
 		}
 
+		private static string removeComments(string file)
+		{
+			List<char> charList = file.ToList();
+			bool inStr = false;
+			int numSlash = 0;
+			bool prevBackSl = false;
+			for (int i = 0; i < charList.Count; ++i)
+			{
+				char ch = charList[i];
+				if (ch == '/')
+				{
+					if (!inStr)
+					{
+						++numSlash;
+						if (numSlash == 2)
+						{
+							int idxnl = charList.IndexOf('\n', i);
+							int idxsl = i - 1;
+							int len = idxnl - idxsl;
+							charList.RemoveRange(idxsl, len);
+							numSlash = 0;
+						}
+					}
+				}
+				else
+				{
+					if (numSlash == 1 && ch == '*' && !inStr)
+					{
+						int idx = idxOfCloseCom(charList, i + 2);
+						int len = idx - i + 3;
+						charList.RemoveRange(i - 1, len);
+						//i = idx;
+					}
+					else if (ch == '\\')
+					{
+						prevBackSl = !prevBackSl;
+					}
+					else
+					{
+						if (ch == '"' && !prevBackSl)
+						{
+							inStr = !inStr;
+						}
+						prevBackSl = false;
+					}
+					numSlash = 0;
+				}
+			}
+			file = new string(charList.ToArray());
+			return file;
+		}
+
+		private static int idxOfCloseCom(List<char> chars, int start)
+		{
+			for (; start < chars.Count; ++start)
+			{
+				if (chars[start - 1] == '*' && chars[start] == '/')
+				{
+					return start - 1;
+				}
+			}
+
+			return -1;
+		}
+
 
 		#region Type Skimming (TS)
 
-		public static File parseFileTS(string file)
+		public static File parseFileTS(ref string file)
 		{
+			file = removeComments(file);
+
 			int openCurly = file.IndexOf('{');
 			string beforeTypeBody = file.Substring(0, openCurly);
 			int lastSemicol = beforeTypeBody.LastIndexOf(';');
@@ -588,8 +655,9 @@ namespace bohc
 			mods = Modifiers.NONE;
 			if (paramParts.Length > 2)
 			{
-				boh.Exception.require<ParserException>(paramParts.First() == "final", "'final' is the only legal modifier for parameters");
-				mods = Modifiers.FINAL;
+				boh.Exception.require<ParserException>(
+					paramParts.First() == "final" || paramParts.First() == "ref", "'final' and 'ref' are the only legal modifiers for parameters");
+				mods = ModifierHelper.getModifierFromString(paramParts.First());
 			}
 
 			type = typesys.Type.getExisting(f.getContext(), typeName);
@@ -647,7 +715,7 @@ namespace bohc
 				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(enumerator), enumerator + " is not a valid enumerator");
 				boh.Exception.warnIf(enumerator.ToUpperInvariant() != enumerator, "Enumerator names should be uppercase");
 
-				((typesys.Enum)f.type).enumerators.Add(new Enumerator(enumerator));
+				((typesys.Enum)f.type).enumerators.Add(new Enumerator(enumerator, (typesys.Enum)f.type));
 			}
 		}
 

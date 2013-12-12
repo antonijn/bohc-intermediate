@@ -20,6 +20,21 @@ namespace bohc.parsing
 
 		public FunctionCall(typesys.Function refersto, Expression belongsto, IEnumerable<Expression> parameters)
 		{
+			// check whether the refs are alright
+			int i = 0;
+			foreach (Expression expr in parameters)
+			{
+				typesys.Parameter corresponding = refersto.parameters[i++];
+				boh.Exception.require<exceptions.ParserException>(
+					(!corresponding.modifiers.HasFlag(typesys.Modifiers.REF) ||
+					(expr is RefExpression)),
+					"ref parameter requires ref expression");
+				boh.Exception.require<exceptions.ParserException>(
+					(corresponding.modifiers.HasFlag(typesys.Modifiers.REF) ||
+					!(expr is RefExpression)),
+					"ref expression requires ref parameter");
+			}
+
 			this.refersto = refersto;
 			this.belongsto = belongsto;
 			this.parameters = parameters.ToArray();
