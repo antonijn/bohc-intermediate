@@ -27,8 +27,61 @@ public final class Array<T> implements IIndexedCollection<T>
 		native.boh_set_deref(items, i, value);
 	}
 	
+	public T getFast(int i)
+	{
+		return native.boh_deref_ptr(items, i);
+	}
+	
+	public void setFast(int i, T value)
+	{
+		native.boh_set_deref(items, i, value);
+	}
+	
 	public IIterator<T> iterator()
 	{
 		throw new Exception();
+	}
+	
+	public void resize(int newsize)
+	{
+		if (newsize <= length)
+		{
+			length = newsize;
+			return;
+		}
+		items = native.GC_realloc(newsize);
+		length = newsize;
+	}
+	
+	public void move(int dest, int src, int size)
+	{
+		if (dest < 0)
+		{
+			//throw new ParameterException("The destination index may not be negative");
+		}
+		if (src < 0)
+		{
+			//throw new ParameterException("The source index may not be negative");
+		}
+		if (dest + size > length || src + size > length)
+		{
+			//throw new ParameterException("Cannot move a section that ranges outside of the array");
+		}
+		if (size == 0)
+		{
+			return;
+		}
+		if (size < 0) 
+		{
+			//throw new ParameterException("size may not be negative");
+		}
+	
+		T[] backup = new T[size];
+		for (int i = 0; i < size; ++i) {
+			backup.setFast(i, getFast(src + i));
+		}
+		for (int i = 0; i < size; ++i) {
+			setFast(dest + i, backup.getFast(i));
+		}
 	}
 }

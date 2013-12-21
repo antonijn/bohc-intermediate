@@ -100,6 +100,32 @@ namespace bohc.parsing
 
 			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(ctx), "Not a modifiable lvalue");
 
+			if (operation == ASSIGN_ADD)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, ADD);
+			}
+			else if (operation == ASSIGN_DIV)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, DIV);
+			}
+			else if (operation == ASSIGN_MUL)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, MUL);
+			}
+			else if (operation == ASSIGN_REM)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, REM);
+			}
+			else if (operation == ASSIGN_SUB)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, SUB);
+			}
+
 			overloaded = figureOutOverload();
 		}
 

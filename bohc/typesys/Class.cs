@@ -204,13 +204,18 @@ namespace bohc.typesys
 			return extends(other) != 0;
 		}
 
+		private bool sameGenType(Class ctx)
+		{
+			return ctx.originalGenType == originalGenType && originalGenType != null;
+		}
+
 		public IEnumerable<Function> getFunctions(string id, Class context)
 		{
 			bool _private = false;
 			bool _protected = false;
 			bool _public = true;
 
-			if (context == this)
+			if (context == this || sameGenType(context))
 			{
 				_private = true;
 				_protected = true;
@@ -232,7 +237,7 @@ namespace bohc.typesys
 			bool _protected = false;
 			bool _public = true;
 
-			if (context == this)
+			if (context == this || sameGenType(context))
 			{
 				_private = true;
 				_protected = true;

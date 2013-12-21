@@ -145,6 +145,11 @@ namespace bohc.typesys
 			}
 
 			Primitive oPrim = other as Primitive;
+			if (oPrim == null)
+			{
+				return 0;
+			}
+
 			if (isInt() && oPrim.isInt())
 			{
 				return 2;

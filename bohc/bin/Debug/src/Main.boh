@@ -4,8 +4,17 @@ import boh.std;
 
 public class MainClass
 {
+	private pf_desktop64 int i = 10;
+
+	protected pf_linux virtual void vfun()
+	{
+		String str = "Hello, " + "world!";
+		str += "From antonijn";
+	}
+	
 	private static void main(final String[] args)
 	{
-		int[] integers = new int[10];
+		String[][] strstsrts = new String[10][];
+		strstsrts.set(0, args);
 	}
 }

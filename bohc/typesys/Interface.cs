@@ -55,5 +55,24 @@ namespace bohc.typesys
 			IEnumerable<Function> inThis = functions.Where(x => x.identifier == id).ToList();
 			return inThis.Concat(implements.SelectMany(x => x.getFunctions(id)));
 		}
+
+		public override int extends(Type other)
+		{
+			if (other == this)
+			{
+				return 1;
+			}
+
+			foreach (Interface impl in implements)
+			{
+				int extds = impl.extends(other);
+				if (extds > 0)
+				{
+					return extds + 1;
+				}
+			}
+
+			return 0;
+		}
 	}
 }

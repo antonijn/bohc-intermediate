@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.parsing.ts;
+using bohc.parsing;
 
 namespace bohc.typesys
 {
@@ -25,6 +25,8 @@ namespace bohc.typesys
 		{
 			file = f;
 		}
+
+		public GenericType originalGenType;
 
 		/// <summary>
 		/// gets a value indicating to which extent two types are related.
@@ -81,7 +83,7 @@ namespace bohc.typesys
 		public readonly Modifiers modifiers;
 		public readonly string name;
 
-		public parsing.ts.File file;
+		public parsing.File file;
 
 		private static readonly List<Type> types = new List<Type>();
 
@@ -108,24 +110,24 @@ namespace bohc.typesys
 			}
 		}
 
-		public static Type getExisting(string name)
+		public static Type getExisting(string name, Parser parser)
 		{
 			int lidxDot = name.LastIndexOf('.');
 			string pkg = name.Substring(0, lidxDot != -1 ? lidxDot : 0);
 			string cname = name.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
-			return typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname);
+			return typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname, parser);
 		}
 
 		/// <returns>null on failure</returns>
-		public static Type getExisting(Package package, string name)
+		public static Type getExisting(Package package, string name, Parser parser)
 		{
-			return getExisting(package, new[] { package }, name);
+			return getExisting(package, new[] { package }, name, parser);
 		}
-		public static Type getExisting(Package package, IEnumerable<Package> packages, string name)
+		public static Type getExisting(Package package, IEnumerable<Package> packages, string name, Parser parser)
 		{
 			if (name.EndsWith("[]"))
 			{
-				return StdType.array.getTypeFor(new[] { getExisting(packages, name.Substring(0, name.Length - 2).TrimEnd()) });
+				return StdType.array.getTypeFor(new[] { getExisting(packages, name.Substring(0, name.Length - 2).TrimEnd(), parser) }, parser);
 			}
 
 			if (name.StartsWith("native."))
@@ -143,14 +145,14 @@ namespace bohc.typesys
 				string nameTrimEnd = name.TrimEnd();
 				if (nameTrimEnd.EndsWith(")"))
 				{
-					int startParent = Parser.getMatchingBraceCharBackwards(nameTrimEnd, nameTrimEnd.Length - 1, '(');
-					IEnumerable<Type> fParamTypes = Parser.split(nameTrimEnd, startParent, ')', ',').Select(x => getExisting(packages, x));
+					int startParent = ParserTools.getMatchingBraceCharBackwards(nameTrimEnd, nameTrimEnd.Length - 1, '(');
+					IEnumerable<Type> fParamTypes = ParserTools.split(nameTrimEnd, startParent, ')', ',').Select(x => getExisting(packages, x, parser));
 					if (string.IsNullOrWhiteSpace(nameTrimEnd.Substring(startParent + 1, nameTrimEnd.Length - startParent - 2)))
 					{
 						fParamTypes = Enumerable.Empty<Type>();
 					}
 					string retTypeStr = nameTrimEnd.Substring(0, startParent);
-					Type retType = getExisting(packages, retTypeStr);
+					Type retType = getExisting(packages, retTypeStr, parser);
 					if (fParamTypes.Any(x => x == null) || retType == null)
 					{
 						return null;
@@ -161,8 +163,8 @@ namespace bohc.typesys
 				if (idxL != -1)
 				{
 					string actName = name.Substring(0, idxL);
-					string[] split = Parser.split(name, idxL, '>', ',').ToArray();
-					Type[] genTypes = split.Select(x => getExisting(packages, x)).ToArray();
+					string[] split = ParserTools.split(name, idxL, '>', ',').ToArray();
+					Type[] genTypes = split.Select(x => getExisting(packages, x, parser)).ToArray();
 					IEnumerable<GenericType> options = GenericType.allGenTypes.Where(x => x.file.package == package);
 					if (options.Count() == 0)
 					{
@@ -170,19 +172,19 @@ namespace bohc.typesys
 					}
 
 					GenericType gType = options.Single(x => x.name == actName);
-					return gType.getTypeFor(genTypes);
+					return gType.getTypeFor(genTypes, parser);
 				}
-				return types.SingleOrDefault(x => x.package == package && x.name == name) ?? (name.Contains('.') ? getExisting(name) : null);
+				return types.SingleOrDefault(x => x.package == package && x.name == name) ?? (name.Contains('.') ? getExisting(name, parser) : null);
 			}
 		}
 
-		public static Type getExisting(IEnumerable<Package> packages, string name)
+		public static Type getExisting(IEnumerable<Package> packages, string name, Parser parser)
 		{
 			lock (types)
 			{
 				foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 				{
-					Type t = getExisting(p, packages, name);
+					Type t = getExisting(p, packages, name, parser);
 					if (t != null)
 					{
 						return t;
@@ -195,11 +197,11 @@ namespace bohc.typesys
 			return null;
 		}
 
-		public static bool exists(IEnumerable<Package> packages, string name)
+		public static bool exists(IEnumerable<Package> packages, string name, Parser parser)
 		{
 			foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 			{
-				Type t = getExisting(p, name);
+				Type t = getExisting(p, name, parser);
 				if (t != null)
 				{
 					return true;

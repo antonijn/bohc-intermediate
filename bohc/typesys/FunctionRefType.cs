@@ -27,6 +27,11 @@ namespace bohc.typesys
 			return other == this ? 1 : (other == StdType.obj ? 2 : 0);
 		}
 
+		public override int GetHashCode()
+		{
+			return retType.GetHashCode() + paramTypes.Sum(x => x.GetHashCode());
+		}
+
 		public override bool Equals(object obj)
 		{
 			FunctionRefType fRefType = obj as FunctionRefType;

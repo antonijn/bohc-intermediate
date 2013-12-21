@@ -16,12 +16,14 @@ namespace bohc.typesys
 	{
 		public static Package boh_lang = Package.getFromString("boh.std");
 
-		public static readonly Class obj = (Class)Type.getExisting(boh_lang, "Object");
-		public static readonly Class str = (Class)Type.getExisting(boh_lang, "String");
-		public static readonly Class type = (Class)Type.getExisting(boh_lang, "Type");
+		public static readonly Class obj = (Class)Type.getExisting(boh_lang, "Object", null);
+		public static readonly Class str = (Class)Type.getExisting(boh_lang, "String", null);
+		public static readonly Class type = (Class)Type.getExisting(boh_lang, "Type", null);
 
 		// TODO: check that package is boh.std
 		public static readonly GenericType array = GenericType.allGenTypes.Single(x => x.name == "Array");
 		public static readonly GenericType box = GenericType.allGenTypes.Single(x => x.name == "Box");
+		public static readonly GenericType icollection = GenericType.allGenTypes.Single(x => x.name == "ICollection");
+		public static readonly GenericType iiterator = GenericType.allGenTypes.Single(x => x.name == "IIterator");
 	}
 }

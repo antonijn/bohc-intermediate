@@ -10,8 +10,6 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>bohc</RootNamespace>
     <AssemblyName>bohc</AssemblyName>
-    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
-    <TargetFrameworkProfile>Client</TargetFrameworkProfile>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
@@ -34,33 +32,28 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="boh\Exception.cs" />
-    <Compile Include="CMangler.cs" />
-    <Compile Include="CodeGen.cs" />
+    <Compile Include="generation\mangling\CMangler.cs" />
+    <Compile Include="generation\c\CodeGen.cs" />
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
-    <Compile Include="ICodeGen.cs" />
-    <Compile Include="IMangler.cs" />
+    <Compile Include="generation\ICodeGen.cs" />
+    <Compile Include="generation\mangling\IMangler.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="parsing\expressions\ConstructorCall.cs" />
+    <Compile Include="parsing\expressions\DefaultExpressionParser.cs" />
     <Compile Include="parsing\expressions\ExprEnumerator.cs" />
     <Compile Include="parsing\expressions\Expression.cs" />
     <Compile Include="parsing\expressions\ExprType.cs" />
     <Compile Include="parsing\expressions\ExprVariable.cs" />
     <Compile Include="parsing\expressions\FunctionCall.cs" />
     <Compile Include="parsing\expressions\FunctionVarCall.cs" />
+    <Compile Include="parsing\expressions\IExpressionParser.cs" />
     <Compile Include="parsing\expressions\Lambda.cs" />
     <Compile Include="parsing\expressions\Literal.cs" />
     <Compile Include="parsing\expressions\BinaryOperation.cs" />
     <Compile Include="parsing\expressions\NativeFCall.cs" />
+    <Compile Include="parsing\expressions\NativeMember.cs" />
     <Compile Include="parsing\expressions\NewDummy.cs" />
     <Compile Include="parsing\expressions\OperationType.cs" />
     <Compile Include="parsing\expressions\Operator.cs" />
@@ -68,22 +61,30 @@
     <Compile Include="parsing\expressions\RefExpression.cs" />
     <Compile Include="parsing\expressions\SuperVar.cs" />
     <Compile Include="parsing\expressions\TypeCast.cs" />
+    <Compile Include="parsing\ParserTools.cs" />
     <Compile Include="parsing\statements\Body.cs" />
     <Compile Include="parsing\statements\BodyStatement.cs" />
     <Compile Include="parsing\statements\BreakStatement.cs" />
+    <Compile Include="parsing\statements\CaseLabel.cs" />
     <Compile Include="parsing\statements\CatchStatement.cs" />
     <Compile Include="parsing\statements\ContinueStatement.cs" />
+    <Compile Include="parsing\statements\DefaultLabel.cs" />
+    <Compile Include="parsing\statements\DefaultStatementParser.cs" />
     <Compile Include="parsing\statements\DoWhileStatement.cs" />
     <Compile Include="parsing\statements\ElseStatement.cs" />
     <Compile Include="parsing\statements\EmptyStatement.cs" />
     <Compile Include="parsing\statements\ExpressionStatement.cs" />
     <Compile Include="parsing\statements\FinallyStatement.cs" />
+    <Compile Include="parsing\statements\ForeachStatement.cs" />
     <Compile Include="parsing\statements\ForStatement.cs" />
     <Compile Include="parsing\statements\IfStatement.cs" />
     <Compile Include="parsing\expressions\NativeExpression.cs" />
+    <Compile Include="parsing\statements\IStatementParser.cs" />
     <Compile Include="parsing\statements\ReturnStatement.cs" />
     <Compile Include="parsing\statements\Scope.cs" />
     <Compile Include="parsing\statements\Statement.cs" />
+    <Compile Include="parsing\statements\SwitchLabel.cs" />
+    <Compile Include="parsing\statements\SwitchStatement.cs" />
     <Compile Include="parsing\statements\ThrowStatement.cs" />
     <Compile Include="parsing\statements\TryStatement.cs" />
     <Compile Include="parsing\statements\VarDeclaration.cs" />
@@ -98,7 +99,7 @@
     <Compile Include="typesys\Enum.cs" />
     <Compile Include="typesys\Enumerator.cs" />
     <Compile Include="typesys\Field.cs" />
-    <Compile Include="parsing\ts\File.cs" />
+    <Compile Include="parsing\File.cs" />
     <Compile Include="typesys\Function.cs" />
     <Compile Include="typesys\FunctionRefType.cs" />
     <Compile Include="typesys\GenericFunction.cs" />
@@ -142,4 +143,8 @@
   <Target Name="AfterBuild">
   </Target>
   -->
+  <ItemGroup>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
 </Project>

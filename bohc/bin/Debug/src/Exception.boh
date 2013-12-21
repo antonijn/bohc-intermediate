@@ -14,9 +14,53 @@ public class Exception
 		return description;
 	}
 	
+	private pf_windows void genStackTrace()
+	{
+		//StringBuilder sBuilder = new StringBuilder();
+		
+		native.HANDLE process = native.GetCurrentProcess();
+		
+		native.SymInitialize(process, null, true);
+		
+		native.void* stack = native.boh_arr_to_ptr(new long[100]);
+		native.uint16_t frames = native.CaptureBackTrace(0, 62, stack, null);
+		native.SYMBOL_INFO dummy;
+		native.SYMBOL_INFO* symbol = native.GC_malloc(native.sizeof(dummy) + 256 * 2);
+		native.boh_deref_ptr(symbol, 0).MaxNameLen = 255;
+		native.boh_deref_ptr(symbol, 0).SizeOfStruct = native.sizeof(dummy);
+		
+		for (int i = 0; i < frames; ++i) {
+			native.SymFromAddr(process, (native.DWORD64) native.boh_deref_ptr(stack, i), 0, symbol);
+			//sBuilder.append(C.boh_str_from_cwstr(symbol->Name));
+			//sBuilder.append(System.NEW_LINE);
+		}
+		
+		//return sBuilder.toString();
+	}
+	
+	private pf_linux pf_osx pf_android void genStackTrace()
+	{
+		//StringBuilder sBuilder = new StringBuilder();
+	
+		native.void* callstack = native.boh_arr_to_ptr(new long[128]);
+		int frames = native.backtrace(callstack, 128);
+		native.char** strings = native.backtrace_symbols(callstack, frames);
+		
+		for (int i = 0; i < frames; ++i) {
+			//sBuilder.append(C.boh_str_from_cstr(C.boh_deref_ptr(strings, i)));
+			//sBuilder.append(System.NEW_LINE);
+		}
+		
+		native.free(strings);
+		
+		//return sBuilder.toString();
+	}
+	
 	public this(String description)
 	{
 		this.description = description;
+		
+		this.genStackTrace();
 	}
 	
 	public this()

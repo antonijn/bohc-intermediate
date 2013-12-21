@@ -11,6 +11,14 @@ using System.Linq;
 using System.Text;
 using System.Diagnostics;
 
+using bohc.generation;
+using bohc.generation.c;
+using bohc.generation.mangling;
+
+using bohc.parsing;
+using bohc.parsing.statements;
+using bohc.parsing.expressions;
+
 namespace bohc
 {
 	public enum ParserState
@@ -24,7 +32,7 @@ namespace bohc
 
 	class Program
 	{
-		public static readonly Dictionary<string, parsing.ts.File> genTypes = new Dictionary<string, parsing.ts.File>();
+		public static readonly Dictionary<string, parsing.File> genTypes = new Dictionary<string, parsing.File>();
 
 		public static ParserState pstate;
 
@@ -44,8 +52,9 @@ namespace bohc
 				"src/IIndexedCollection.boh",
 				"src/IIterator.boh",
 				"src/Vector2f.boh",
+				"src/List.boh",
+				"src/StringBuilder.boh",
 			};
-			//string[] filenames = new string[] { "src/String.boh", "src/Exception.boh", "src/Object.boh", "src/Type.boh", "src/Class.boh", "src/Interface.boh" };
 			string[] files = new string[filenames.Length];
 
 			for (int i = 0; i < filenames.Length; ++i)
@@ -53,16 +62,18 @@ namespace bohc
 				files[i] = System.IO.File.ReadAllText(filenames[i]);
 			}
 
-			Dictionary<string, parsing.ts.File> filesassoc = new Dictionary<string, parsing.ts.File>();
+			Dictionary<string, parsing.File> filesassoc = new Dictionary<string, parsing.File>();
 
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
+
+			Parser parser = new Parser(new DefaultStatementParser(new DefaultExpressionParser()));
 
 			pstate = ParserState.TS;
 			for (int i = 0; i < files.Length; ++i)
 			{
 				string file = files[i];
-				parsing.ts.File f = Parser.parseFileTS(ref file);
+				parsing.File f = parser.parseFileTS(ref file);
 				files[i] = file;
 				filesassoc[file] = f;
 				if (f.type is typesys.Type)
@@ -74,10 +85,10 @@ namespace bohc
 			pstate = ParserState.TP;
 			foreach (string file in files)
 			{
-				parsing.ts.File f = filesassoc[file];
+				parsing.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
-					Parser.parseFileTP(f, file);
+					parser.parseFileTP(f, file);
 					Console.WriteLine("Type parsing for: {0}", ((typesys.Type)f.type).fullName());
 				}
 			}
@@ -85,31 +96,31 @@ namespace bohc
 			typesys.Primitive.figureOutFunctionsForAll();
 
 			pstate = ParserState.TCS;
-			KeyValuePair<string, parsing.ts.File>[] vpairs = genTypes.ToArray();
+			KeyValuePair<string, parsing.File>[] vpairs = genTypes.ToArray();
 			for (int i = 0; i < genTypes.Count; ++i)
 			{
 				if (vpairs.Length != genTypes.Count)
 				{
 					vpairs = genTypes.ToArray();
 				}
-				KeyValuePair<string, parsing.ts.File> v = vpairs.ToArray()[i];
+				KeyValuePair<string, parsing.File> v = vpairs.ToArray()[i];
 				Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)v.Value.type).fullName());
-				Parser.parseFileTCS(v.Value, v.Key);
+				parser.parseFileTCS(v.Value, v.Key);
 			}
 
 			foreach (string file in files)
 			{
-				parsing.ts.File f = filesassoc[file];
+				parsing.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)f.type).fullName());
-					Parser.parseFileTCS(f, file);
+					parser.parseFileTCS(f, file);
 				}
 			}
 
 			foreach (typesys.Enum e in typesys.Enum.instances)
 			{
-				e.sortOutFunctions();
+				e.sortOutFunctions(parser);
 			}
 
 			pstate = ParserState.TCP;
@@ -119,18 +130,18 @@ namespace bohc
 				{
 					vpairs = genTypes.ToArray();
 				}
-				KeyValuePair<string, parsing.ts.File> v = vpairs.ToArray()[i];
+				KeyValuePair<string, parsing.File> v = vpairs.ToArray()[i];
 				Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
-				Parser.parseFileTCP(v.Value, v.Key);
+				parser.parseFileTCP(v.Value, v.Key);
 			}
 
 			foreach (string file in files)
 			{
-				parsing.ts.File f = filesassoc[file];
+				parsing.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)f.type).fullName());
-					Parser.parseFileTCP(f, file);
+					parser.parseFileTCP(f, file);
 				}
 			}
 
@@ -141,18 +152,18 @@ namespace bohc
 				{
 					vpairs = genTypes.ToArray();
 				}
-				KeyValuePair<string, parsing.ts.File> v = vpairs.ToArray()[i];
+				KeyValuePair<string, parsing.File> v = vpairs.ToArray()[i];
 				Console.WriteLine("Code parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
-				Parser.parseFileCP(v.Value, v.Key);
+				parser.parseFileCP(v.Value, v.Key);
 			}
 
 			foreach (string file in files)
 			{
-				parsing.ts.File f = filesassoc[file];
+				parsing.File f = filesassoc[file];
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Code parsing for: {0}", ((typesys.Type)f.type).fullName());
-					Parser.parseFileCP(f, file);
+					parser.parseFileCP(f, file);
 				}
 			}
 

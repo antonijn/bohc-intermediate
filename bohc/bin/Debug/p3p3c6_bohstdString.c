@@ -2,10 +2,10 @@
 
 struct p3p3c6_bohstdString * p3p3c6_bohstdString_sf_empty;
 
-static void p3p3c6_bohstdString_m_this_e2fdbca8(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length);
-static unsigned char p3p3c6_bohstdString_m_set_f076e8e0(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch);
+static void p3p3c6_bohstdString_m_this_51708853(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length);
+static unsigned char p3p3c6_bohstdString_m_set_d5ad6698(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch);
 
-const struct vtable_p3p3c6_bohstdString instance_vtable_p3p3c6_bohstdString = { &p3p3c6_bohstdString_m_equals_5289cddf, &p3p3c6_bohstdObject_m_hash_d5aca7eb, &p3p3c6_bohstdObject_m_getType_d5aca7eb, &p3p3c6_bohstdObject_m_toString_d5aca7eb };
+const struct vtable_p3p3c6_bohstdString instance_vtable_p3p3c6_bohstdString = { &p3p3c6_bohstdString_m_equals_e9664e21, &p3p3c6_bohstdObject_m_hash_35cf4c, &p3p3c6_bohstdObject_m_getType_35cf4c, &p3p3c6_bohstdObject_m_toString_35cf4c };
 
 struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdString(void)
 {
@@ -15,13 +15,22 @@ struct p3p3c4_bohstdType * typeof_p3p3c6_bohstdString(void)
 	}
 	return result;
 }
-struct p3p3c6_bohstdString * new_p3p3c6_bohstdString_e2fdbca8(struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
+struct p3p3c6_bohstdString * new_p3p3c6_bohstdString_51708853(struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
 {
 	struct p3p3c6_bohstdString * result = GC_malloc(sizeof(struct p3p3c6_bohstdString));
 	result->vtable = &instance_vtable_p3p3c6_bohstdString;
-	p3p3c6_bohstdString_m_static_2d2816fe();
+	p3p3c6_bohstdString_m_static_0();
 	p3p3c6_bohstdString_fi(result);
-	p3p3c6_bohstdString_m_this_e2fdbca8(result, p_str, p_offset, p_length);
+	p3p3c6_bohstdString_m_this_51708853(result, p_str, p_offset, p_length);
+	return result;
+}
+struct p3p3c6_bohstdString * new_p3p3c6_bohstdString_adeaa357(int32_t p_length)
+{
+	struct p3p3c6_bohstdString * result = GC_malloc(sizeof(struct p3p3c6_bohstdString));
+	result->vtable = &instance_vtable_p3p3c6_bohstdString;
+	p3p3c6_bohstdString_m_static_0();
+	p3p3c6_bohstdString_fi(result);
+	p3p3c6_bohstdString_m_this_adeaa357(result, p_length);
 	return result;
 }
 
@@ -32,22 +41,32 @@ void p3p3c6_bohstdString_fi(struct p3p3c6_bohstdString * const self)
 	self->f_chars = NULL;
 }
 
-void p3p3c6_bohstdString_m_this_e2fdbca8(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
+void p3p3c6_bohstdString_m_this_51708853(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
 {
-	unsigned char l_dummy = (u8'\0');
 	(self->f_chars = p_str->f_chars);
 	(self->f_offset = (p_offset + p_str->f_offset));
 	(self->f_length = p_length);
 }
-_Bool p3p3c6_bohstdString_m_isNullOrEmpty_5bf6fcab(struct p3p3c6_bohstdString * p_str)
+void p3p3c6_bohstdString_m_this_adeaa357(struct p3p3c6_bohstdString * const self, int32_t p_length)
 {
-	p3p3c6_bohstdString_m_static_2d2816fe();
+	unsigned char l_dummy = (u8'\0');
+	(self->f_chars = (unsigned char*)(GC_malloc((p_length * sizeof(l_dummy)))));
+	(self->f_offset = (int32_t)(0));
+	(self->f_length = p_length);
+	for (int32_t l_i = (int32_t)(0); (l_i < p_length); (++l_i))
+	{
+		p3p3c6_bohstdString_m_set_d5ad6698(self, l_i, l_dummy);
+	}
+}
+_Bool p3p3c6_bohstdString_m_isNullOrEmpty_ef2d95bf(struct p3p3c6_bohstdString * p_str)
+{
+	p3p3c6_bohstdString_m_static_0();
 	return (((p_str == NULL)) || ((p_str->f_length == 0)));
 }
-_Bool p3p3c6_bohstdString_m_equals_5289cddf(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdObject * p_other)
+_Bool p3p3c6_bohstdString_m_equals_e9664e21(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdObject * p_other)
 {
-	struct p3p3c6_bohstdObject * temp3;
-	if ((!p3p3c6_bohstdObject_m_valEquals_d237012d((struct p3p3c6_bohstdObject *)((temp3 = p_other)->vtable->m_getType_d5aca7eb(temp3)), (struct p3p3c6_bohstdObject *)((typeof_p3p3c6_bohstdString())))))
+	struct p3p3c6_bohstdObject * temp6;
+	if ((!p3p3c6_bohstdObject_m_valEquals_4eb476e0((struct p3p3c6_bohstdObject *)((temp6 = p_other)->vtable->m_getType_35cf4c(temp6)), (struct p3p3c6_bohstdObject *)((typeof_p3p3c6_bohstdString())))))
 	{
 		return 0;
 	}
@@ -58,68 +77,82 @@ _Bool p3p3c6_bohstdString_m_equals_5289cddf(struct p3p3c6_bohstdString * const s
 	}
 	for (int32_t l_i = (int32_t)(0); (l_i < self->f_length); (++l_i))
 	{
-		if ((!(p3p3c6_bohstdString_m_get_70fcd6e5(l_str, l_i) == p3p3c6_bohstdString_m_get_70fcd6e5(self, l_i))))
+		if ((!(p3p3c6_bohstdString_m_get_adeaa357(l_str, l_i) == p3p3c6_bohstdString_m_get_adeaa357(self, l_i))))
 		{
 			return 0;
 		}
 	}
 	return 1;
 }
-unsigned char p3p3c6_bohstdString_m_get_70fcd6e5(struct p3p3c6_bohstdString * const self, int32_t p_i)
+unsigned char p3p3c6_bohstdString_m_get_adeaa357(struct p3p3c6_bohstdString * const self, int32_t p_i)
 {
 	return boh_deref_ptr(self->f_chars, (self->f_offset + p_i));
 }
-unsigned char p3p3c6_bohstdString_m_set_f076e8e0(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch)
+unsigned char p3p3c6_bohstdString_m_set_d5ad6698(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch)
 {
 	return boh_set_deref(self->f_chars, (self->f_offset + p_i), p_ch);
 }
-struct p3p3c6_bohstdString * p3p3c6_bohstdString_m_substring_70fcd6e5(struct p3p3c6_bohstdString * const self, int32_t p_idx)
+struct p3p3c6_bohstdString * p3p3c6_bohstdString_m_substring_adeaa357(struct p3p3c6_bohstdString * const self, int32_t p_idx)
 {
-	return new_p3p3c6_bohstdString_e2fdbca8(self, p_idx, (self->f_length - p_idx));
+	return new_p3p3c6_bohstdString_51708853(self, p_idx, (self->f_length - p_idx));
 }
-struct p3p3c6_bohstdString * p3p3c6_bohstdString_m_substring_e5adf5a9(struct p3p3c6_bohstdString * const self, int32_t p_idx, int32_t p_len)
+struct p3p3c6_bohstdString * p3p3c6_bohstdString_m_substring_dd8c3cec(struct p3p3c6_bohstdString * const self, int32_t p_idx, int32_t p_len)
 {
-	return new_p3p3c6_bohstdString_e2fdbca8(self, p_idx, (p_len - p_idx));
+	return new_p3p3c6_bohstdString_51708853(self, p_idx, (p_len - p_idx));
 }
-int32_t p3p3c6_bohstdString_m_indexOf_d8de2e33(struct p3p3c6_bohstdString * const self, unsigned char p_ch)
+int32_t p3p3c6_bohstdString_m_indexOf_111bcd8d(struct p3p3c6_bohstdString * const self, unsigned char p_ch)
 {
 	for (int32_t l_i = (int32_t)(0); (l_i < self->f_length); (++l_i))
 	{
-		if (((p3p3c6_bohstdString_m_get_70fcd6e5(self, l_i) == p_ch)))
+		if (((p3p3c6_bohstdString_m_get_adeaa357(self, l_i) == p_ch)))
 		{
 			return l_i;
 		}
 	}
 	return (-1);
 }
-int32_t p3p3c6_bohstdString_m_count_d8de2e33(struct p3p3c6_bohstdString * const self, unsigned char p_ch)
+int32_t p3p3c6_bohstdString_m_count_111bcd8d(struct p3p3c6_bohstdString * const self, unsigned char p_ch)
 {
 	int32_t l_result = (int32_t)(0);
 	for (int32_t l_i = (int32_t)(0); (l_i < self->f_length); (++l_i))
 	{
-		if (((p3p3c6_bohstdString_m_get_70fcd6e5(self, l_i) == p_ch)))
+		if (((p3p3c6_bohstdString_m_get_adeaa357(self, l_i) == p_ch)))
 		{
 			(++l_result);
 		}
 	}
 	return l_result;
 }
-struct p3p3c14_bohstdArray_boh_std_String * p3p3c6_bohstdString_m_split_d8de2e33(struct p3p3c6_bohstdString * const self, unsigned char p_ch)
+struct p3p3c14_bohstdArray_boh_std_String * p3p3c6_bohstdString_m_split_111bcd8d(struct p3p3c6_bohstdString * const self, unsigned char p_ch)
 {
-	struct p3p3c14_bohstdArray_boh_std_String * l_res = (struct p3p3c14_bohstdArray_boh_std_String *)(new_p3p3c6_bohstdObject_d5aca7eb());
+	struct p3p3c14_bohstdArray_boh_std_String * l_res = new_p3p3c14_bohstdArray_boh_std_String_adeaa357((p3p3c6_bohstdString_m_count_111bcd8d(self, p_ch) + 1));
 	int32_t l_i = (int32_t)(0);
 	int32_t l_idx = (int32_t)(0);
 	int32_t l_prev = (int32_t)(0);
-	while ((!((l_idx = p3p3c6_bohstdString_m_indexOf_d8de2e33(self, p_ch)) == (-1))))
+	while ((!((l_idx = p3p3c6_bohstdString_m_indexOf_111bcd8d(self, p_ch)) == (-1))))
 	{
-		p3p3c14_bohstdArray_boh_std_String_m_set_77f0ba2b(l_res, l_i, p3p3c6_bohstdString_m_substring_e5adf5a9(self, l_prev, (l_idx - l_prev)));
+		p3p3c14_bohstdArray_boh_std_String_m_set_d881ed08(l_res, l_i, p3p3c6_bohstdString_m_substring_dd8c3cec(self, l_prev, (l_idx - l_prev)));
 		(++l_i);
 		(l_prev = l_idx);
 	}
-	p3p3c14_bohstdArray_boh_std_String_m_set_77f0ba2b(l_res, l_i, p3p3c6_bohstdString_m_substring_e5adf5a9(self, l_idx, (self->f_length - l_idx)));
+	p3p3c14_bohstdArray_boh_std_String_m_set_d881ed08(l_res, l_i, p3p3c6_bohstdString_m_substring_dd8c3cec(self, l_idx, (self->f_length - l_idx)));
 	return l_res;
 }
-void p3p3c6_bohstdString_m_static_2d2816fe(void)
+struct p3p3c6_bohstdString * p3p3c6_bohstdString_op_add_5264d1a0(struct p3p3c6_bohstdString * p_left, struct p3p3c6_bohstdString * p_right)
+{
+	p3p3c6_bohstdString_m_static_0();
+	struct p3p3c6_bohstdString * l_res = (struct p3p3c6_bohstdString *)(create_str_by_len((p_left->f_length + p_right->f_length)));
+	for (int32_t l_i = (int32_t)(0); (l_i < p_left->f_length); (++l_i))
+	{
+		p3p3c6_bohstdString_m_set_d5ad6698(l_res, l_i, p3p3c6_bohstdString_m_get_adeaa357(p_left, l_i));
+	}
+	for (int32_t l_i = (int32_t)(0); (l_i < p_right->f_length); (++l_i))
+	{
+		p3p3c6_bohstdString_m_set_d5ad6698(l_res, (l_i + p_left->f_length), p3p3c6_bohstdString_m_get_adeaa357(p_right, l_i));
+	}
+	return l_res;
+}
+void p3p3c6_bohstdString_m_static_0(void)
 {
 	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
@@ -127,7 +160,7 @@ void p3p3c6_bohstdString_m_static_2d2816fe(void)
 		return;
 	}
 	hasBeenCalled = 1;
-	p3p3c6_bohstdObject_m_static_2d2816fe();
+	p3p3c6_bohstdObject_m_static_0();
 	p3p3c6_bohstdString_sf_empty = boh_create_string(u"", 0);
 	{
 	}

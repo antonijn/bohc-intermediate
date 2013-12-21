@@ -15,226 +15,25 @@ using bohc.boh;
 using bohc.exceptions;
 using bohc.typesys;
 using bohc.parsing;
-using bohc.parsing.ts;
 using bohc.parsing.statements;
 
 namespace bohc
 {
-	public static class Parser
+	public class Parser
 	{
-		public static int indexOf(string str, char[] begin, char[] end, char idxOf)
+		public readonly IStatementParser statements;
+
+		public Parser(IStatementParser statements)
 		{
-			bool instring = false;
-
-			int scope = 0;
-			int i = 0;
-			for (; true; ++i)
-			{
-				if (i >= str.Length)
-				{
-					return -1;
-				}
-
-				char ch = str[i];
-				if (ch == '"')
-				{
-					instring = !instring;
-				}
-
-				if (instring)
-				{
-					continue;
-				}
-
-				if (begin.Contains(ch))
-				{
-					++scope;
-				}
-				else if (end.Contains(ch))
-				{
-					--scope;
-				}
-
-				if (ch == idxOf && scope <= 0)
-				{
-					break;
-				}
-			}
-
-			return i;
+			this.statements = statements;
+			this.statements.init(this);
 		}
-
-		public static int indexOf(string str, char begin, char end, char idxOf)
-		{
-			return indexOf(str, new[] { begin }, new[] { end }, idxOf);
-		}
-
-		private static int getMatchingBraceCh(string str, int first, char matches, int step)
-		{
-			bool instring = false;
-			char startscope = str[first];
-			int scope = 0;
-			int i;
-			for (i = first + step; scope != -1; i += step)
-			{
-				char ch = str[i];
-				if (ch == '"')
-				{
-					instring = !instring;
-				}
-
-				if (instring)
-				{
-					continue;
-				}
-
-				if (ch == startscope)
-				{
-					++scope;
-				}
-				else if (ch == matches)
-				{
-					--scope;
-				}
-			}
-
-			return i - step;
-		}
-
-		public static int getMatchingBraceChar(string str, int first, char matches)
-		{
-			return getMatchingBraceCh(str, first, matches, 1);
-		}
-
-		public static int getMatchingBraceCharBackwards(string str, int first, char matches)
-		{
-			return getMatchingBraceCh(str, first, matches, -1);
-		}
-
-		public static IEnumerable<string> split(string str, char[] begin, char[] end, char seperator)
-		{
-			bool instring = false;
-			int scope = 0;
-
-			int temp = 0;
-			for (int i = 0; scope >= 0 && i < str.Length; ++i)
-			{
-				char ch = str[i];
-
-				if (ch == '"')
-				{
-					instring = !instring;
-				}
-
-				if (instring)
-				{
-					continue;
-				}
-
-				if (begin.Contains(ch))
-				{
-					++scope;
-				}
-				else if (end.Contains(ch))
-				{
-					--scope;
-				}
-				else if (scope == 0 && ch == seperator)
-				{
-					yield return str.Substring(temp, i - temp);
-					temp = i + 1;
-				}
-			}
-
-			yield return str.Substring(temp, str.Length - temp);
-		}
-
-		public static IEnumerable<string> split(string str, int first, char matches, char seperator)
-		{
-			char begin = str[first];
-			int stop = getMatchingBraceChar(str, first, matches);
-			return split(str.Substring(first + 1, stop - first - 1), new[] { begin }, new[] { matches }, seperator);
-		}
-
-		/// <summary>
-		/// Removes duplicate whitespace in string
-		/// </summary>
-		public static string remDupW(string str)
-		{
-			return Regex.Replace(str, "\\s+", " ");
-		}
-
-		private static string removeComments(string file)
-		{
-			List<char> charList = file.ToList();
-			bool inStr = false;
-			int numSlash = 0;
-			bool prevBackSl = false;
-			for (int i = 0; i < charList.Count; ++i)
-			{
-				char ch = charList[i];
-				if (ch == '/')
-				{
-					if (!inStr)
-					{
-						++numSlash;
-						if (numSlash == 2)
-						{
-							int idxnl = charList.IndexOf('\n', i);
-							int idxsl = i - 1;
-							int len = idxnl - idxsl;
-							charList.RemoveRange(idxsl, len);
-							numSlash = 0;
-						}
-					}
-				}
-				else
-				{
-					if (numSlash == 1 && ch == '*' && !inStr)
-					{
-						int idx = idxOfCloseCom(charList, i + 2);
-						int len = idx - i + 3;
-						charList.RemoveRange(i - 1, len);
-						//i = idx;
-					}
-					else if (ch == '\\')
-					{
-						prevBackSl = !prevBackSl;
-					}
-					else
-					{
-						if (ch == '"' && !prevBackSl)
-						{
-							inStr = !inStr;
-						}
-						prevBackSl = false;
-					}
-					numSlash = 0;
-				}
-			}
-			file = new string(charList.ToArray());
-			return file;
-		}
-
-		private static int idxOfCloseCom(List<char> chars, int start)
-		{
-			for (; start < chars.Count; ++start)
-			{
-				if (chars[start - 1] == '*' && chars[start] == '/')
-				{
-					return start - 1;
-				}
-			}
-
-			return -1;
-		}
-
 
 		#region Type Skimming (TS)
 
-		public static File parseFileTS(ref string file)
+		public File parseFileTS(ref string file)
 		{
-			file = removeComments(file);
+			file = ParserTools.removeComments(file);
 
 			int openCurly = file.IndexOf('{');
 			string beforeTypeBody = file.Substring(0, openCurly);
@@ -249,13 +48,13 @@ namespace bohc
 			return f;
 		}
 
-		private static File parseCommonFileHeader(string header, string content)
+		private File parseCommonFileHeader(string header, string content)
 		{
 			IEnumerable<string> headerParts = header.Split(';').Select(x => x.Trim());
 			return parseHeaderParts(headerParts, content);
 		}
 
-		private static File parseHeaderParts(IEnumerable<string> headerParts, string content)
+		private File parseHeaderParts(IEnumerable<string> headerParts, string content)
 		{
 			// the file header contains the package directive
 			// and the import directives
@@ -264,7 +63,7 @@ namespace bohc
 			List<Package> imports = new List<Package>();
 			Package package = Package.GLOBAL;
 
-			headerParts = headerParts.Select(x => remDupW(x));
+			headerParts = headerParts.Select(x => ParserTools.remDupW(x));
 			foreach (string headerPart in headerParts)
 			{
 				string[] parts = headerPart.Split(' ');
@@ -290,10 +89,10 @@ namespace bohc
 			return new File(imports, package, content);
 		}
 
-		private static void parseTypeStart(File file, string typedec)
+		private void parseTypeStart(File file, string typedec)
 		{
 			typedec = typedec.Trim();
-			typedec = remDupW(typedec);
+			typedec = ParserTools.remDupW(typedec);
 
 			string[] parts = typedec.Split(' ');
 			int idxExtImpl = parts.Length;
@@ -326,7 +125,7 @@ namespace bohc
 				int f = name.IndexOf('<');
 				int l = name.LastIndexOf('>');
 				string genname = name.Substring(0, f);
-				string[] types = split(name, f, '>', ',').ToArray();
+				string[] types = ParserTools.split(name, f, '>', ',').ToArray();
 				file.type = new GenericType(types, genname);
 			}
 			else
@@ -358,12 +157,12 @@ namespace bohc
 		
 		#region Type Parsing (TP)
 
-		public static void parseFileTP(File f, string file)
+		public void parseFileTP(File f, string file)
 		{
 			int openCurly = file.IndexOf('{');
 			string beforeTypeBody = file.Substring(0, openCurly - 1);
 			int lastSemicol = beforeTypeBody.LastIndexOf(';');
-			string typedec = remDupW(beforeTypeBody.Substring(lastSemicol + 1)).Trim();
+			string typedec = ParserTools.remDupW(beforeTypeBody.Substring(lastSemicol + 1)).Trim();
 
 			if (f.type is Class)
 			{
@@ -392,7 +191,7 @@ namespace bohc
 			}
 		}
 
-		private static Class parseExt(File file, string typedec)
+		private Class parseExt(File file, string typedec)
 		{
 			string[] parts = typedec.Split(' ');
 			int idxExt = Array.IndexOf(parts, "extends");
@@ -400,7 +199,7 @@ namespace bohc
 			if (idxExt != -1)
 			{
 				string super = parts[idxExt + 1];
-				Class superClass = typesys.Type.getExisting(file.getContext(), super) as Class;
+				Class superClass = typesys.Type.getExisting(file.getContext(), super, this) as Class;
 				boh.Exception.require<ParserException>(superClass != null, "Type was not a class: " + super);
 				return superClass;
 			}
@@ -409,7 +208,7 @@ namespace bohc
 			return null;
 		}
 
-		private static IEnumerable<Interface> parseImpl(File file, string typedec)
+		private IEnumerable<Interface> parseImpl(File file, string typedec)
 		{
 			string[] parts = typedec.Split(' ');
 			int idxIpml = Array.IndexOf(parts, "implements");
@@ -421,7 +220,7 @@ namespace bohc
 				for (int i = idxIpml + 1; i < parts.Length; ++i)
 				{
 					string ifacestr = parts[i].Replace(",", string.Empty);
-					Interface iface = typesys.Type.getExisting(fileContext, ifacestr) as Interface;
+					Interface iface = typesys.Type.getExisting(fileContext, ifacestr, this) as Interface;
 					boh.Exception.require<ParserException>(iface != null, "Type was not an interface: " + ifacestr);
 					yield return iface;
 				}
@@ -432,7 +231,7 @@ namespace bohc
 
 		#region Type Content Skimming (TCS)
 
-		public static void parseFileTCS(File f, string file)
+		public void parseFileTCS(File f, string file)
 		{
 			int typeStartCurly = file.IndexOf('{');
 			int typeStopCurly = file.LastIndexOf('}');
@@ -462,7 +261,7 @@ namespace bohc
 			}
 		}
 
-		private static void parseClassTCS(File f, string content)
+		private void parseClassTCS(File f, string content)
 		{
 			int idxSemicol = content.IndexOf(';');
 			int idxCurly = content.IndexOf('{');
@@ -473,12 +272,12 @@ namespace bohc
 			if ((idxSemicol > idxCurly || idxSemicol == -1) && idxCurly != -1)
 			{
 				// function
-				int idxClose = getMatchingBraceChar(content, idxCurly, '}');
+				int idxClose = ParserTools.getMatchingBraceChar(content, idxCurly, '}');
 				string body = content.Substring(idxCurly + 1, idxClose - idxCurly - 1);
 
 				((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxCurly), body, true));
 
-				int closingCurly = getMatchingBraceChar(content, idxCurly, '}');
+				int closingCurly = ParserTools.getMatchingBraceChar(content, idxCurly, '}');
 				string after = content.Substring(closingCurly + 1);
 				parseClassTCS(f, after);
 			}
@@ -506,7 +305,7 @@ namespace bohc
 			}
 		}
 
-		private static void parseInterfaceTCS(File f, string content)
+		private void parseInterfaceTCS(File f, string content)
 		{
 			string func = string.Empty;
 			while (true)
@@ -525,7 +324,7 @@ namespace bohc
 			}
 		}
 
-		private static IFunction parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
+		private IFunction parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
 		{
 			// make sure the static constructors are called
 			parsing.BinaryOperation.ADD.GetType();
@@ -588,11 +387,11 @@ namespace bohc
 
 		}
 
-		private static void parsePreFunctionParamsTCS(File f, string fDec, bool requiresAccess, out Modifiers mods, out typesys.Type type, out string identifier)
+		private void parsePreFunctionParamsTCS(File f, string fDec, bool requiresAccess, out Modifiers mods, out typesys.Type type, out string identifier)
 		{
 			int idxClose = fDec.LastIndexOf(')');
-			int idxParent = getMatchingBraceCharBackwards(fDec, idxClose, '(');
-			fDec = remDupW(fDec.Substring(0, idxParent).Trim());
+			int idxParent = ParserTools.getMatchingBraceCharBackwards(fDec, idxClose, '(');
+			fDec = ParserTools.remDupW(fDec.Substring(0, idxParent).Trim());
 
 			string[] parts = fDec.Split(' ');
 			bool isStaticConstr = parts.Last() == "static";
@@ -606,16 +405,16 @@ namespace bohc
 			string typeName = isConstr ? null : parts[parts.Length - 2];
 			IEnumerable<string> modifiers = parts.Take(parts.Length - (isConstr ? 1 : 2));
 
-			type = isConstr ? null : typesys.Type.getExisting(f.getContext(), typeName);
+			type = isConstr ? null : typesys.Type.getExisting(f.getContext(), typeName, this);
 			mods = isStaticConstr ? Modifiers.NONE : ModifierHelper.getModifiersFromStrings(modifiers);
 		}
 
-		private static void parseFunctionParamsTCS(File f, string fDec, Function func)
+		private void parseFunctionParamsTCS(File f, string fDec, Function func)
 		{
 			int idxClose = fDec.LastIndexOf(')');
-			int idxParent = getMatchingBraceCharBackwards(fDec, idxClose, '(');
+			int idxParent = ParserTools.getMatchingBraceCharBackwards(fDec, idxClose, '(');
 
-			string paramString = remDupW(fDec.Substring(idxParent + 1, idxClose - idxParent - 1).Trim());
+			string paramString = ParserTools.remDupW(fDec.Substring(idxParent + 1, idxClose - idxParent - 1).Trim());
 
 			if (string.IsNullOrEmpty(paramString))
 			{
@@ -625,7 +424,7 @@ namespace bohc
 			// TODO: consider special cases:
 			// public void function(void() f = () => otherFunc(1, 2))
 
-			string[] parts = split(paramString, new[] { '<', '(' }, new[] { '>', ')' }, ',').ToArray();
+			string[] parts = ParserTools.split(paramString, new[] { '<', '(' }, new[] { '>', ')' }, ',').ToArray();
 			for (int i = 0; i < parts.Length; ++i)
 			{
 				parts[i] = parts[i].Trim();
@@ -643,7 +442,7 @@ namespace bohc
 			}
 		}
 
-		public static void parseParam(File f, string part, out string identifier, out Modifiers mods, out typesys.Type type)
+		public void parseParam(File f, string part, out string identifier, out Modifiers mods, out typesys.Type type)
 		{
 			string[] paramParts = part.Split(' ');
 			boh.Exception.require<ParserException>(paramParts.Length >= 2, "Parameter type expected");
@@ -660,10 +459,10 @@ namespace bohc
 				mods = ModifierHelper.getModifierFromString(paramParts.First());
 			}
 
-			type = typesys.Type.getExisting(f.getContext(), typeName);
+			type = typesys.Type.getExisting(f.getContext(), typeName, this);
 		}
 
-		private static void parseFieldTCS(File f, string fDec)
+		private void parseFieldTCS(File f, string fDec)
 		{
 			fDec = fDec.Trim();
 
@@ -675,7 +474,7 @@ namespace bohc
 				fDec = fDec.Substring(0, equals).TrimEnd();
 			}
 
-			fDec = remDupW(fDec);
+			fDec = ParserTools.remDupW(fDec);
 
 			string[] parts = fDec.Split(' ');
 			boh.Exception.require<ParserException>(parts.Length >= 3, fDec + ": field access modifier and/or type expected");
@@ -684,7 +483,7 @@ namespace bohc
 			string type = parts[parts.Length - 2];
 			IEnumerable<string> modifiers = parts.Take(parts.Length - 2);
 
-			typesys.Type actualType = typesys.Type.getExisting(f.getContext(), type);
+			typesys.Type actualType = typesys.Type.getExisting(f.getContext(), type, this);
 			Modifiers mods = ModifierHelper.getModifiersFromStrings(modifiers);
 
 			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
@@ -694,7 +493,7 @@ namespace bohc
 			((Class)f.type).addMember(field);
 		}
 
-		private static void parseEnumTCS(File f, string content)
+		private void parseEnumTCS(File f, string content)
 		{
 			string[] enumerators = content.Split(',');
 			for (int i = 0; i < enumerators.Length; ++i)
@@ -723,7 +522,7 @@ namespace bohc
 
 		#region Type Content Parsing
 
-		public static void parseFileTCP(File f, string file)
+		public void parseFileTCP(File f, string file)
 		{
 			Class c = f.type as Class;
 			if (c != null)
@@ -732,13 +531,13 @@ namespace bohc
 			}
 		}
 
-		private static void parseClassTCP(Class c)
+		private void parseClassTCP(Class c)
 		{
 			foreach (Field f in c.fields)
 			{
 				if (f.initvalstr != null)
 				{
-					f.initial = parsing.Expression.analyze(f.initvalstr, new List<Variable>(), c.file);
+					f.initial = statements.getExpressions().analyze(f.initvalstr, new List<Variable>(), c.file);
 				}
 			}
 		}
@@ -747,7 +546,7 @@ namespace bohc
 
 		#region Code Parsing
 
-		public static void parseFileCP(File f, string file)
+		public void parseFileCP(File f, string file)
 		{
 			Class c = f.type as Class;
 			if (c == null)
@@ -759,482 +558,21 @@ namespace bohc
 			{
 				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT))
 				{
-					func.body = parseBody(func.bodystr, func, f);
+					func.body = statements.parseBody(func.bodystr, func, f);
 					if (func.returnType != Primitive.VOID && func.returnType != null)
 					{
-						boh.Exception.require<ParserException>(hasReturned(func.body), "Function must return a value");
+						boh.Exception.require<ParserException>(func.body.hasReturned(), "Function must return a value");
 					}
 					else if (func is Constructor)
 					{
 						boh.Exception.require<ParserException>(
 							c.super == null ||
 							c.super.constructors.Any(x => !(x.modifiers.HasFlag(Modifiers.PRIVATE) || x.modifiers.HasFlag(Modifiers.CVISIBLE)) && x.parameters.Count == 0) ||
-							hasSuperBeenCalled(func.body),
+							func.body.hasSuperBeenCalled(),
 							"Constructor must call super constructor");
 					}
 				}
 			}
-		}
-
-		public static bool hasSuperBeenCalled(Body body)
-		{
-			foreach (Statement s in body.statements)
-			{
-				ExpressionStatement expr = s as ExpressionStatement;
-				if (expr != null)
-				{
-					FunctionCall f = expr.expression as FunctionCall;
-					if (f != null)
-					{
-						if (f.refersto.identifier == "this")
-						{
-							return true;
-						}
-					}
-				}
-
-				IfStatement ifstat = s as IfStatement;
-				if (ifstat != null)
-				{
-					if (ifstat.elsestat != null)
-					{
-						return hasSuperBeenCalled(ifstat.body) && hasSuperBeenCalled(ifstat.elsestat.body);
-					}
-
-					continue;
-				}
-
-				TryStatement trys = s as TryStatement;
-				if (trys != null)
-				{
-					if (tryReturnsOrSuper(trys, hasSuperBeenCalled))
-					{
-						return true;
-					}
-
-					continue;
-				}
-
-				if (s is BreakStatement || s is ContinueStatement)
-				{
-					return false;
-				}
-			}
-
-			return false;
-		}
-
-		public static bool hasReturned(Body body)
-		{
-			foreach (Statement s in body.statements)
-			{
-				if (s is ReturnStatement || s is ThrowStatement)
-				{
-					return true;
-				}
-
-				IfStatement ifstat = s as IfStatement;
-				if (ifstat != null)
-				{
-					if (ifstat.elsestat != null)
-					{
-						return hasReturned(ifstat.body) && hasReturned(ifstat.elsestat.body);
-					}
-
-					continue;
-				}
-
-				TryStatement trys = s as TryStatement;
-				if (trys != null)
-				{
-					if (tryReturnsOrSuper(trys, hasReturned))
-					{
-						return true;
-					}
-
-					continue;
-				}
-				
-				if (s is BreakStatement || s is ContinueStatement)
-				{
-					return false;
-				}
-			}
-
-			return false;
-		}
-
-		private static bool tryReturnsOrSuper(TryStatement trys, Func<Body, bool> bodyAct)
-		{
-			if (!bodyAct(trys.body))
-			{
-				return false;
-			}
-
-			foreach (CatchStatement cs in trys.catches)
-			{
-				if (!bodyAct(cs.body))
-				{
-					return false;
-				}
-			}
-
-			return true;
-		}
-
-		public static Body parseBody(string body, Function func, File f)
-		{
-			Stack<List<Variable>> vars = new Stack<List<Variable>>();
-			// TODO: remove this if it doesn't work?
-			if (func != null)
-			{
-				vars.Push(func.parameters.ToList<typesys.Variable>());
-			}
-			return parseBody(body, func, vars, f);
-		}
-
-		public static Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f)
-		{
-			Body result = new Body();
-			vars.Push(new List<Variable>());
-
-			while (true)
-			{
-				body = body.TrimStart();
-				if (string.IsNullOrWhiteSpace(body))
-				{
-					break;
-				}
-				parseLine(ref body, func, vars, result, f);
-			}
-
-			vars.Pop();
-			return result;
-		}
-
-		private static bool startsWithKW(string line, string word)
-		{
-			return line.StartsWith(word) && !char.IsLetterOrDigit(line[word.Length]);
-		}
-
-		private static void parseLine(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
-		{
-			if (line.StartsWith("{"))
-			{
-				int closing = getMatchingBraceChar(line, 0, '}');
-				string bod = line.Substring(1, closing - 1);
-				result.statements.Add(new Scope(parseBody(bod, func, vars, f)));
-				line = line.Substring(closing + 1).TrimStart();
-			}
-			else if (startsWithKW(line, "if"))
-			{
-				result.statements.Add(parseIf(ref line, func, vars, f));
-			}
-			else if (startsWithKW(line, "while"))
-			{
-				result.statements.Add(parseWhile(ref line, func, vars, f));
-			}
-			else if (startsWithKW(line, "for"))
-			{
-				result.statements.Add(parseFor(ref line, func, vars, f));
-			}
-			else if (startsWithKW(line, "do"))
-			{
-				result.statements.Add(parseDoWhile(ref line, func, vars, f));
-			}
-			else if (startsWithKW(line, "try"))
-			{
-				result.statements.Add(parseTry(ref line, func, vars, f));
-			}
-			else
-			{
-				// FIXME: void() f = void () -> { doSth(); };
-				int semicol1 = indexOf(line, '(', ')', ';');
-				int semicol2 = indexOf(line, '{', '}', ';');
-				int semicol = Math.Max(semicol1, semicol2);
-				string stat = line.Substring(0, semicol);
-				result.statements.Add(parseStatement(stat, func, vars, f));
-				line = line.Substring(semicol + 1).TrimStart();
-			}
-		}
-
-		private static Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			int wspace = Math.Max(indexOf(line, '<', '>', ' '), indexOf(line, '(', ')', ' '));
-			if (wspace != -1)
-			{
-				string beforeWspace = line.Substring(0, wspace);
-				if (typesys.Type.exists(f.getContext(), beforeWspace))
-				{
-					typesys.Type type = typesys.Type.getExisting(f.getContext(), beforeWspace);
-					string id = null;
-
-					Expression initial = null;
-
-					int eq = indexOf(line, '(', ')', '=');
-					if (eq != -1)
-					{
-						id = line.Substring(wspace + 1, eq - wspace - 1).Trim();
-						boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(id), id + ": is not a valid identifier");
-						string initstr = line.Substring(eq + 1);
-						initial = Expression.analyze(initstr, vars.SelectMany(x => x), f);
-					}
-					else
-					{
-						id = line.Substring(wspace + 1).Trim();
-					}
-					Local variable = new Local(id, type);
-					variable.lambdaLevel = Expression.lambdaStack;
-					vars.Peek().Add(variable);
-
-					return new VarDeclaration(variable, initial);
-				}
-			}
-
-			if (startsWithKW(line, "return"))
-			{
-				return parseReturn(line, func, vars, f);
-			}
-			else if (startsWithKW(line, "throw"))
-			{
-				return parseThrow(line, func, vars, f);
-			}
-			else if (func is Constructor && line.Replace(" ", string.Empty).StartsWith("this("))
-			{
-				int i = line.IndexOf("(") + 1;
-				IEnumerable<Expression> parameters;
-				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).constructors, out parameters, func);
-				line = line.Substring(i);
-				return new ExpressionStatement(new FunctionCall(constr, ((Class)func.owner).THISVAR, parameters));
-			}
-			else if (func is Constructor && line.StartsWith("super("))
-			{
-				int i = line.IndexOf("(") + 1;
-				IEnumerable<Expression> parameters;
-				typesys.Function constr = Expression.getCompatibleFunction(ref i, "this", line, f, vars.SelectMany(x => x), ((Class)func.owner).super.constructors, out parameters, func);
-				line = line.Substring(i);
-				return new ExpressionStatement(new FunctionCall(constr, ((Class)func.owner).THISVAR, parameters));
-			}
-			else if (startsWithKW(line, "break"))
-			{
-				// TODO: make sure that in loop
-				return new BreakStatement();
-			}
-			else if (startsWithKW(line, "continue"))
-			{
-				// TODO: make sure that in loop
-				return new ContinueStatement();
-			}
-
-			Expression expr = Expression.analyze(line, vars.SelectMany(x => x), f, func);
-			if (expr != null)
-			{
-				return new ExpressionStatement(expr);
-			}
-
-			return new EmptyStatement();
-		}
-
-		private static ThrowStatement parseThrow(string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("throw ".Length);
-			Expression thr = Expression.analyze(line, vars.SelectMany(x => x), f, func);
-			boh.Exception.require<ParserException>(thr.getType().extends(typesys.Type.getExisting(StdType.boh_lang, "Exception")) != 0, "Expression after throw must be an exception");
-			return new ThrowStatement(thr);
-		}
-
-		private static ReturnStatement parseReturn(string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("return".Length);
-			Expression ret = Expression.analyze(line, vars.SelectMany(x => x), f, func);
-			boh.Exception.require<ParserException>(ret.getType().extends(func.returnType) != 0, "Return statement incompatible with function return type");
-			return new ReturnStatement(ret);
-		}
-
-		private static void parseStatBody(ref string line, Function func, Stack<List<Variable>> vars, File f, out Body body)
-		{
-			body = null;
-			if (line.StartsWith("{"))
-			{
-				string curlies = getCurlies(line);
-				body = parseBody(curlies, func, vars, f);
-				line = line.TrimStart().Substring(curlies.Length + 2);
-			}
-			else
-			{
-				body = new Body();
-				parseLine(ref line, func, vars, body, f);
-			}
-		}
-
-		private static void parseIfLike(ref string line, Function func, Stack<List<Variable>> vars, File f, out Expression condition, out Body body)
-		{
-			boh.Exception.require<ParserException>(line.StartsWith("("), "Condition must be placed between parentheses");
-
-			string condstr = getBrackets(line);
-			condition = Expression.analyze(condstr, vars.SelectMany(x => x), f, func);
-			line = line.Substring(condstr.Length + 2).TrimStart();
-
-			parseStatBody(ref line, func, vars, f, out body);
-		}
-
-		private static TryStatement parseTry(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("try".Length).TrimStart();
-
-			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, vars, f);
-			line = line.Substring(curlies.Length + 2).TrimStart();
-
-			List<CatchStatement> catches = new List<CatchStatement>();
-			while (line.StartsWith("catch"))
-			{
-				catches.Add(parseCatch(ref line, func, vars, f));
-			}
-
-			FinallyStatement fin = null;
-			if (line.StartsWith("finally"))
-			{
-				line = line.Substring("finally".Length).TrimStart();
-				curlies = getCurlies(line);
-				line = line.Substring(curlies.Length + 2).TrimStart();
-				fin = new FinallyStatement(parseBody(curlies, func, f));
-			}
-
-			return new TryStatement(body, catches, fin);
-		}
-
-		private static CatchStatement parseCatch(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("catch".Length).TrimStart();
-
-			string bracks = getBrackets(line);
-			string[] parts = bracks.Split(' ');
-
-			boh.Exception.require<ParserException>(parts.Length == 2, "Invalid parameter for catch block");
-
-			string typestr = parts[0];
-			string idstr = parts[1];
-
-			typesys.Type type = typesys.Type.getExisting(f.getContext(), typestr);
-
-			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(idstr), idstr + " is not a valid identifier");
-
-			Parameter param = new Parameter(func, Modifiers.NONE, idstr, type);
-			vars.Push(new List<Variable>());
-			vars.Peek().Add(param);
-
-			line = line.Substring(bracks.Length + 2).TrimStart();
-
-			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, vars, f);
-			line = line.Substring(curlies.Length + 2).TrimStart();
-
-			vars.Pop();
-
-			return new CatchStatement(param, body);
-		}
-
-		private static IfStatement parseIf(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("if".Length).TrimStart();
-
-			Expression condition;
-			Body body;
-			parseIfLike(ref line, func, vars, f, out condition, out body);
-
-			line = line.TrimStart();
-			if (line.StartsWith("else"))
-			{
-				return new IfStatement(condition, body, parseElse(ref line, func, vars, f));
-			}
-
-			return new IfStatement(condition, body, null);
-		}
-
-		private static ElseStatement parseElse(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("else".Length).TrimStart();
-			Body body;
-			parseStatBody(ref line, func, vars, f, out body);
-
-			return new ElseStatement(body);
-		}
-
-		private static WhileStatement parseWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("while".Length).TrimStart();
-
-			Expression condition;
-			Body body;
-			parseIfLike(ref line, func, vars, f, out condition, out body);
-
-			return new WhileStatement(condition, body);
-		}
-
-		private static ForStatement parseFor(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			vars.Push(new List<Variable>());
-
-			line = line.Substring("for".Length).TrimStart();
-
-			string betwBracks = "(" + getBrackets(line) + ")";
-			IEnumerable<string> strs = split(betwBracks, 0, ')', ';');
-
-			boh.Exception.require<ParserException>(strs.Count() == 3, "For loops require three parts between brackets");
-
-			string[] strparts = strs.ToArray();
-
-			Statement initial = parseStatement(strparts[0], func, vars, f);
-			Expression condition = Expression.analyze(strparts[1], vars.SelectMany(x => x), f);
-			Statement post = parseStatement(strparts[2], func, vars, f);
-
-			line = line.Substring(betwBracks.Length).TrimStart();
-
-			Body body;
-			parseStatBody(ref line, func, vars, f, out body);
-
-			vars.Pop();
-
-			return new ForStatement(initial, condition, post, body);
-		}
-
-		private static DoWhileStatement parseDoWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
-		{
-			line = line.Substring("do".Length).TrimStart();
-
-			string curlies = getCurlies(line);
-			Body body = parseBody(getCurlies(line), func, f);
-			line = line.Substring(curlies.Length + 2).TrimStart();
-
-			if (line.StartsWith("while"))
-			{
-				line = line.Substring("while".Length).TrimStart();
-				string pars = getBrackets(line);
-				Expression condition = Expression.analyze(pars, vars.SelectMany(x => x), f, func);
-
-				line = line.Substring(pars.Length + 2).TrimStart().Substring(1);
-
-				return new DoWhileStatement(condition, body);
-			}
-
-			return new DoWhileStatement(new parsing.Literal(Primitive.BOOLEAN, "false"), body);
-		}
-
-		public static string getBrackets(string line)
-		{
-			int lbrack = line.IndexOf('(');
-			int rbrack = getMatchingBraceChar(line, lbrack, ')');
-
-			return line.Substring(lbrack + 1, rbrack - lbrack - 1);
-		}
-
-		private static string getCurlies(string line)
-		{
-			int lbrack = line.IndexOf('{');
-			int rbrack = getMatchingBraceChar(line, lbrack, '}');
-
-			return line.Substring(lbrack + 1, rbrack - lbrack - 1);
 		}
 
 		#endregion

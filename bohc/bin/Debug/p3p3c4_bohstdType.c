@@ -2,7 +2,7 @@
 
 
 
-const struct vtable_p3p3c4_bohstdType instance_vtable_p3p3c4_bohstdType = { &p3p3c6_bohstdObject_m_equals_5289cddf, &p3p3c6_bohstdObject_m_hash_d5aca7eb, &p3p3c6_bohstdObject_m_getType_d5aca7eb, &p3p3c6_bohstdObject_m_toString_d5aca7eb, &p3p3c4_bohstdType_m_getName_d5aca7eb, &p3p3c4_bohstdType_m_isSubTypeOf_46dba1cc };
+const struct vtable_p3p3c4_bohstdType instance_vtable_p3p3c4_bohstdType = { &p3p3c6_bohstdObject_m_equals_e9664e21, &p3p3c6_bohstdObject_m_hash_35cf4c, &p3p3c6_bohstdObject_m_getType_35cf4c, &p3p3c6_bohstdObject_m_toString_35cf4c, &p3p3c4_bohstdType_m_getName_35cf4c, &p3p3c4_bohstdType_m_isSubTypeOf_490a3fde };
 
 struct p3p3c4_bohstdType * typeof_p3p3c4_bohstdType(void)
 {
@@ -12,13 +12,13 @@ struct p3p3c4_bohstdType * typeof_p3p3c4_bohstdType(void)
 	}
 	return result;
 }
-struct p3p3c4_bohstdType * new_p3p3c4_bohstdType_125bf9a2(struct p3p3c6_bohstdString * p_name)
+struct p3p3c4_bohstdType * new_p3p3c4_bohstdType_f13b0af3(struct p3p3c6_bohstdString * p_name)
 {
 	struct p3p3c4_bohstdType * result = GC_malloc(sizeof(struct p3p3c4_bohstdType));
 	result->vtable = &instance_vtable_p3p3c4_bohstdType;
-	p3p3c4_bohstdType_m_static_2d2816fe();
+	p3p3c4_bohstdType_m_static_0();
 	p3p3c4_bohstdType_fi(result);
-	p3p3c4_bohstdType_m_this_125bf9a2(result, p_name);
+	p3p3c4_bohstdType_m_this_f13b0af3(result, p_name);
 	return result;
 }
 
@@ -28,19 +28,19 @@ void p3p3c4_bohstdType_fi(struct p3p3c4_bohstdType * const self)
 	self->f_base = NULL;
 }
 
-void p3p3c4_bohstdType_m_this_125bf9a2(struct p3p3c4_bohstdType * const self, struct p3p3c6_bohstdString * p_name)
+void p3p3c4_bohstdType_m_this_f13b0af3(struct p3p3c4_bohstdType * const self, struct p3p3c6_bohstdString * p_name)
 {
 	(self->f_name = p_name);
 }
-struct p3p3c6_bohstdString * p3p3c4_bohstdType_m_getName_d5aca7eb(struct p3p3c4_bohstdType * const self)
+struct p3p3c6_bohstdString * p3p3c4_bohstdType_m_getName_35cf4c(struct p3p3c4_bohstdType * const self)
 {
 	return self->f_name;
 }
-_Bool p3p3c4_bohstdType_m_isSubTypeOf_46dba1cc(struct p3p3c4_bohstdType * const self, struct p3p3c4_bohstdType * p_t)
+_Bool p3p3c4_bohstdType_m_isSubTypeOf_490a3fde(struct p3p3c4_bohstdType * const self, struct p3p3c4_bohstdType * p_t)
 {
-	return (p3p3c6_bohstdObject_m_valEquals_d237012d((struct p3p3c6_bohstdObject *)(self->f_base), (struct p3p3c6_bohstdObject *)(p_t)));
+	return (p3p3c6_bohstdObject_m_valEquals_4eb476e0((struct p3p3c6_bohstdObject *)(self->f_base), (struct p3p3c6_bohstdObject *)(p_t)));
 }
-void p3p3c4_bohstdType_m_static_2d2816fe(void)
+void p3p3c4_bohstdType_m_static_0(void)
 {
 	_Bool hasBeenCalled = 0;
 	if (hasBeenCalled)
@@ -48,7 +48,7 @@ void p3p3c4_bohstdType_m_static_2d2816fe(void)
 		return;
 	}
 	hasBeenCalled = 1;
-	p3p3c6_bohstdObject_m_static_2d2816fe();
+	p3p3c6_bohstdObject_m_static_0();
 	{
 	}
 }

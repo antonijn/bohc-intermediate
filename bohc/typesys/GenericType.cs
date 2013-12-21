@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.parsing.ts;
+using bohc.parsing;
 
 namespace bohc.typesys
 {
@@ -56,7 +56,7 @@ namespace bohc.typesys
 			return result;
 		}
 
-		public typesys.Type getTypeFor(typesys.Type[] what)
+		public typesys.Type getTypeFor(typesys.Type[] what, Parser parser)
 		{
 			lock (types)
 			{
@@ -66,17 +66,16 @@ namespace bohc.typesys
 					return types[hash];
 				}
 
-				typesys.Type newType = getNewTypeFor(what);
-				types[hash] = newType;
+				typesys.Type newType = getNewTypeFor(what, parser, hash);
 				return newType;
 			}
 		}
 
-		protected Type getNewTypeFor(Type[] what)
+		protected Type getNewTypeFor(Type[] what, Parser parser, int hash)
 		{
 			// TODO: PROPER REPLACING FFS!!!
 
-			string code = Parser.remDupW(file.content).Replace(" ,", ",").Replace(", ", ",");
+			string code = ParserTools.remDupW(file.content).Replace(" ,", ",").Replace(", ", ",");
 			for (int i = 0; i < what.Length; ++i)
 			{
 				string gtname = genTypeNames[i];
@@ -111,26 +110,28 @@ namespace bohc.typesys
 			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
 
-			parsing.ts.File newf = Parser.parseFileTS(ref code);
+			parsing.File newf = parser.parseFileTS(ref code);
+			types[hash] = (Type)newf.type;
 			Program.genTypes.Add(code, newf);
-			Parser.parseFileTP(newf, code);
+			parser.parseFileTP(newf, code);
 			if (Program.pstate >= ParserState.TCS)
 			{
-				Parser.parseFileTCS(newf, code);
+				parser.parseFileTCS(newf, code);
 			}
 			if (Program.pstate >= ParserState.TCP)
 			{
-				Parser.parseFileTCP(newf, code);
+				parser.parseFileTCP(newf, code);
 			}
 			if (Program.pstate >= ParserState.CP)
 			{
-				Parser.parseFileCP(newf, code);
+				parser.parseFileCP(newf, code);
 			}
 
 			newf.type.setFile(newf);
 
 			try
 			{
+				((Type)newf.type).originalGenType = this;
 				return (Type)newf.type;
 			}
 			catch

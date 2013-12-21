@@ -75,9 +75,9 @@ namespace bohc.typesys
 			body.statements.Add(ifs);
 		}
 
-		public void sortOutFunctions()
+		public void sortOutFunctions(Parser parser)
 		{
-			StdType.box.getTypeFor(new [] { this });
+			StdType.box.getTypeFor(new [] { this }, parser);
 
 			buildToString();
 			getType = new Function(this, Modifiers.PUBLIC, StdType.type, "getType", new List<Parameter>(), default(parsing.statements.Body));
@@ -89,7 +89,7 @@ namespace bohc.typesys
 			tryParse = new Function(this, Modifiers.PUBLIC | Modifiers.STATIC, Primitive.BOOLEAN, "tryParse", new List<Parameter>(), default(parsing.statements.Body));
 			tryParse.parameters.Add(new Parameter(parse, Modifiers.FINAL, "str", StdType.str));
 			tryParse.parameters.Add(new Parameter(parse, Modifiers.REF, "output", this));
-			getEnumerators = new Function(this, Modifiers.PUBLIC | Modifiers.STATIC, StdType.array.getTypeFor(new[] { Primitive.INT }), "getEnumerators", new List<Parameter>(), default(parsing.statements.Body));			
+			getEnumerators = new Function(this, Modifiers.PUBLIC | Modifiers.STATIC, StdType.array.getTypeFor(new[] { Primitive.INT }, parser), "getEnumerators", new List<Parameter>(), default(parsing.statements.Body));			
 		
 		}
 
