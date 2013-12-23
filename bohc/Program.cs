@@ -40,7 +40,7 @@ namespace bohc
 		{
 			string[] filenames = new string[]
 			{
-				"src/EnumExample.boh",
+				/*"src/EnumExample.boh",
 				"src/Main.boh",
 				"src/Box.boh",
 				"src/Object.boh",
@@ -56,7 +56,24 @@ namespace bohc
 				"src/StringBuilder.boh",
 				"src/Ptr.boh",
 				"src/VoidPtr.boh",
-				"src/Interop.boh",
+				"src/Interop.boh",*/
+			
+				"stdlib/Box.boh",
+				"stdlib/Object.boh",
+				"stdlib/String.boh",
+				"stdlib/Type.boh",
+				"stdlib/Exception.boh",
+				"stdlib/Array.boh",
+				"stdlib/ICollection.boh",
+				"stdlib/IIndexedCollection.boh",
+				"stdlib/IIterator.boh",
+				"stdlib/List.boh",
+				"stdlib/StringBuilder.boh",
+				"stdlib/Ptr.boh",
+				"stdlib/VoidPtr.boh",
+				"stdlib/Interop.boh",
+				"stdlib/Query.boh",
+				"stdlib/WhereIterator.boh",
 			};
 			string[] files = new string[filenames.Length];
 

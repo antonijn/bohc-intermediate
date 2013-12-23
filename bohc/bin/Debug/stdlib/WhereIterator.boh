@@ -1,0 +1,46 @@
+package boh.std;
+
+public class WhereIterator<T> implements IIterator<T>
+{
+	private IIterator<T> base;
+	private boolean(T) condition;
+
+	public this(IIterator<T> base, boolean(T) condition)
+	{
+		this.base = base;
+		this.condition = condition;
+	}
+	
+	public boolean next()
+	{
+		return base.next();
+	}
+	
+	public boolean previous()
+	{
+		return base.previous();
+	}
+	
+	public void moveLast()
+	{
+		return base.moveLast();
+	}
+	
+	public void reset()
+	{
+		return base.reset();
+	}
+	
+	public T current()
+	{
+		T curr = base.current();
+		while (!condition(curr))
+		{
+			next();
+			curr = base.current();
+		}
+		
+		return curr;
+	}
+}
+

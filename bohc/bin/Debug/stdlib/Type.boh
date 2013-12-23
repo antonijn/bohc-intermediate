@@ -1,0 +1,22 @@
+package boh.std;
+
+public class Type
+{
+	private String name;
+	private Type base;
+	
+	public this(String name)
+	{
+		this.name = name;
+	}
+
+	public virtual String getName()
+	{
+		return name;
+	}
+	
+	public virtual boolean isSubTypeOf(Type t)
+	{
+		return base == t;
+	}
+}

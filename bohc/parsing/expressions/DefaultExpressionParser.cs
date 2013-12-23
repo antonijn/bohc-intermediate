@@ -700,7 +700,7 @@ namespace bohc.parsing.expressions
 		private void solveIdentifierWithInfo(ref Expression expr, IEnumerable<typesys.Variable> vars, ref int i, string next, string str, parsing.File file, typesys.Function ctx, IEnumerable<typesys.Function> functions, typesys.Variable field)
 		{
 			string nextnext = readNext(str, ref i);
-			if (nextnext == "(")
+			if (nextnext == "(" && field == null)
 			{
 
 				// if belongsto is thisvar, the thisvar has to be enclosed
@@ -724,8 +724,9 @@ namespace bohc.parsing.expressions
 				}
 				else
 				{
-					FunctionVarCall call = new FunctionVarCall(expr, typesys.Function.getStringParams(str, i, vars, file, ctx, this));
-					expr = call;
+					//FunctionVarCall call = new FunctionVarCall(expr, typesys.Function.getStringParams(str, i, vars, file, ctx, this));
+					//expr = call;
+					//i = ParserTools.getMatchingBraceChar(str, i - 1, ')') + 1;
 				}
 
 				//i -= nextnext.Length;

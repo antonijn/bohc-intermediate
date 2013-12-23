@@ -1,0 +1,32 @@
+package boh.std;
+
+public final class StringBuilder
+{
+	private static final int INITIAL_SIZE = 1024;
+
+	private List<char> characters;
+	
+	public this(int capacity) 
+	{
+		this.characters = new List<char>(capacity);
+	}
+	public this()
+	{
+		this(INITIAL_SIZE);
+	}
+	
+	public void append(String str)
+	{
+		characters.add(str);
+	}
+	
+	public void append(char ch)
+	{
+		characters.add(ch);
+	}
+	
+	public override void toString()
+	{
+		return new String(characters);
+	}
+}

@@ -1,0 +1,27 @@
+package boh.std;
+
+public class Query<T> implements ICollection<T>
+{
+	private ICollection<T> base;
+	
+	public this(ICollection<T> base)
+	{
+		this.base = base;
+	}
+
+	public IIterator<T> iterator()
+	{
+		return base.iterator();
+	}
+	
+	public Query<T> where(boolean(T) condition)
+	{
+		return new WhereIterator<T>(base.iterator(), condition);
+	}
+	
+	public Query<T> query()
+	{
+		return this;
+	}
+}
+

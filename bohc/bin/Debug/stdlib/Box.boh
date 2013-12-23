@@ -1,0 +1,26 @@
+package boh.std;
+
+/**
+  * Functions as a way for value types to be represented as a reference type.
+  * @gentype T: The value type for which to create a box.
+  */
+public class Box<T>
+{
+	/**
+	  * The internal value for the value type.
+	  */
+	public T value;
+
+	/**
+	  * @param value: The value to which to set the @field value field
+	  */
+	public this(T value)
+	{
+		this.value = value;
+	}
+	
+	public override String toString()
+	{
+		return value.toString();
+	}
+}

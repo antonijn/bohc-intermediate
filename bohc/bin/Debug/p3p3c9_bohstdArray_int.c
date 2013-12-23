@@ -58,6 +58,11 @@ struct p3p3iD_bohstdIIterator_int * p3p3c9_bohstdArray_int_m_iterator_35cf4c(str
 {
 	boh_throw_ex(new_p3p3c9_bohstdException_35cf4c());
 }
+struct p3p3c9_bohstdQuery_int * p3p3c9_bohstdArray_int_m_query_35cf4c(struct p3p3c9_bohstdArray_int * const self)
+{
+	struct p3p3c9_bohstdArray_int *temp12;
+	return new_p3p3c9_bohstdQuery_int_e625b83f(new_p3p3iF_bohstdICollection_int(temp12 = (self), &p3p3c9_bohstdArray_int_m_iterator_35cf4c, &p3p3c9_bohstdArray_int_m_query_35cf4c));
+}
 void p3p3c9_bohstdArray_int_m_resize_adeaa357(struct p3p3c9_bohstdArray_int * const self, int32_t p_newsize)
 {
 	if ((p_newsize <= self->f_length))

@@ -61,6 +61,11 @@ struct p3p3iD_bohstdIIterator_int * p3p3c8_bohstdList_int_m_iterator_35cf4c(stru
 {
 	boh_throw_ex(new_p3p3c9_bohstdException_35cf4c());
 }
+struct p3p3c9_bohstdQuery_int * p3p3c8_bohstdList_int_m_query_35cf4c(struct p3p3c8_bohstdList_int * const self)
+{
+	struct p3p3c8_bohstdList_int *temp21;
+	return new_p3p3c9_bohstdQuery_int_e625b83f(new_p3p3iF_bohstdICollection_int(temp21 = (self), &p3p3c8_bohstdList_int_m_iterator_35cf4c, &p3p3c8_bohstdList_int_m_query_35cf4c));
+}
 int32_t p3p3c8_bohstdList_int_m_get_adeaa357(struct p3p3c8_bohstdList_int * const self, int32_t p_index)
 {
 	if ((p_index >= self->f_length))
@@ -96,19 +101,19 @@ void p3p3c8_bohstdList_int_m_add_adeaa357(struct p3p3c8_bohstdList_int * const s
 }
 void p3p3c8_bohstdList_int_m_add_48086441(struct p3p3c8_bohstdList_int * const self, struct p3p3i16_bohstdIIndexedCollection_int * p_items)
 {
-	struct p3p3i16_bohstdIIndexedCollection_int * temp17;
-	if (((self->f_length + (temp17 = p_items)->m_size_35cf4c(temp17->object)) > p3p3c9_bohstdArray_int_m_size_35cf4c(self->f_array)))
+	struct p3p3i16_bohstdIIndexedCollection_int * temp22;
+	if (((self->f_length + (temp22 = p_items)->m_size_35cf4c(temp22->object)) > p3p3c9_bohstdArray_int_m_size_35cf4c(self->f_array)))
 	{
-		struct p3p3i16_bohstdIIndexedCollection_int * temp18;
-		p3p3c8_bohstdList_int_m_grow_adeaa357(self, (temp18 = p_items)->m_size_35cf4c(temp18->object));
+		struct p3p3i16_bohstdIIndexedCollection_int * temp23;
+		p3p3c8_bohstdList_int_m_grow_adeaa357(self, (temp23 = p_items)->m_size_35cf4c(temp23->object));
 	}
-	struct p3p3iD_bohstdIIterator_int * temp19;
-	struct p3p3i16_bohstdIIndexedCollection_int * temp20;
-	temp19 = (temp20 = p_items)->m_iterator_35cf4c(temp20->object);
-	while (temp19->p3p3iD_bohstdIIterator_int_m_next_35cf4c(temp19->object))
+	struct p3p3iD_bohstdIIterator_int * temp24;
+	struct p3p3i16_bohstdIIndexedCollection_int * temp25;
+	temp24 = (temp25 = p_items)->m_iterator_35cf4c(temp25->object);
+	while (temp24->p3p3iD_bohstdIIterator_int_m_next_35cf4c(temp24->object))
 	{
 		int32_t l_item;
-		l_item = temp19->p3p3iD_bohstdIIterator_int_m_current_35cf4c(temp19->object));
+		l_item = temp24->p3p3iD_bohstdIIterator_int_m_current_35cf4c(temp24->object));
 		{
 			p3p3c9_bohstdArray_int_m_setFast_dd8c3cec(self->f_array, (self->f_length++), l_item);
 		}
@@ -153,9 +158,9 @@ void p3p3c8_bohstdList_int_m_removeWhen_55f25d43(struct p3p3c8_bohstdList_int * 
 	struct p3p3c8_bohstdList_int * l_removeWhat = new_p3p3c8_bohstdList_int_adeaa357(self->f_length);
 	for (int32_t l_i = (int32_t)(0); (l_i < self->f_length); (++l_i))
 	{
-		struct f19_p07_booleanp03_intp03_int temp21;
-		temp21 = p_when;
-		if (temp21.function(temp21.context, p3p3c9_bohstdArray_int_m_getFast_adeaa357(self->f_array, l_i), l_i))
+		struct f19_p07_booleanp03_intp03_int temp26;
+		temp26 = p_when;
+		if (temp26.function(temp26.context, p3p3c9_bohstdArray_int_m_getFast_adeaa357(self->f_array, l_i), l_i))
 		{
 			p3p3c8_bohstdList_int_m_add_adeaa357(l_removeWhat, (l_i - l_removeWhat->f_length));
 		}
@@ -190,15 +195,15 @@ void p3p3c8_bohstdList_int_m_shrink_adeaa357(struct p3p3c8_bohstdList_int * cons
 	double l_shrinkAmount = (l_oneOverPhi * l_log);
 	p3p3c9_bohstdArray_int_m_resize_adeaa357(self->f_array, (int32_t)((p3p3c9_bohstdArray_int_m_size_35cf4c(self->f_array) * l_shrinkAmount)));
 }
-void p3p3c8_bohstdList_int_m_removeWhen_106f4a47(struct p3p3c8_bohstdList_int * const self, struct f12_p07_booleanp03_int p_when)
+void p3p3c8_bohstdList_int_m_removeWhen_5a618770(struct p3p3c8_bohstdList_int * const self, struct f1E_p07_booleanp3p3c6_bohstdString p_when)
 {
-	struct f12_p07_booleanp03_int* ep_when = GC_malloc(sizeof(struct f12_p07_booleanp03_int));
+	struct f1E_p07_booleanp3p3c6_bohstdString* ep_when = GC_malloc(sizeof(struct f1E_p07_booleanp3p3c6_bohstdString));
 	(*ep_when) = p_when;
 	{
-		struct f19_p07_booleanp03_intp03_int temp22;
-		temp22.function = &l4;
-		temp22.context = GC_malloc(sizeof(struct lmbd_ctx_4));
-		p3p3c8_bohstdList_int_m_removeWhen_55f25d43(self, temp22);
+		struct f19_p07_booleanp03_intp03_int temp27;
+		temp27.function = &l4;
+		temp27.context = GC_malloc(sizeof(struct lmbd_ctx_4));
+		p3p3c8_bohstdList_int_m_removeWhen_55f25d43(self, temp27);
 	}
 }
 void p3p3c8_bohstdList_int_m_removeAll_adeaa357(struct p3p3c8_bohstdList_int * const self, int32_t p_item)
@@ -206,10 +211,10 @@ void p3p3c8_bohstdList_int_m_removeAll_adeaa357(struct p3p3c8_bohstdList_int * c
 	int32_t* ep_item = GC_malloc(sizeof(int32_t));
 	(*ep_item) = p_item;
 	{
-		struct f12_p07_booleanp03_int temp23;
-		temp23.function = &l5;
-		temp23.context = GC_malloc(sizeof(struct lmbd_ctx_5));
-		p3p3c8_bohstdList_int_m_removeWhen_106f4a47(self, temp23);
+		struct f1E_p07_booleanp3p3c6_bohstdString temp28;
+		temp28.function = &l5;
+		temp28.context = GC_malloc(sizeof(struct lmbd_ctx_5));
+		p3p3c8_bohstdList_int_m_removeWhen_5a618770(self, temp28);
 	}
 }
 void p3p3c8_bohstdList_int_m_removeRange_dd8c3cec(struct p3p3c8_bohstdList_int * const self, int32_t p_start, int32_t p_amount)

@@ -1,0 +1,97 @@
+package boh.std;
+
+public final class Array<T> implements IIndexedCollection<T>
+{
+	private int length;
+	private pf_desktop64 long items;
+	private pf_desktop32 int items;
+
+	public static native pf_desktop64 long GC_malloc(int size);
+	public static native pf_desktop32 int GC_malloc(int size);
+	public static native pf_desktop64 long GC_realloc(long ptr, int size);
+	public static native pf_desktop32 int GC_realloc(int ptr, int size);
+
+	public this(int length)
+	{
+		this.length = length;
+		this.items = GC_malloc(length * native_sizeof(T));
+	}
+	
+	public int size()
+	{
+		return length;
+	}
+	
+	public T get(int i)
+	{
+		return native_deref(T, items + i * native_sizeof(T));
+	}
+	
+	public void set(int i, T value)
+	{
+		native_deref(T, items + i * native_sizeof(T)) = value;
+	}
+	
+	public T getFast(int i)
+	{
+		return native_deref(T, items + i * native_sizeof(T));
+	}
+	
+	public void setFast(int i, T value)
+	{
+		native_deref(T, items + i * native_sizeof(T)) = value;
+	}
+	
+	public IIterator<T> iterator()
+	{
+		throw new Exception();
+	}
+	
+	public Query<T> query()
+	{
+		return new Query<T>(this);
+	}
+	
+	public void resize(int newsize)
+	{
+		if (newsize <= length)
+		{
+			length = newsize;
+			return;
+		}
+		items = GC_realloc(items, newsize);
+		length = newsize;
+	}
+	
+	public void move(int dest, int src, int size)
+	{
+		if (dest < 0)
+		{
+			//throw new ParameterException("The destination index may not be negative");
+		}
+		if (src < 0)
+		{
+			//throw new ParameterException("The source index may not be negative");
+		}
+		if (dest + size > length || src + size > length)
+		{
+			//throw new ParameterException("Cannot move a section that ranges outside of the array");
+		}
+		if (size == 0)
+		{
+			return;
+		}
+		if (size < 0) 
+		{
+			//throw new ParameterException("size may not be negative");
+		}
+	
+		T[] backup = new T[size];
+		for (int i = 0; i < size; ++i) {
+			backup.setFast(i, getFast(src + i));
+		}
+		for (int i = 0; i < size; ++i) {
+			setFast(dest + i, backup.getFast(i));
+		}
+	}
+}

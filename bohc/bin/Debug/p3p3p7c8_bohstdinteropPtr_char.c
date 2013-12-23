@@ -62,8 +62,8 @@ void p3p3p7c8_bohstdinteropPtr_char_fi(struct p3p3p7c8_bohstdinteropPtr_char * c
 
 void p3p3p7c8_bohstdinteropPtr_char_m_this_bf420477(struct p3p3p7c8_bohstdinteropPtr_char * const self, struct p3p3p7c7_bohstdinteropVoidPtr p_ptr)
 {
-	struct p3p3p7c7_bohstdinteropVoidPtr temp24;
-	((*self).f_ptr = p3p3p7c7_bohstdinteropVoidPtr_m_toInt_35cf4c((temp24 = p_ptr, &temp24)));
+	struct p3p3p7c7_bohstdinteropVoidPtr temp29;
+	((*self).f_ptr = p3p3p7c7_bohstdinteropVoidPtr_m_toInt_35cf4c((temp29 = p_ptr, &temp29)));
 }
 void p3p3p7c8_bohstdinteropPtr_char_m_this_111bcd8d(struct p3p3p7c8_bohstdinteropPtr_char * const self, unsigned char* const p_reference)
 {
@@ -93,6 +93,18 @@ void p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698(struct p3p3p7c8_bohstdinterop
 {
 	((*(unsigned char *)((int8_t *)(((*self).f_ptr + (p_idx * sizeof(unsigned char)))))) = p_value);
 }
+#if defined(PF_DESKTOP64)
+int64_t p3p3p7c8_bohstdinteropPtr_char_m_toInt_35cf4c(struct p3p3p7c8_bohstdinteropPtr_char * const self)
+{
+	return (*self).f_ptr;
+}
+#endif
+#if defined(PF_DESKTOP32)
+int32_t p3p3p7c8_bohstdinteropPtr_char_m_toInt_35cf4c(struct p3p3p7c8_bohstdinteropPtr_char * const self)
+{
+	return (*self).f_ptr;
+}
+#endif
 void p3p3p7c8_bohstdinteropPtr_char_m_this_35cf4c(struct p3p3p7c8_bohstdinteropPtr_char * const self)
 {
 }

@@ -56,7 +56,7 @@ void p3p3c6_bohstdString_m_this_adeaa357(struct p3p3c6_bohstdString * const self
 	for (int32_t l_i = (int32_t)(0); (l_i < p_length); (++l_i))
 	{
 		struct p3p3p7c8_bohstdinteropPtr_char temp6;
-		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp6 = self->f_chars, &temp6), l_i, (u8'\0'));
+		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp6 = self->f_chars, &temp6), ((l_i + self->f_offset) * sizeof(unsigned char)), (u8'\0'));
 	}
 }
 _Bool p3p3c6_bohstdString_m_isNullOrEmpty_ef2d95bf(struct p3p3c6_bohstdString * p_str)
@@ -142,12 +142,12 @@ struct p3p3c6_bohstdString * p3p3c6_bohstdString_op_add_5264d1a0(struct p3p3c6_b
 	for (int32_t l_i = (int32_t)(0); (l_i < p_left->f_length); (++l_i))
 	{
 		struct p3p3p7c8_bohstdinteropPtr_char temp8;
-		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp8 = l_res->f_chars, &temp8), l_i, p3p3c6_bohstdString_m_get_adeaa357(p_left, l_i));
+		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp8 = l_res->f_chars, &temp8), ((l_i + self->f_offset) * sizeof(unsigned char)), p3p3c6_bohstdString_m_get_adeaa357(p_left, l_i));
 	}
 	for (int32_t l_i = (int32_t)(0); (l_i < p_right->f_length); (++l_i))
 	{
 		struct p3p3p7c8_bohstdinteropPtr_char temp9;
-		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp9 = l_res->f_chars, &temp9), (l_i + p_left->f_length), p3p3c6_bohstdString_m_get_adeaa357(p_right, l_i));
+		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp9 = l_res->f_chars, &temp9), (((l_i + self->f_offset) + p_left->f_length) * sizeof(unsigned char)), p3p3c6_bohstdString_m_get_adeaa357(p_right, l_i));
 	}
 	return l_res;
 }
