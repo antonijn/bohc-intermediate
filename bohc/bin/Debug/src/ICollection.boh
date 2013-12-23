@@ -1,6 +1,0 @@
-package boh.std;
-
-public interface ICollection<T>
-{
-	IIterator<T> iterator();
-}

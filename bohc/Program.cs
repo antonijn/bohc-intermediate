@@ -40,7 +40,7 @@ namespace bohc
 		{
 			string[] filenames = new string[]
 			{
-				/*"src/EnumExample.boh",
+			/*"src/EnumExample.boh",
 				"src/Main.boh",
 				"src/Box.boh",
 				"src/Object.boh",
@@ -58,6 +58,7 @@ namespace bohc
 				"src/VoidPtr.boh",
 				"src/Interop.boh",*/
 			
+				"stdlib/MainClass.boh",
 				"stdlib/Box.boh",
 				"stdlib/Object.boh",
 				"stdlib/String.boh",
@@ -79,7 +80,7 @@ namespace bohc
 
 			for (int i = 0; i < filenames.Length; ++i)
 			{
-				files[i] = System.IO.File.ReadAllText(filenames[i]);
+				files [i] = System.IO.File.ReadAllText(filenames [i]);
 			}
 
 			Dictionary<string, parsing.File> filesassoc = new Dictionary<string, parsing.File>();
@@ -92,10 +93,10 @@ namespace bohc
 			pstate = ParserState.TS;
 			for (int i = 0; i < files.Length; ++i)
 			{
-				string file = files[i];
+				string file = files [i];
 				parsing.File f = parser.parseFileTS(ref file);
-				files[i] = file;
-				filesassoc[file] = f;
+				files [i] = file;
+				filesassoc [file] = f;
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Type skimming for: {0}", ((typesys.Type)f.type).fullName());
@@ -105,7 +106,7 @@ namespace bohc
 			pstate = ParserState.TP;
 			foreach (string file in files)
 			{
-				parsing.File f = filesassoc[file];
+				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
 					parser.parseFileTP(f, file);
@@ -123,14 +124,14 @@ namespace bohc
 				{
 					vpairs = genTypes.ToArray();
 				}
-				KeyValuePair<string, parsing.File> v = vpairs.ToArray()[i];
+				KeyValuePair<string, parsing.File> v = vpairs.ToArray() [i];
 				Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)v.Value.type).fullName());
 				parser.parseFileTCS(v.Value, v.Key);
 			}
 
 			foreach (string file in files)
 			{
-				parsing.File f = filesassoc[file];
+				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)f.type).fullName());
@@ -150,14 +151,14 @@ namespace bohc
 				{
 					vpairs = genTypes.ToArray();
 				}
-				KeyValuePair<string, parsing.File> v = vpairs.ToArray()[i];
+				KeyValuePair<string, parsing.File> v = vpairs.ToArray() [i];
 				Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
 				parser.parseFileTCP(v.Value, v.Key);
 			}
 
 			foreach (string file in files)
 			{
-				parsing.File f = filesassoc[file];
+				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)f.type).fullName());
@@ -172,14 +173,14 @@ namespace bohc
 				{
 					vpairs = genTypes.ToArray();
 				}
-				KeyValuePair<string, parsing.File> v = vpairs.ToArray()[i];
+				KeyValuePair<string, parsing.File> v = vpairs.ToArray() [i];
 				Console.WriteLine("Code parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
 				parser.parseFileCP(v.Value, v.Key);
 			}
 
 			foreach (string file in files)
 			{
-				parsing.File f = filesassoc[file];
+				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
 					Console.WriteLine("Code parsing for: {0}", ((typesys.Type)f.type).fullName());
@@ -212,7 +213,22 @@ namespace bohc
 			Console.WriteLine("Done generating code");
 			Console.WriteLine("Compilation of {0} files took: {1} milliseconds", files.Length, sw.Elapsed.TotalMilliseconds);
 
-			Console.ReadKey();
+			StringBuilder script = new StringBuilder();
+			script.AppendLine("#!/bin/sh");
+
+			string location = System.Reflection.Assembly.GetEntryAssembly().Location;
+			location = location.Substring(0, location.LastIndexOf(System.IO.Path.DirectorySeparatorChar));
+			script.AppendFormat("gcc -w -g -DPF_DESKTOP64 -DPF_LINUX boh_internal.c function_types.c ", location);
+			foreach (typesys.Type type in types)
+			{
+				script.Append(mangler.getCodeFileName(type));
+				script.Append(" ");
+			}
+			script.Append("-lgc -pthread -std=c11");
+			script.AppendLine();
+			System.IO.File.WriteAllText("make.sh", script.ToString());
+
+			//Console.ReadKey();
 		}
 	}
 }

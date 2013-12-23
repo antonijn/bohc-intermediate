@@ -245,13 +245,13 @@ namespace bohc.generation.mangling
 				{
 					if (variable.identifier == "this")
 					{
-						return "ctx->self";
+						return "(*ctx->self)";
 					}
 					if (variable is Parameter || variable is LambdaParam)
 					{
-						return "ctx->*e" + getVarName(variable);
+						return "(*ctx->e" + getVarName(variable) + ")";
 					}
-					return "ctx->*" + getVarName(variable);
+					return "(*ctx->" + getVarName(variable) + ")";
 				}
 			}
 
@@ -301,9 +301,16 @@ namespace bohc.generation.mangling
 			{
 				builder.Append("self");
 			}
-			foreach (typesys.Type type in func.parameters.Select(x => x.type))
+			if (ModifierHelper.getPfMods(func.modifiers) == Modifiers.NONE)
 			{
-				builder.Append(getCName(type));
+				foreach (typesys.Type type in func.parameters.Select(x => x.type))
+				{
+					builder.Append(getCName(type));
+				}
+			}
+			else
+			{
+				builder.Append("XXX");
 			}
 			string str = builder.ToString();
 			uint hash = hashString(str);

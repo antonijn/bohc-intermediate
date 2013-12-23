@@ -1,8 +1,0 @@
-package my.pack;
-
-public enum EnumExample
-{
-	FIRST,
-	SECOND,
-	THIRD,
-}

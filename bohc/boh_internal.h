@@ -5,18 +5,16 @@
  * Please refer to the long version for a list of rights and restrictions
  * pertaining to source file use and modification. */
 
-#ifndef BOH_INTERNAL_H
-#define BOH_INTERNAL_H
+#pragma once
 
 #include <setjmp.h>
 #include <wchar.h>
 #include <string.h>
-#if __STDC_VERSION__ >= 201112L
 #include <uchar.h>
-#endif
+#include <stdint.h>
 
-#include "p3p3c9_bohstdException.h"
-#include "p3p3c6_bohstdString.h"
+struct p3p3c9_bohstdException;
+struct p3p3c6_bohstdString;
 
 typedef _Bool boh_bool;
 typedef uint8_t boh_byte;
@@ -41,15 +39,6 @@ const wchar_t * boh_get_wcstr(struct c_boh_p_lang_p_String * const str);
 struct c_boh_p_lang_p_String * boh_get_str_from_cstr(const char * const str);
 struct c_boh_p_lang_p_String * boh_get_str_from_wcstr(const wchar_t * const str);
 
-#define boh_force_cast(x) (x)
-
-#define boh_deref_ptr(x, y) (x[y])
-#define boh_set_deref(x, y, z) (x[y]=z)
-
 typedef struct c_boh_p_lang_p_Object * boh_object;
 typedef struct c_boh_p_lang_p_String * boh_string;
 typedef struct c_boh_p_lang_p_Type * boh_type;
-
-#define BOHCALL
-
-#endif

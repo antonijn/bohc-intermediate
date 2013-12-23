@@ -171,7 +171,11 @@ namespace bohc.typesys
 						return null;
 					}
 
-					GenericType gType = options.Single(x => x.name == actName);
+					GenericType gType = options.SingleOrDefault(x => x.name == actName);
+					if (gType == null)
+					{
+						return null;
+					}
 					return gType.getTypeFor(genTypes, parser);
 				}
 				return types.SingleOrDefault(x => x.package == package && x.name == name) ?? (name.Contains('.') ? getExisting(name, parser) : null);

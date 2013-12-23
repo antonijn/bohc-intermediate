@@ -131,6 +131,9 @@
     </None>
     <None Include="codegen.md" />
     <None Include="parsing.md" />
+    <None Include="boh_internal.c">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <None Include="README.md" />

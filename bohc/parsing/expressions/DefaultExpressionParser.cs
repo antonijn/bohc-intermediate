@@ -99,6 +99,11 @@ namespace bohc.parsing.expressions
 
 				sb.Append(ch);
 				++i;
+				if (ch == '\'')
+				{
+					++pos;
+					break;
+				}
 			}
 
 			if (i == 0)

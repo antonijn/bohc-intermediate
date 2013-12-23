@@ -1,7 +1,0 @@
-package boh.std;
-
-public interface ICollection<T>
-{
-	IIterator<T> iterator();
-	Query<T> query();
-}

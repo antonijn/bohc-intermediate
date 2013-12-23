@@ -91,6 +91,13 @@ namespace bohc.typesys
 			return true;
 		}
 
+		public static Modifiers getPfMods(Modifiers mods)
+		{
+			mods &= (Modifiers)~0x000004FF;
+			mods &= ~Modifiers.NATIVE;
+			return mods;
+		}
+
 		public static Modifiers getModifierFromString(string str)
 		{
 			Modifiers result;
