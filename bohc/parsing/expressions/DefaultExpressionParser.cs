@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -447,22 +447,13 @@ namespace bohc.parsing.expressions
 
 		private bool analyzeNative(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, ref string nxt, string str, parsing.File file, typesys.Function ctx)
 		{
-			if (nxt.StartsWith("native."))
+			typesys.NativeFunction nf;
+			if (typesys.NativeFunction.funcs.TryGetValue(nxt, out nf))
 			{
-				string after = readNext(str, ref i);
-				if (after == "(")
-				{
-					last = new NativeFCall(nxt.Substring("native.".Length), typesys.Function.getStringParams(str, i, vars, file, ctx, this).ToArray());
-					i = ParserTools.getMatchingBraceChar(str, i - 1, ')') + 1;
-				}
-				else
-				{
-					if (after != null)
-					{
-						i -= after.Length;
-					}
-					last = new NativeExpression(nxt.Substring("native.".Length));
-				}
+				string openParent = readNext(str, ref i);
+				boh.Exception.require<exceptions.ParserException>(openParent == "(", "Native function must be followed by an open paranthesis");
+				last = new NativeFunctionCall(nf, typesys.Function.getStringParams(str, i, vars, file, ctx, this).ToArray());
+				i = ParserTools.getMatchingBraceChar(str, i - 1, ')');
 				return true;
 			}
 
@@ -559,11 +550,6 @@ namespace bohc.parsing.expressions
 				ExprVariable exprLast = (ExprVariable)last;
 				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.refersto.type, ctx);
 			}
-			else if (last is NativeFCall || last is NativeMember)
-			{
-				//i += next.Length;
-				last = new NativeMember(last, next);
-			}
 			else if (last is ExprType)
 			{
 				ExprType exprLast = (ExprType)last;
@@ -591,9 +577,19 @@ namespace bohc.parsing.expressions
 			{
 				last = new ExprType(type);
 			}
+			else if (typesys.GenericType.allGenTypes.Any(x => x.name == next))
+			{
+				int backup = i;
+				string after = readNext(str, ref i);
+				boh.Exception.require<exceptions.ParserException>(after == "<", "Generic type must be followed by <");
+				int greaterThan = ParserTools.getMatchingBraceChar(str, i - 1, '>');
+				string typename = str.Substring(backup - next.Length, greaterThan - backup + next.Length + 1);
+				last = new ExprType(typesys.Type.getExisting(exprPack != null ? new typesys.Package[] { exprPack.refersto } : file.getContext(), typename, getStats().getParser()));
+				i = greaterThan + 1;
+			}
 			else
 			{
-				// it's either a package or field
+				// it's either a package, field
 				Expression lastBackup = last;
 				try
 				{

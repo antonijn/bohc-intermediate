@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2013 Antonie Blom
+// Copyright (c) 2013 Antonie Blom
 // The antonijn open-source license, draft 1, short form.
 // This source file is licensed under the antonijn open-source license, a
 // full version of which is included with the project.

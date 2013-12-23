@@ -45,7 +45,8 @@ public class List<T> implements IIndexedCollection<T>
 		return array.getFast(index);
 	}
 	
-	public void set(int index, T value) {
+	public void set(int index, T value)
+	{
 		if (index >= length)
 		{
 			//throw new IndexOutOfBoundsException("Index was outside of list bounds");

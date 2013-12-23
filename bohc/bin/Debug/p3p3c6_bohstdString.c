@@ -3,7 +3,8 @@
 struct p3p3c6_bohstdString * p3p3c6_bohstdString_sf_empty;
 
 static void p3p3c6_bohstdString_m_this_51708853(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length);
-static unsigned char p3p3c6_bohstdString_m_set_d5ad6698(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch);
+static struct p3p3c6_bohstdString * create_str_by_len(int32_t p_len);
+#endif
 
 const struct vtable_p3p3c6_bohstdString instance_vtable_p3p3c6_bohstdString = { &p3p3c6_bohstdString_m_equals_e9664e21, &p3p3c6_bohstdObject_m_hash_35cf4c, &p3p3c6_bohstdObject_m_getType_35cf4c, &p3p3c6_bohstdObject_m_toString_35cf4c };
 
@@ -38,7 +39,7 @@ void p3p3c6_bohstdString_fi(struct p3p3c6_bohstdString * const self)
 {
 	self->f_offset = 0;
 	self->f_length = 0;
-	self->f_chars = NULL;
+	self->f_chars = new_p3p3p7c8_bohstdinteropPtr_char_35cf4c();
 }
 
 void p3p3c6_bohstdString_m_this_51708853(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdString * p_str, int32_t p_offset, int32_t p_length)
@@ -49,13 +50,13 @@ void p3p3c6_bohstdString_m_this_51708853(struct p3p3c6_bohstdString * const self
 }
 void p3p3c6_bohstdString_m_this_adeaa357(struct p3p3c6_bohstdString * const self, int32_t p_length)
 {
-	unsigned char l_dummy = (u8'\0');
-	(self->f_chars = (unsigned char*)(GC_malloc((p_length * sizeof(l_dummy)))));
+	(self->f_chars = new_p3p3p7c8_bohstdinteropPtr_char_bf420477(p3p3p7c7_bohstdinteropInterop_m_gcAlloc_799e0023((p_length * sizeof(unsigned char)))));
 	(self->f_offset = (int32_t)(0));
 	(self->f_length = p_length);
 	for (int32_t l_i = (int32_t)(0); (l_i < p_length); (++l_i))
 	{
-		p3p3c6_bohstdString_m_set_d5ad6698(self, l_i, l_dummy);
+		struct p3p3p7c8_bohstdinteropPtr_char temp6;
+		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp6 = self->f_chars, &temp6), l_i, (u8'\0'));
 	}
 }
 _Bool p3p3c6_bohstdString_m_isNullOrEmpty_ef2d95bf(struct p3p3c6_bohstdString * p_str)
@@ -65,8 +66,8 @@ _Bool p3p3c6_bohstdString_m_isNullOrEmpty_ef2d95bf(struct p3p3c6_bohstdString * 
 }
 _Bool p3p3c6_bohstdString_m_equals_e9664e21(struct p3p3c6_bohstdString * const self, struct p3p3c6_bohstdObject * p_other)
 {
-	struct p3p3c6_bohstdObject * temp6;
-	if ((!p3p3c6_bohstdObject_m_valEquals_4eb476e0((struct p3p3c6_bohstdObject *)((temp6 = p_other)->vtable->m_getType_35cf4c(temp6)), (struct p3p3c6_bohstdObject *)((typeof_p3p3c6_bohstdString())))))
+	struct p3p3c6_bohstdObject * temp7;
+	if ((!p3p3c6_bohstdObject_m_valEquals_4eb476e0((struct p3p3c6_bohstdObject *)((temp7 = p_other)->vtable->m_getType_35cf4c(temp7)), (struct p3p3c6_bohstdObject *)((typeof_p3p3c6_bohstdString())))))
 	{
 		return 0;
 	}
@@ -86,11 +87,7 @@ _Bool p3p3c6_bohstdString_m_equals_e9664e21(struct p3p3c6_bohstdString * const s
 }
 unsigned char p3p3c6_bohstdString_m_get_adeaa357(struct p3p3c6_bohstdString * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_chars, (self->f_offset + p_i));
-}
-unsigned char p3p3c6_bohstdString_m_set_d5ad6698(struct p3p3c6_bohstdString * const self, int32_t p_i, unsigned char p_ch)
-{
-	return boh_set_deref(self->f_chars, (self->f_offset + p_i), p_ch);
+	return (*(unsigned char *)((int8_t *)((self->f_chars + ((self->f_offset + p_i) * sizeof(unsigned char))))));
 }
 struct p3p3c6_bohstdString * p3p3c6_bohstdString_m_substring_adeaa357(struct p3p3c6_bohstdString * const self, int32_t p_idx)
 {
@@ -141,14 +138,16 @@ struct p3p3c14_bohstdArray_boh_std_String * p3p3c6_bohstdString_m_split_111bcd8d
 struct p3p3c6_bohstdString * p3p3c6_bohstdString_op_add_5264d1a0(struct p3p3c6_bohstdString * p_left, struct p3p3c6_bohstdString * p_right)
 {
 	p3p3c6_bohstdString_m_static_0();
-	struct p3p3c6_bohstdString * l_res = (struct p3p3c6_bohstdString *)(create_str_by_len((p_left->f_length + p_right->f_length)));
+	struct p3p3c6_bohstdString * l_res = create_str_by_len((p_left->f_length + p_right->f_length));
 	for (int32_t l_i = (int32_t)(0); (l_i < p_left->f_length); (++l_i))
 	{
-		p3p3c6_bohstdString_m_set_d5ad6698(l_res, l_i, p3p3c6_bohstdString_m_get_adeaa357(p_left, l_i));
+		struct p3p3p7c8_bohstdinteropPtr_char temp8;
+		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp8 = l_res->f_chars, &temp8), l_i, p3p3c6_bohstdString_m_get_adeaa357(p_left, l_i));
 	}
 	for (int32_t l_i = (int32_t)(0); (l_i < p_right->f_length); (++l_i))
 	{
-		p3p3c6_bohstdString_m_set_d5ad6698(l_res, (l_i + p_left->f_length), p3p3c6_bohstdString_m_get_adeaa357(p_right, l_i));
+		struct p3p3p7c8_bohstdinteropPtr_char temp9;
+		p3p3p7c8_bohstdinteropPtr_char_m_set_d5ad6698((temp9 = l_res->f_chars, &temp9), (l_i + p_left->f_length), p3p3c6_bohstdString_m_get_adeaa357(p_right, l_i));
 	}
 	return l_res;
 }

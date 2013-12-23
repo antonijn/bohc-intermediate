@@ -9,7 +9,7 @@ public class Object
 
 	public virtual long hash()
 	{
-		return native.boh_force_cast(this);
+		return native_ref(native_deref(int, this));
 	}
 
 	public virtual Type getType()

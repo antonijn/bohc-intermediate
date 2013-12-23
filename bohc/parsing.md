@@ -1,4 +1,4 @@
-﻿PARSING
+PARSING
 =======
 
 Passes:

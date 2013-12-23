@@ -25,14 +25,14 @@ struct p3p3c9_bohstdArray_int * new_p3p3c9_bohstdArray_int_adeaa357(int32_t p_le
 void p3p3c9_bohstdArray_int_fi(struct p3p3c9_bohstdArray_int * const self)
 {
 	self->f_length = 0;
-	self->f_items = NULL;
+	self->f_items = 0;
+	self->f_items = 0;
 }
 
 void p3p3c9_bohstdArray_int_m_this_adeaa357(struct p3p3c9_bohstdArray_int * const self, int32_t p_length)
 {
 	(self->f_length = p_length);
-	int32_t l_dummy = (0);
-	(self->f_items = (int32_t*)(GC_malloc((p_length * sizeof(l_dummy)))));
+	(self->f_items = GC_malloc((p_length * sizeof(int32_t))));
 }
 int32_t p3p3c9_bohstdArray_int_m_size_35cf4c(struct p3p3c9_bohstdArray_int * const self)
 {
@@ -40,19 +40,19 @@ int32_t p3p3c9_bohstdArray_int_m_size_35cf4c(struct p3p3c9_bohstdArray_int * con
 }
 int32_t p3p3c9_bohstdArray_int_m_get_adeaa357(struct p3p3c9_bohstdArray_int * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_items, p_i);
+	return (*(int32_t *)((int8_t *)((self->f_items + (p_i * sizeof(int32_t))))));
 }
 void p3p3c9_bohstdArray_int_m_set_dd8c3cec(struct p3p3c9_bohstdArray_int * const self, int32_t p_i, int32_t p_value)
 {
-	boh_set_deref(self->f_items, p_i, p_value);
+	((*(int32_t *)((int8_t *)((self->f_items + (p_i * sizeof(int32_t)))))) = p_value);
 }
 int32_t p3p3c9_bohstdArray_int_m_getFast_adeaa357(struct p3p3c9_bohstdArray_int * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_items, p_i);
+	return (*(int32_t *)((int8_t *)((self->f_items + (p_i * sizeof(int32_t))))));
 }
 void p3p3c9_bohstdArray_int_m_setFast_dd8c3cec(struct p3p3c9_bohstdArray_int * const self, int32_t p_i, int32_t p_value)
 {
-	boh_set_deref(self->f_items, p_i, p_value);
+	((*(int32_t *)((int8_t *)((self->f_items + (p_i * sizeof(int32_t)))))) = p_value);
 }
 struct p3p3iD_bohstdIIterator_int * p3p3c9_bohstdArray_int_m_iterator_35cf4c(struct p3p3c9_bohstdArray_int * const self)
 {
@@ -65,7 +65,7 @@ void p3p3c9_bohstdArray_int_m_resize_adeaa357(struct p3p3c9_bohstdArray_int * co
 		(self->f_length = p_newsize);
 		return;
 	}
-	(self->f_items = (int32_t*)(GC_realloc(p_newsize)));
+	(self->f_items = GC_realloc(self->f_items, p_newsize));
 	(self->f_length = p_newsize);
 }
 void p3p3c9_bohstdArray_int_m_move_10aba1b7(struct p3p3c9_bohstdArray_int * const self, int32_t p_dest, int32_t p_src, int32_t p_size)

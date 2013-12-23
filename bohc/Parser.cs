@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2013 Antonie Blom
+// Copyright (c) 2013 Antonie Blom
 // The antonijn open-source license, draft 1, short form.
 // This source file is licensed under the antonijn open-source license, a
 // full version of which is included with the project.
@@ -242,7 +242,7 @@ namespace bohc
 			{
 				Class c = (Class)f.type;
 				parseClassTCS(f, content);
-				if (c.constructors.Count == 0)
+				if (c.constructors.Count == 0 || c is Struct)
 				{
 					c.addMember(new Constructor(Modifiers.PUBLIC, c, new List<Parameter>(), string.Empty));
 				}
@@ -286,9 +286,12 @@ namespace bohc
 				// field
 				string b4semi = content.Substring(0, idxSemicol);
 
-				if (b4semi.Contains(" abstract "))
+				if (b4semi.Contains(" abstract ") || b4semi.Contains(" native "))
 				{
-					boh.Exception.require<ParserException>(((Class)f.type).modifiers.HasFlag(Modifiers.ABSTRACT), "Abstract functions require the surrounding class to be abstract too");
+					if (b4semi.Contains(" abstract "))
+					{
+						boh.Exception.require<ParserException>(((Class)f.type).modifiers.HasFlag(Modifiers.ABSTRACT), "Abstract functions require the surrounding class to be abstract too");
+					}
 
 					((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxSemicol), null, true));
 
@@ -343,7 +346,7 @@ namespace bohc
 				boh.Exception.require<ParserException>(
 					!(mods.HasFlag(Modifiers.ABSTRACT) || mods.HasFlag(Modifiers.FINAL) ||
 					mods.HasFlag(Modifiers.OVERRIDE) || mods.HasFlag(Modifiers.STATIC) ||
-					mods.HasFlag(Modifiers.VIRTUAL)), "Invalid modifier for constructor");
+					mods.HasFlag(Modifiers.VIRTUAL) || mods.HasFlag(Modifiers.NATIVE)), "Invalid modifier for constructor");
 
 				List<Parameter> parameters = new List<Parameter>();
 				Constructor func = new Constructor(mods, (Class)f.type, parameters, body);
@@ -556,7 +559,7 @@ namespace bohc
 
 			foreach (Function func in c.functions)
 			{
-				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT))
+				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT) && !func.modifiers.HasFlag(Modifiers.NATIVE))
 				{
 					func.body = statements.parseBody(func.bodystr, func, f);
 					if (func.returnType != Primitive.VOID && func.returnType != null)

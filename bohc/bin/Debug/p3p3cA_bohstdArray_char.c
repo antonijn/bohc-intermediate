@@ -25,14 +25,14 @@ struct p3p3cA_bohstdArray_char * new_p3p3cA_bohstdArray_char_adeaa357(int32_t p_
 void p3p3cA_bohstdArray_char_fi(struct p3p3cA_bohstdArray_char * const self)
 {
 	self->f_length = 0;
-	self->f_items = NULL;
+	self->f_items = 0;
+	self->f_items = 0;
 }
 
 void p3p3cA_bohstdArray_char_m_this_adeaa357(struct p3p3cA_bohstdArray_char * const self, int32_t p_length)
 {
 	(self->f_length = p_length);
-	unsigned char l_dummy = (u8'\0');
-	(self->f_items = (unsigned char*)(GC_malloc((p_length * sizeof(l_dummy)))));
+	(self->f_items = GC_malloc((p_length * sizeof(unsigned char))));
 }
 int32_t p3p3cA_bohstdArray_char_m_size_35cf4c(struct p3p3cA_bohstdArray_char * const self)
 {
@@ -40,19 +40,19 @@ int32_t p3p3cA_bohstdArray_char_m_size_35cf4c(struct p3p3cA_bohstdArray_char * c
 }
 unsigned char p3p3cA_bohstdArray_char_m_get_adeaa357(struct p3p3cA_bohstdArray_char * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_items, p_i);
+	return (*(unsigned char *)((int8_t *)((self->f_items + (p_i * sizeof(unsigned char))))));
 }
 void p3p3cA_bohstdArray_char_m_set_d5ad6698(struct p3p3cA_bohstdArray_char * const self, int32_t p_i, unsigned char p_value)
 {
-	boh_set_deref(self->f_items, p_i, p_value);
+	((*(unsigned char *)((int8_t *)((self->f_items + (p_i * sizeof(unsigned char)))))) = p_value);
 }
 unsigned char p3p3cA_bohstdArray_char_m_getFast_adeaa357(struct p3p3cA_bohstdArray_char * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_items, p_i);
+	return (*(unsigned char *)((int8_t *)((self->f_items + (p_i * sizeof(unsigned char))))));
 }
 void p3p3cA_bohstdArray_char_m_setFast_d5ad6698(struct p3p3cA_bohstdArray_char * const self, int32_t p_i, unsigned char p_value)
 {
-	boh_set_deref(self->f_items, p_i, p_value);
+	((*(unsigned char *)((int8_t *)((self->f_items + (p_i * sizeof(unsigned char)))))) = p_value);
 }
 struct p3p3iE_bohstdIIterator_char * p3p3cA_bohstdArray_char_m_iterator_35cf4c(struct p3p3cA_bohstdArray_char * const self)
 {
@@ -65,7 +65,7 @@ void p3p3cA_bohstdArray_char_m_resize_adeaa357(struct p3p3cA_bohstdArray_char * 
 		(self->f_length = p_newsize);
 		return;
 	}
-	(self->f_items = (unsigned char*)(GC_realloc(p_newsize)));
+	(self->f_items = GC_realloc(self->f_items, p_newsize));
 	(self->f_length = p_newsize);
 }
 void p3p3cA_bohstdArray_char_m_move_10aba1b7(struct p3p3cA_bohstdArray_char * const self, int32_t p_dest, int32_t p_src, int32_t p_size)

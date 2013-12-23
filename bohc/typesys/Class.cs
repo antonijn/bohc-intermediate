@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2013 Antonie Blom
+// Copyright (c) 2013 Antonie Blom
 // The antonijn open-source license, draft 1, short form.
 // This source file is licensed under the antonijn open-source license, a
 // full version of which is included with the project.
@@ -247,7 +247,8 @@ namespace bohc.typesys
 				_protected = true;
 			}
 
-			Field result = fields.SingleOrDefault(x => x.identifier == id &&
+			// TODO: pf_stuff, firstordefault isn't ideal...
+			Field result = fields.FirstOrDefault(x => x.identifier == id &&
 				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
 				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
 				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));

@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2013 Antonie Blom
+// Copyright (c) 2013 Antonie Blom
 // The antonijn open-source license, draft 1, short form.
 // This source file is licensed under the antonijn open-source license, a
 // full version of which is included with the project.
@@ -130,14 +130,14 @@ namespace bohc.typesys
 				return StdType.array.getTypeFor(new[] { getExisting(packages, name.Substring(0, name.Length - 2).TrimEnd(), parser) }, parser);
 			}
 
-			if (name.StartsWith("native."))
+			/*if (name.StartsWith("native."))
 			{
 				if (isValidName(name.Replace(".", string.Empty).Replace("*", string.Empty), true))
 				{
 					return new NativeType(name.Substring("native.".Length));
 				}
 				return null;
-			}
+			}*/
 
 			lock (types)
 			{
@@ -201,10 +201,17 @@ namespace bohc.typesys
 		{
 			foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 			{
-				Type t = getExisting(p, name, parser);
-				if (t != null)
+				try
 				{
-					return true;
+					Type t = getExisting(p, name, parser);
+					if (t != null)
+					{
+						return true;
+					}
+				}
+				catch // if shit happens with generics (can't get hash code because null.GetHashCode() fails)
+				{
+
 				}
 			}
 

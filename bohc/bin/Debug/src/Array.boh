@@ -3,13 +3,18 @@ package boh.std;
 public final class Array<T> implements IIndexedCollection<T>
 {
 	private int length;
-	private native.T* items;
-	
+	private pf_desktop64 long items;
+	private pf_desktop32 int items;
+
+	public static native pf_desktop64 long GC_malloc(int size);
+	public static native pf_desktop32 int GC_malloc(int size);
+	public static native pf_desktop64 long GC_realloc(long ptr, int size);
+	public static native pf_desktop32 int GC_realloc(int ptr, int size);
+
 	public this(int length)
 	{
 		this.length = length;
-		T dummy = default(T);
-		this.items = native.GC_malloc(length * native.sizeof(dummy));
+		this.items = GC_malloc(length * native_sizeof(T));
 	}
 	
 	public int size()
@@ -19,22 +24,22 @@ public final class Array<T> implements IIndexedCollection<T>
 	
 	public T get(int i)
 	{
-		return native.boh_deref_ptr(items, i);
+		return native_deref(T, items + i * native_sizeof(T));
 	}
 	
 	public void set(int i, T value)
 	{
-		native.boh_set_deref(items, i, value);
+		native_deref(T, items + i * native_sizeof(T)) = value;
 	}
 	
 	public T getFast(int i)
 	{
-		return native.boh_deref_ptr(items, i);
+		return native_deref(T, items + i * native_sizeof(T));
 	}
 	
 	public void setFast(int i, T value)
 	{
-		native.boh_set_deref(items, i, value);
+		native_deref(T, items + i * native_sizeof(T)) = value;
 	}
 	
 	public IIterator<T> iterator()
@@ -49,7 +54,7 @@ public final class Array<T> implements IIndexedCollection<T>
 			length = newsize;
 			return;
 		}
-		items = native.GC_realloc(newsize);
+		items = GC_realloc(items, newsize);
 		length = newsize;
 	}
 	

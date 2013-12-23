@@ -1,8 +1,11 @@
-﻿<Properties>
+<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="bohc/Program.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="bohc/typesys/Modifiers.cs">
     <Files>
-      <File FileName="bohc/Program.cs" Line="1" Column="1" />
+      <File FileName="bohc/generation/cs/CSCodeGen.cs" Line="151" Column="5" />
+      <File FileName="bohc/generation/mangling/CSMangler.cs" Line="9" Column="4" />
+      <File FileName="bohc/generation/c/CCodeGen.cs" Line="1269" Column="1" />
+      <File FileName="bohc/typesys/Modifiers.cs" Line="28" Column="29" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

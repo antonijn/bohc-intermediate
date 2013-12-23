@@ -32,7 +32,7 @@ _Bool p3p3c6_bohstdObject_m_equals_e9664e21(struct p3p3c6_bohstdObject * const s
 }
 int64_t p3p3c6_bohstdObject_m_hash_35cf4c(struct p3p3c6_bohstdObject * const self)
 {
-	return boh_force_cast(self);
+	return &(*(int32_t *)((int8_t *)(self)));
 }
 struct p3p3c4_bohstdType * p3p3c6_bohstdObject_m_getType_35cf4c(struct p3p3c6_bohstdObject * const self)
 {

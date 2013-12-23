@@ -1,4 +1,4 @@
-﻿CODE GENERATION
+CODE GENERATION
 ===============
 
 For classes

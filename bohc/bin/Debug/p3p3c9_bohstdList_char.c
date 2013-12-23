@@ -96,19 +96,19 @@ void p3p3c9_bohstdList_char_m_add_111bcd8d(struct p3p3c9_bohstdList_char * const
 }
 void p3p3c9_bohstdList_char_m_add_cdea1985(struct p3p3c9_bohstdList_char * const self, struct p3p3i17_bohstdIIndexedCollection_char * p_items)
 {
-	struct p3p3i17_bohstdIIndexedCollection_char * temp7;
-	if (((self->f_length + (temp7 = p_items)->m_size_35cf4c(temp7->object)) > p3p3cA_bohstdArray_char_m_size_35cf4c(self->f_array)))
-	{
-		struct p3p3i17_bohstdIIndexedCollection_char * temp8;
-		p3p3c9_bohstdList_char_m_grow_adeaa357(self, (temp8 = p_items)->m_size_35cf4c(temp8->object));
-	}
-	struct p3p3iE_bohstdIIterator_char * temp9;
 	struct p3p3i17_bohstdIIndexedCollection_char * temp10;
-	temp9 = (temp10 = p_items)->m_iterator_35cf4c(temp10->object);
-	while (temp9->p3p3iE_bohstdIIterator_char_m_next_35cf4c(temp9->object))
+	if (((self->f_length + (temp10 = p_items)->m_size_35cf4c(temp10->object)) > p3p3cA_bohstdArray_char_m_size_35cf4c(self->f_array)))
+	{
+		struct p3p3i17_bohstdIIndexedCollection_char * temp11;
+		p3p3c9_bohstdList_char_m_grow_adeaa357(self, (temp11 = p_items)->m_size_35cf4c(temp11->object));
+	}
+	struct p3p3iE_bohstdIIterator_char * temp12;
+	struct p3p3i17_bohstdIIndexedCollection_char * temp13;
+	temp12 = (temp13 = p_items)->m_iterator_35cf4c(temp13->object);
+	while (temp12->p3p3iE_bohstdIIterator_char_m_next_35cf4c(temp12->object))
 	{
 		unsigned char l_item;
-		l_item = temp9->p3p3iE_bohstdIIterator_char_m_current_35cf4c(temp9->object));
+		l_item = temp12->p3p3iE_bohstdIIterator_char_m_current_35cf4c(temp12->object));
 		{
 			p3p3cA_bohstdArray_char_m_setFast_d5ad6698(self->f_array, (self->f_length++), l_item);
 		}
@@ -153,9 +153,9 @@ void p3p3c9_bohstdList_char_m_removeWhen_a6fd6f77(struct p3p3c9_bohstdList_char 
 	struct p3p3c8_bohstdList_int * l_removeWhat = new_p3p3c8_bohstdList_int_adeaa357(self->f_length);
 	for (int32_t l_i = (int32_t)(0); (l_i < self->f_length); (++l_i))
 	{
-		struct f1A_p07_booleanp04_charp03_int temp11;
-		temp11 = p_when;
-		if (temp11.function(temp11.context, p3p3cA_bohstdArray_char_m_getFast_adeaa357(self->f_array, l_i), l_i))
+		struct f1A_p07_booleanp04_charp03_int temp14;
+		temp14 = p_when;
+		if (temp14.function(temp14.context, p3p3cA_bohstdArray_char_m_getFast_adeaa357(self->f_array, l_i), l_i))
 		{
 			p3p3c8_bohstdList_int_m_add_adeaa357(l_removeWhat, (l_i - l_removeWhat->f_length));
 		}
@@ -195,11 +195,11 @@ void p3p3c9_bohstdList_char_m_removeWhen_bc4fa1e(struct p3p3c9_bohstdList_char *
 	struct f13_p07_booleanp04_char* ep_when = GC_malloc(sizeof(struct f13_p07_booleanp04_char));
 	(*ep_when) = p_when;
 	{
-		struct f1A_p07_booleanp04_charp03_int temp12;
-		temp12.function = &l2;
-		temp12.context = GC_malloc(sizeof(struct lmbd_ctx_2));
-		((struct lmbd_ctx_2 *)temp12.context)->ep_when = &(*ep_when);
-		p3p3c9_bohstdList_char_m_removeWhen_a6fd6f77(self, temp12);
+		struct f1A_p07_booleanp04_charp03_int temp15;
+		temp15.function = &l2;
+		temp15.context = GC_malloc(sizeof(struct lmbd_ctx_2));
+		((struct lmbd_ctx_2 *)temp15.context)->ep_when = &(*ep_when);
+		p3p3c9_bohstdList_char_m_removeWhen_a6fd6f77(self, temp15);
 	}
 }
 void p3p3c9_bohstdList_char_m_removeAll_111bcd8d(struct p3p3c9_bohstdList_char * const self, unsigned char p_item)
@@ -207,11 +207,11 @@ void p3p3c9_bohstdList_char_m_removeAll_111bcd8d(struct p3p3c9_bohstdList_char *
 	unsigned char* ep_item = GC_malloc(sizeof(unsigned char));
 	(*ep_item) = p_item;
 	{
-		struct f13_p07_booleanp04_char temp13;
-		temp13.function = &l3;
-		temp13.context = GC_malloc(sizeof(struct lmbd_ctx_3));
-		((struct lmbd_ctx_3 *)temp13.context)->ep_item = &(*ep_item);
-		p3p3c9_bohstdList_char_m_removeWhen_bc4fa1e(self, temp13);
+		struct f13_p07_booleanp04_char temp16;
+		temp16.function = &l3;
+		temp16.context = GC_malloc(sizeof(struct lmbd_ctx_3));
+		((struct lmbd_ctx_3 *)temp16.context)->ep_item = &(*ep_item);
+		p3p3c9_bohstdList_char_m_removeWhen_bc4fa1e(self, temp16);
 	}
 }
 void p3p3c9_bohstdList_char_m_removeRange_dd8c3cec(struct p3p3c9_bohstdList_char * const self, int32_t p_start, int32_t p_amount)

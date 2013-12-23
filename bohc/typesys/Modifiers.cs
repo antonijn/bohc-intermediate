@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2013 Antonie Blom
+// Copyright (c) 2013 Antonie Blom
 // The antonijn open-source license, draft 1, short form.
 // This source file is licensed under the antonijn open-source license, a
 // full version of which is included with the project.
@@ -34,7 +34,7 @@ namespace bohc.typesys
 		PF_ANDROID   = 0x00004000,
 		PF_IOS       = 0x00008000,
 		PF_DESKTOP   = 0x00010000,
-		PO_WEB       = 0x00020000,
+		PF_WEB       = 0x00020000,
 
 		PF_WINDOWS64 = 0x00040000,
 		PF_LINUX64   = 0x00080000,
@@ -45,5 +45,10 @@ namespace bohc.typesys
 		PF_LINUX32   = 0x00800000,
 		PF_OSX32     = 0x01000000,
 		PF_DESKTOP32 = 0x02000000,
+
+		PF_CLR       = 0x04000000,
+		PF_JVM       = 0x08000000,
+
+		NATIVE       = 0x10000000,
 	}
 }

@@ -25,14 +25,14 @@ struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * new_p3p3c22_bohstdArra
 void p3p3c22_bohstdArray_boh_std_Array_boh_std_String_fi(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self)
 {
 	self->f_length = 0;
-	self->f_items = NULL;
+	self->f_items = 0;
+	self->f_items = 0;
 }
 
 void p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_this_adeaa357(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self, int32_t p_length)
 {
 	(self->f_length = p_length);
-	struct p3p3c14_bohstdArray_boh_std_String * l_dummy = (NULL);
-	(self->f_items = (struct p3p3c14_bohstdArray_boh_std_String **)(GC_malloc((p_length * sizeof(l_dummy)))));
+	(self->f_items = GC_malloc((p_length * sizeof(struct p3p3c14_bohstdArray_boh_std_String *))));
 }
 int32_t p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_size_35cf4c(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self)
 {
@@ -40,19 +40,19 @@ int32_t p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_size_35cf4c(struct p3
 }
 struct p3p3c14_bohstdArray_boh_std_String * p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_get_adeaa357(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_items, p_i);
+	return (*(struct p3p3c14_bohstdArray_boh_std_String * *)((int8_t *)((self->f_items + (p_i * sizeof(struct p3p3c14_bohstdArray_boh_std_String *))))));
 }
 void p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_set_9c920c15(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self, int32_t p_i, struct p3p3c14_bohstdArray_boh_std_String * p_value)
 {
-	boh_set_deref(self->f_items, p_i, p_value);
+	((*(struct p3p3c14_bohstdArray_boh_std_String * *)((int8_t *)((self->f_items + (p_i * sizeof(struct p3p3c14_bohstdArray_boh_std_String *)))))) = p_value);
 }
 struct p3p3c14_bohstdArray_boh_std_String * p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_getFast_adeaa357(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self, int32_t p_i)
 {
-	return boh_deref_ptr(self->f_items, p_i);
+	return (*(struct p3p3c14_bohstdArray_boh_std_String * *)((int8_t *)((self->f_items + (p_i * sizeof(struct p3p3c14_bohstdArray_boh_std_String *))))));
 }
 void p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_setFast_9c920c15(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self, int32_t p_i, struct p3p3c14_bohstdArray_boh_std_String * p_value)
 {
-	boh_set_deref(self->f_items, p_i, p_value);
+	((*(struct p3p3c14_bohstdArray_boh_std_String * *)((int8_t *)((self->f_items + (p_i * sizeof(struct p3p3c14_bohstdArray_boh_std_String *)))))) = p_value);
 }
 struct p3p3i26_bohstdIIterator_boh_std_Array_boh_std_String * p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_iterator_35cf4c(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self)
 {
@@ -65,7 +65,7 @@ void p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_resize_adeaa357(struct p
 		(self->f_length = p_newsize);
 		return;
 	}
-	(self->f_items = (struct p3p3c14_bohstdArray_boh_std_String **)(GC_realloc(p_newsize)));
+	(self->f_items = GC_realloc(self->f_items, p_newsize));
 	(self->f_length = p_newsize);
 }
 void p3p3c22_bohstdArray_boh_std_Array_boh_std_String_m_move_10aba1b7(struct p3p3c22_bohstdArray_boh_std_Array_boh_std_String * const self, int32_t p_dest, int32_t p_src, int32_t p_size)

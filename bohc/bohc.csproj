@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -34,7 +34,6 @@
   <ItemGroup>
     <Compile Include="boh\Exception.cs" />
     <Compile Include="generation\mangling\CMangler.cs" />
-    <Compile Include="generation\c\CodeGen.cs" />
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
     <Compile Include="generation\ICodeGen.cs" />
@@ -52,8 +51,6 @@
     <Compile Include="parsing\expressions\Lambda.cs" />
     <Compile Include="parsing\expressions\Literal.cs" />
     <Compile Include="parsing\expressions\BinaryOperation.cs" />
-    <Compile Include="parsing\expressions\NativeFCall.cs" />
-    <Compile Include="parsing\expressions\NativeMember.cs" />
     <Compile Include="parsing\expressions\NewDummy.cs" />
     <Compile Include="parsing\expressions\OperationType.cs" />
     <Compile Include="parsing\expressions\Operator.cs" />
@@ -78,7 +75,6 @@
     <Compile Include="parsing\statements\ForeachStatement.cs" />
     <Compile Include="parsing\statements\ForStatement.cs" />
     <Compile Include="parsing\statements\IfStatement.cs" />
-    <Compile Include="parsing\expressions\NativeExpression.cs" />
     <Compile Include="parsing\statements\IStatementParser.cs" />
     <Compile Include="parsing\statements\ReturnStatement.cs" />
     <Compile Include="parsing\statements\Scope.cs" />
@@ -123,6 +119,11 @@
     <Compile Include="typesys\GenericType.cs" />
     <Compile Include="typesys\Primitive.cs" />
     <Compile Include="typesys\Variable.cs" />
+    <Compile Include="generation\c\CCodeGen.cs" />
+    <Compile Include="generation\cs\CSCodeGen.cs" />
+    <Compile Include="generation\mangling\CSMangler.cs" />
+    <Compile Include="typesys\NativeFunction.cs" />
+    <Compile Include="parsing\expressions\NativeFunctionCall.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">
@@ -146,5 +147,21 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+  </ItemGroup>
+  <ProjectExtensions>
+    <MonoDevelop>
+      <Properties>
+        <Policies>
+          <TextStylePolicy inheritsSet="null" scope="text/x-csharp" />
+          <CSharpFormattingPolicy IndentSwitchBody="True" AnonymousMethodBraceStyle="NextLine" PropertyBraceStyle="NextLine" PropertyGetBraceStyle="NextLine" PropertySetBraceStyle="NextLine" EventBraceStyle="NextLine" EventAddBraceStyle="NextLine" EventRemoveBraceStyle="NextLine" StatementBraceStyle="NextLine" ArrayInitializerBraceStyle="NextLine" BeforeMethodDeclarationParentheses="False" BeforeMethodCallParentheses="False" BeforeConstructorDeclarationParentheses="False" BeforeDelegateDeclarationParentheses="False" NewParentheses="False" inheritsSet="Mono" inheritsScope="text/x-csharp" scope="text/x-csharp" />
+          <TextStylePolicy FileWidth="120" TabsToSpaces="False" inheritsSet="VisualStudio" inheritsScope="text/plain" scope="text/plain" />
+          <TextStylePolicy inheritsSet="null" scope="text/x-chdr" />
+          <TextStylePolicy inheritsSet="null" scope="text/x-markdown" />
+        </Policies>
+      </Properties>
+    </MonoDevelop>
+  </ProjectExtensions>
+  <ItemGroup>
+    <Folder Include="generation\cs\" />
   </ItemGroup>
 </Project>

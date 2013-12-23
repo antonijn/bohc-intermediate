@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -322,6 +322,11 @@ namespace bohc.generation.mangling
 
 		public string getCFuncName(Function func)
 		{
+			if (func.modifiers.HasFlag(Modifiers.NATIVE))
+			{
+				return func.identifier;
+			}
+
 			if (func is OverloadedOperator)
 			{
 				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which) + getFuncAddition(func);

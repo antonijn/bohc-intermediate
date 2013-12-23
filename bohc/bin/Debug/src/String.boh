@@ -1,5 +1,7 @@
 package boh.std;
 
+import boh.std.interop;
+
 public class String
 {
 	public static final String empty = "";
@@ -13,13 +15,12 @@ public class String
 	
 	public this(int length)
 	{
-		char dummy = default(char);
-		this.chars = native.GC_malloc(length * native.sizeof(dummy));
+		this.chars = new Ptr<char>(Interop.gcAlloc(length * native_sizeof(char)));
 		this.offset = 0;
 		this.length = length;
 		for (int i = 0; i < length; ++i)
 		{
-			set(i, dummy);
+			chars.set(i, default(char));
 		}
 	}
 	
@@ -54,12 +55,7 @@ public class String
 	
 	public char get(int i)
 	{
-		return native.boh_deref_ptr(chars, offset + i);
-	}
-	
-	private char set(int i, char ch)
-	{
-		return native.boh_set_deref(chars, offset + i, ch);
+		return native_deref(char, chars + (offset + i) * native_sizeof(char));
 	}
 	
 	public String substring(int idx)
@@ -116,19 +112,21 @@ public class String
 	
 	public static String +(String left, String right)
 	{
-		String res = native.create_str_by_len(left.length + right.length);
+		String res = create_str_by_len(left.length + right.length);
 		for (int i = 0; i < left.length; ++i)
 		{
-			res.set(i, left.get(i));
+			res.chars.set(i, left.get(i));
 		}
 		for (int i = 0; i < right.length; ++i)
 		{
-			res.set(i + left.length, right.get(i));
+			res.chars.set(i + left.length, right.get(i));
 		}
 		return res;
 	}
 
+	private static native String create_str_by_len(int len);
+
 	private int offset;
 	private int length;
-	private native.char* chars;
+	private Ptr<char> chars;
 }

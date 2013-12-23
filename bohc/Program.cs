@@ -1,4 +1,4 @@
-﻿// Copyright (c) 2013 Antonie Blom
+// Copyright (c) 2013 Antonie Blom
 // The antonijn open-source license, draft 1, short form.
 // This source file is licensed under the antonijn open-source license, a
 // full version of which is included with the project.
@@ -54,6 +54,9 @@ namespace bohc
 				"src/Vector2f.boh",
 				"src/List.boh",
 				"src/StringBuilder.boh",
+				"src/Ptr.boh",
+				"src/VoidPtr.boh",
+				"src/Interop.boh",
 			};
 			string[] files = new string[filenames.Length];
 
@@ -173,7 +176,7 @@ namespace bohc
 			Console.WriteLine("Generating code");
 
 			IMangler mangler = new CMangler();
-			ICodeGen codegen = new CodeGen(mangler);
+			ICodeGen codegen = new CCodeGen(mangler);
 
 			IEnumerable<typesys.Type> types = filesassoc.Values.Select(x => x.type as typesys.Type).Where(x => x != null).Concat(
 				filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).SelectMany(x => x.types.Values));

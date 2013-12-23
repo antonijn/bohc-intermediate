@@ -1,4 +1,4 @@
-﻿The Intermediate Boh Compiler
+The Intermediate Boh Compiler
 =============================
 
 This is (hopefully) the last version of the boh compiler written in C#. It is a complete rewrite of the previous compiler, with the goal of **extreme readability** in mind.
