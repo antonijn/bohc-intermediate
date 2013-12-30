@@ -20,6 +20,8 @@ namespace bohc.parsing
 		public readonly Package package;
 		public readonly string content;
 
+		public ParserState state;
+
 		public IEnumerable<Package> getContext()
 		{
 			return imports.Concat(new[] { package });

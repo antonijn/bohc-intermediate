@@ -56,29 +56,7 @@ namespace bohc.generation.c
 
 			foreach (FunctionRefType fRefType in FunctionRefType.instances)
 			{
-				builder.Append("struct ");
-				builder.AppendLine(mangler.getCName(fRefType));
-				builder.AppendLine("{");
-
-				++indentation;
-				addIndent(builder);
-				builder.Append(mangler.getCTypeName(fRefType.retType));
-				builder.Append(" (* function)(void *, ");
-
-				foreach (typesys.Type t in fRefType.paramTypes)
-				{
-					builder.Append(mangler.getCTypeName(t));
-					builder.Append(", ");
-				}
-
-				builder.Remove(builder.Length - 2, 2);
-				builder.AppendLine(");");
-
-				addIndent(builder);
-				builder.AppendLine("void * context;");
-
-				--indentation;
-				builder.AppendLine("};");
+				//addFunctionRefTypeDef(builder, fRefType);
 			}
 
 			generateLambdas(builder);
@@ -93,16 +71,10 @@ namespace bohc.generation.c
 			foreach (Lambda l in Lambda.lambdas)
 			{
 				lambdaStack = l.lambdaLevel;
-				builder.Append(mangler.getCTypeName(l.type.retType));
-				builder.Append(" " + lambdaNames[l]);
-				builder.Append("(struct ");
-				builder.Append(lambdaCtxNames[l] + " * ctx, ");
+				builder.Append(mangler.getCTypeName(l.type.retType)).Append(" " + lambdaNames[l]).Append("(struct ").Append(lambdaCtxNames[l] + " * ctx, ");
 				foreach (LambdaParam lParam in l.lambdaParams)
 				{
-					builder.Append(mangler.getCTypeName(lParam.type));
-					builder.Append(" ");
-					builder.Append(mangler.getVarName(lParam));
-					builder.Append(", ");
+					builder.Append(mangler.getCTypeName(lParam.type)).Append(" ").Append(mangler.getVarName(lParam)).Append(", ");
 				}
 				builder.Remove(builder.Length - 2, 2);
 				builder.AppendLine(")");
@@ -149,6 +121,31 @@ namespace bohc.generation.c
 			System.IO.File.WriteAllText("function_types.c", builder.ToString());
 		}
 
+		private void addFunctionRefTypeDef(StringBuilder builder, FunctionRefType fRefType)
+		{
+			builder.Append("struct ");
+			builder.AppendLine(mangler.getCName(fRefType));
+			builder.AppendLine("{");
+
+			++indentation;
+			addIndent(builder);
+			builder.Append(mangler.getCTypeName(fRefType.retType)).Append(" (* function)(void *, ");
+
+			foreach (typesys.Type t in fRefType.paramTypes)
+			{
+				builder.Append(mangler.getCTypeName(t)).Append(", ");
+			}
+
+			builder.Remove(builder.Length - 2, 2);
+			builder.AppendLine(");");
+
+			addIndent(builder);
+			builder.AppendLine("void * context;");
+
+			--indentation;
+			builder.AppendLine("};");
+		}
+
 		private void generateLambdas(StringBuilder builder)
 		{
 			int i = 0;
@@ -192,12 +189,105 @@ namespace bohc.generation.c
 			}
 		}
 
+		private class DependencyBasedTypeSorter : IComparer<typesys.Type>
+		{
+			private static bool containsTypeOther(typesys.Type type, typesys.Type other)
+			{
+				Struct str = type as Struct;
+				if (str != null)
+				{
+					return containsTypeOther(str, other);
+				}
+
+				FunctionRefType frt = type as FunctionRefType;
+				if (frt != null)
+				{
+					return containsTypeOther(frt, other);
+				}
+
+				return false;
+			}
+
+			private static bool containsTypeOther(Struct str, typesys.Type other)
+			{
+				foreach (Field f in str.fields)
+				{
+					if (f.type == other)
+					{
+						return true;
+					}
+
+					if (containsTypeOther(f.type, other))
+					{
+						return true;
+					}
+				}
+				return false;
+			}
+
+			private static bool containsTypeOther(FunctionRefType frt, typesys.Type other)
+			{
+				return containsTypeOther(frt.retType, other) || frt.paramTypes.Any(x => containsTypeOther(x, other));
+			}
+
+			int IComparer<typesys.Type>.Compare(typesys.Type l, typesys.Type r)
+			{
+				if (containsTypeOther(l, r))
+				{
+					return -1;
+				}
+
+				return 0;
+			}
+		}
+
+		public void finish(IEnumerable<typesys.Type> types)
+		{
+			StringBuilder builder = new StringBuilder();
+			builder.AppendLine("#pragma once");
+			builder.AppendLine("#include \"boh_internal.h\"");
+			builder.AppendLine("#include <gc/gc.h>");
+			builder.AppendLine("#include <stdint.h>");
+			builder.AppendLine("#include <stddef.h>");
+			builder.AppendLine("#include <setjmp.h>");
+			builder.AppendLine("#include \"function_types.h\"");
+
+			foreach (typesys.Type c in types.Where(x => (x is Class && !(x is Struct)) || x is Interface))
+			{
+				addStructPrototype(builder, c);
+			}
+
+			foreach (typesys.Type t in types.Where(x => (!(x is Class) || x is Struct) && !(x is Interface)).Concat(FunctionRefType.instances).OrderBy(x => x, new DependencyBasedTypeSorter()))
+			{
+				if (t is Struct)
+				{
+					builder.AppendFormat("#include \"{0}\"", mangler.getCName(t) + ".type.h");
+					builder.AppendLine();
+				}
+				else
+				{
+					addFunctionRefTypeDef(builder, t as FunctionRefType);
+				}
+			}
+
+			foreach (typesys.Type t in types)
+			{
+				builder.AppendFormat("#include \"{0}\"", mangler.getCName(t) + ".type.h");
+				builder.AppendLine();
+
+				builder.AppendFormat("#include \"{0}\"", mangler.getCName(t) + ".sigs.h");
+				builder.AppendLine();
+				builder.AppendLine();
+			}
+
+			System.IO.File.WriteAllText("all.h", builder.ToString());
+		}
+
 		public void generateFor(typesys.Type type, IEnumerable<typesys.Type> others)
 		{
 			others = others.Except(new[] { type });
 
-			string header = generateHeader(type, others);
-			System.IO.File.WriteAllText(mangler.getHeaderName(type), header);
+			generateHeaders(type, others);
 
 			string code = generateCode(type, others);
 			System.IO.File.WriteAllText(mangler.getCodeFileName(type), code);
@@ -208,36 +298,40 @@ namespace bohc.generation.c
 			}
 		}
 
-		private string generateHeader(typesys.Type type, IEnumerable<typesys.Type> others)
+		private void generateHeaders(typesys.Type type, IEnumerable<typesys.Type> others)
 		{
 			Struct s = type as Struct;
 			if (s != null)
 			{
-				return generateStructHeader(s, others);
+				generateStructHeaders(s, others);
+				return;
 			}
 
 			Class c = type as Class;
 			if (c != null)
 			{
-				return generateClassHeader(c, others);
+				generateClassHeaders(c, others);
+				return;
 			}
 
 			Interface i = type as Interface;
 			if (i != null)
 			{
-				return generateInterfaceHeader(i, others);
+				generateInterfaceHeaders(i, others);
+				return;
 			}
 
 			typesys.Enum e = type as typesys.Enum;
 			if (e != null)
 			{
-				return generateEnumHeader(e, others);
+				generateEnumHeaders(e, others);
+				return;
 			}
 
 			throw new NotImplementedException();
 		}
 
-		private string generateEnumHeader(typesys.Enum e, IEnumerable<typesys.Type> others)
+		private void generateEnumHeaders(typesys.Enum e, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 
@@ -268,12 +362,24 @@ namespace bohc.generation.c
 
 			--indentation;
 
-			return builder.ToString();
+			System.IO.File.WriteAllText(mangler.getCName(e) + ".enum.h", builder.ToString());
 		}
 
-		private string generateInterfaceHeader(Interface iface, IEnumerable<typesys.Type> others)
+		private void generateInterfaceHeaders(Interface iface, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
+
+			addIncludeGuard(builder, iface);
+			builder.AppendLine();
+
+			addStructPrototypes(builder, others);
+			builder.AppendLine();
+
+			addInterfaceNewOpSig(builder, iface);
+			builder.AppendLine();
+
+			System.IO.File.WriteAllText(mangler.getCName(iface) + ".sigs.h", builder.ToString());
+			builder.Clear();
 
 			addIncludeGuard(builder, iface);
 			builder.AppendLine();
@@ -284,14 +390,12 @@ namespace bohc.generation.c
 
 			addStructPrototypes(builder, others);
 			builder.AppendLine();
-
-			addInterfaceNewOpSig(builder, iface);
-			builder.AppendLine();
-
+			
 			addInterfaceStruct(builder, iface);
 			builder.AppendLine();
 
-			return builder.ToString();
+			System.IO.File.WriteAllText(mangler.getCName(iface) + ".type.h", builder.ToString());
+
 		}
 
 		private void addInterfaceFunc(StringBuilder builder, Function f)
@@ -369,7 +473,8 @@ namespace bohc.generation.c
 
 		private void addStructPrototypes(StringBuilder builder, IEnumerable<typesys.Type> others)
 		{
-			builder.AppendLine("#include \"boh_internal.h\"");
+			builder.AppendLine("#include \"all.h\"");
+			/*builder.AppendLine("#include \"boh_internal.h\"");
 			builder.AppendLine("#include \"function_types.h\"");
 			builder.AppendLine("#include <gc/gc.h>");
 			builder.AppendLine("#include <stdint.h>");
@@ -380,20 +485,21 @@ namespace bohc.generation.c
 			foreach (typesys.Type type in others)
 			{
 				addStructPrototype(builder, type);
-			}
+			}*/
 		}
 
-		private void addIncludesOnlySpecified(StringBuilder builder, IEnumerable<typesys.Type> others)
+		/*private void addIncludesOnlySpecified(StringBuilder builder, IEnumerable<typesys.Type> others)
 		{
 			foreach (typesys.Type type in others.OrderBy(x => x.fullName()))
 			{
 				builder.AppendLine("#include \"" + mangler.getHeaderName(type) + "\"");
 			}
-		}
+		}*/
 
 		private void addIncludes(StringBuilder builder, IEnumerable<typesys.Type> others)
 		{
-			addIncludesOnlySpecified(builder, others);
+			//addIncludesOnlySpecified(builder, others);
+			builder.AppendLine("#include \"all.h\"");
 		}
 
 		private void addStructPrototype(StringBuilder builder, typesys.Type c)
@@ -418,6 +524,10 @@ namespace bohc.generation.c
 				builder.Append(mangler.getThisParamTypeName(func.owner));
 				builder.Append(" self, ");
 			}
+			else if (!func.modifiers.HasFlag(Modifiers.NATIVE))
+			{
+				builder.Append("void * const dummy, ");
+			}
 
 			foreach (Parameter p in func.parameters)
 			{
@@ -427,13 +537,9 @@ namespace bohc.generation.c
 				builder.Append(", ");
 			}
 
-			if (!func.modifiers.HasFlag(Modifiers.STATIC) || func.parameters.Count > 0)
+			if (!func.modifiers.HasFlag(Modifiers.NATIVE) || func.parameters.Count > 0)
 			{
 				builder.Remove(builder.Length - 2, 2);
-			}
-			else
-			{
-				builder.Append("void");
 			}
 		}
 
@@ -460,8 +566,9 @@ namespace bohc.generation.c
 		private void addFunctionSig(StringBuilder builder, Function func, string prefix)
 		{
 			if (func.modifiers.HasFlag(Modifiers.NATIVE) &&
-				(func.identifier == "GC_MALLOC" ||
-				func.identifier == "GC_REALLOC" ||
+				(func.identifier == "boh_gc_alloc" ||
+				func.identifier == "boh_gc_realloc" ||
+				func.identifier == "boh_gc_collect" ||
 				func.identifier == "malloc" ||
 				func.identifier == "free" ||
 				func.identifier == "realloc"))
@@ -514,14 +621,23 @@ namespace bohc.generation.c
 			builder.Append(cname);
 			builder.AppendLine("(void)");
 			builder.AppendLine("{");
-			builder.Append("\t");
+
+			++indentation;
+			addIndent(builder);
+			builder.Append("static ");
 			builder.Append(ctype);
 			builder.AppendLine(" result = NULL;");
-			builder.AppendLine("\tif (result == NULL)");
-			builder.AppendLine("\t{");
+			addIndent(builder);
+			builder.AppendLine("if (result == NULL)");
+			addIndent(builder);
+			builder.AppendLine("{");
 			// TODO: initialise the type
-			builder.AppendLine("\t}");
-			builder.AppendLine("\treturn result;");
+			addIndent(builder);
+			builder.AppendLine("}");
+			addIndent(builder);
+			builder.AppendLine("return result;");
+			--indentation;
+
 			builder.Append("}");
 		}
 
@@ -635,7 +751,8 @@ namespace bohc.generation.c
 
 			builder.AppendLine("{");
 
-			builder.Append("\t");
+			++indentation;
+			addIndent(builder);
 			builder.Append(mangler.getCTypeName(constr.owner));
 			builder.Append(" result");
 			if (constr.owner is Struct)
@@ -644,23 +761,24 @@ namespace bohc.generation.c
 			}
 			else
 			{
-				builder.Append(" = GC_MALLOC(sizeof(");
+				builder.Append(" = boh_gc_alloc(sizeof(");
 				builder.Append(mangler.getCStructName(constr.owner));
 				builder.AppendLine("));");
 			}
 
 			if (!(constr.owner is Struct))
 			{
-				builder.Append("\tresult->vtable = &instance_");
+				addIndent(builder);
+				builder.Append("result->vtable = &instance_");
 				builder.Append(mangler.getVtableName((typesys.Class)constr.owner));
 				builder.AppendLine(";");
 			}
 
-			builder.Append("\t");
+			addIndent(builder);
 			builder.Append(mangler.getCFuncName(((Class)constr.owner).staticConstr));
-			builder.AppendLine("();");
+			builder.AppendLine("(NULL);");
 
-			builder.Append("\t");
+			addIndent(builder);
 			builder.Append(mangler.getFieldInitName((Class)constr.owner));
 			builder.Append("(");
 			if (constr.owner is Struct)
@@ -669,7 +787,7 @@ namespace bohc.generation.c
 			}
 			builder.AppendLine("result);");
 
-			builder.Append("\t");
+			addIndent(builder);
 			builder.Append(mangler.getCFuncName(constr));
 			builder.Append("(");
 			if (constr.owner is Struct)
@@ -686,7 +804,10 @@ namespace bohc.generation.c
 
 			builder.AppendLine(");");
 
-			builder.AppendLine("\treturn result;");
+			addIndent(builder);
+			builder.AppendLine("return result;");
+			--indentation;
+			
 			builder.AppendLine("}");
 
 			addPlatformModClose(builder, constr.modifiers);
@@ -727,10 +848,11 @@ namespace bohc.generation.c
 				addVtableMembers(builder, super);
 			}
 
+			++indentation;
 			foreach (Function f in c.functions.Where(x => x.modifiers.HasFlag(Modifiers.VIRTUAL) || x.modifiers.HasFlag(Modifiers.ABSTRACT)))
 			{
 				addPlatformModifiers(builder, f.modifiers);
-				builder.Append("\t");
+				addIndent(builder);
 				builder.Append(mangler.getCTypeName(f.returnType));
 				builder.Append(" (*");
 				builder.Append(mangler.getVFuncName(f));
@@ -739,6 +861,7 @@ namespace bohc.generation.c
 				builder.AppendLine(");");
 				addPlatformModClose(builder, f.modifiers);
 			}
+			--indentation;
 		}
 
 		private void addVtable(StringBuilder builder, Class c)
@@ -763,16 +886,18 @@ namespace bohc.generation.c
 				addStructFields(builder, c.super);
 			}
 
+			++indentation;
 			foreach (Field f in c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.STATIC)))
 			{
 				addPlatformModifiers(builder, f.modifiers);
-				builder.Append("\t");
+				addIndent(builder);
 				builder.Append(mangler.getCTypeName(f.type));
 				builder.Append(" ");
 				builder.Append(mangler.getVarUsageName(f, lambdaStack));
 				builder.AppendLine(";");
 				addPlatformModClose(builder, f.modifiers);
 			}
+			--indentation;
 		}
 
 		private void addStructDefinition(StringBuilder builder, typesys.Class c)
@@ -799,7 +924,7 @@ namespace bohc.generation.c
 			builder.AppendLine("};");
 		}
 
-		private string generateStructHeader(typesys.Struct c, IEnumerable<typesys.Type> others)
+		private void generateStructHeaders(typesys.Struct c, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 			addIncludeGuard(builder, c);
@@ -809,6 +934,15 @@ namespace bohc.generation.c
 			builder.AppendLine();
 
 			addStructDefinition(builder, c);
+			builder.AppendLine();
+
+			System.IO.File.WriteAllText(mangler.getCName(c) + ".type.h", builder.ToString());
+			builder.Clear();
+
+			addIncludeGuard(builder, c);
+			builder.AppendLine();
+
+			addStructPrototypes(builder, others);
 			builder.AppendLine();
 
 			addTypeOfSig(builder, c);
@@ -823,16 +957,13 @@ namespace bohc.generation.c
 			addStaticFieldProtos(builder, c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT)), "extern ");
 			builder.AppendLine();
 
-			return builder.ToString();
+			System.IO.File.WriteAllText(mangler.getCName(c) + ".sigs.h", builder.ToString());
 		}
 
-		private string generateClassHeader(typesys.Class c, IEnumerable<typesys.Type> others)
+		private void generateClassHeaders(typesys.Class c, IEnumerable<typesys.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 			addIncludeGuard(builder, c);
-			builder.AppendLine();
-
-			addStructPrototype(builder, c);
 			builder.AppendLine();
 
 			addStructPrototypes(builder, others);
@@ -852,11 +983,20 @@ namespace bohc.generation.c
 			
 			addStaticFieldProtos(builder, c.fields.Where(x => !x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT)), "extern ");
 			builder.AppendLine();
-	
+
+			System.IO.File.WriteAllText(mangler.getCName(c) + ".sigs.h", builder.ToString());
+			builder.Clear();
+
+			addIncludeGuard(builder, c);
+			builder.AppendLine();
+
+			addStructPrototypes(builder, others);
+			builder.AppendLine();
+
 			addStructDefinition(builder, c);
 			builder.AppendLine();
 
-			return builder.ToString();
+			System.IO.File.WriteAllText(mangler.getCName(c) + ".type.h", builder.ToString());
 		}
 
 		private class FEqualComp : IEqualityComparer<Function>
@@ -929,7 +1069,7 @@ namespace bohc.generation.c
 				builder.AppendLine("GC_INIT();");
 				addIndent(builder);
 				builder.Append(mangler.getCFuncName(func));
-				builder.AppendLine("();");
+				builder.AppendLine("(NULL);");
 				addIndent(builder);
 				builder.AppendLine("return 0;");
 				--indentation;
@@ -1029,7 +1169,7 @@ namespace bohc.generation.c
 					builder.Append(mangler.getCTypeName(param.type));
 					builder.Append("* e");
 					builder.Append(mangler.getVarName(param));
-					builder.Append(" = GC_MALLOC(sizeof(");
+					builder.Append(" = boh_gc_alloc(sizeof(");
 					builder.Append(mangler.getCTypeName(param.type));
 					builder.AppendLine("));");
 					addIndent(builder);
@@ -1046,7 +1186,7 @@ namespace bohc.generation.c
 			builder.AppendLine("{");
 			++indentation;
 			addIndent(builder);
-			builder.AppendLine("_Bool hasBeenCalled = 0;");
+			builder.AppendLine("static _Bool hasBeenCalled = 0;");
 			addIndent(builder);
 			builder.AppendLine("if (hasBeenCalled)");
 			addIndent(builder);
@@ -1063,7 +1203,7 @@ namespace bohc.generation.c
 			{
 				addIndent(builder);
 				builder.Append(mangler.getCFuncName(((Class)func.owner).super.staticConstr));
-				builder.AppendLine("();");
+				builder.AppendLine("(NULL);");
 			}
 
 			foreach (Field f in ((Class)func.owner).fields.Where(x => x.modifiers.HasFlag(Modifiers.STATIC)))
@@ -1320,7 +1460,7 @@ namespace bohc.generation.c
 		{
 			string tmp = addTemp(lambda);
 			addPreStatStatement(tmp + ".function = &" + lambdaNames[lambda] + ";");
-			addPreStatStatement(tmp + ".context = GC_MALLOC(sizeof(struct " + lambdaCtxNames[lambda] + "));");
+			addPreStatStatement(tmp + ".context = boh_gc_alloc(sizeof(struct " + lambdaCtxNames[lambda] + "));");
 			foreach (Variable v in lambda.enclosed)
 			{
 				StringBuilder preStat = new StringBuilder();
@@ -1529,6 +1669,21 @@ namespace bohc.generation.c
 			}
 		}
 
+		private void addNullCheck(StringBuilder builder, Expression expr)
+		{
+			ThisVar tvar = expr as ThisVar;
+			if (!Program.Options.unsafeNullPtr && tvar == null)
+			{
+				builder.Append("boh_check_null(");
+			}
+			addExpression(builder, expr);
+			if (!Program.Options.unsafeNullPtr && tvar == null)
+			{
+				builder.Append(", ");
+				builder.Append(mangler.getCTypeName(expr.getType()));
+				builder.Append(")");
+			}
+		}
 		private void addFCall(StringBuilder builder, FunctionCall fcall)
 		{
 			if ((fcall.refersto.modifiers.HasFlag(Modifiers.VIRTUAL) ||
@@ -1552,7 +1707,7 @@ namespace bohc.generation.c
 					builder.Append("(");
 					builder.Append(temp);
 					builder.Append(" = ");
-					addExpression(builder, fcall.belongsto);
+					addNullCheck(builder, fcall.belongsto);
 					builder.Append(")->vtable->");
 
 					builder.Append(mangler.getVFuncName(fcall.refersto));
@@ -1582,7 +1737,7 @@ namespace bohc.generation.c
 				{
 					builder.Append(mangler.getCFuncName(fcall.refersto));
 					builder.Append("(");
-					addExpression(builder, fcall.belongsto);
+					addNullCheck(builder, fcall.belongsto);
 					builder.Append(", ");
 				}
 				else
@@ -1591,7 +1746,7 @@ namespace bohc.generation.c
 					builder.Append("(");
 					builder.Append(temp);
 					builder.Append(" = ");
-					addExpression(builder, fcall.belongsto);
+					addNullCheck(builder, fcall.belongsto);
 					builder.Append(")->");
 					builder.Append(mangler.getVFuncName(fcall.refersto));
 					builder.Append("(");
@@ -1602,7 +1757,14 @@ namespace bohc.generation.c
 			else
 			{
 				builder.Append(mangler.getCFuncName(fcall.refersto));
-				builder.Append("(");
+				if (fcall.refersto.modifiers.HasFlag(Modifiers.NATIVE))
+				{
+					builder.Append("(");
+				}
+				else
+				{
+					builder.Append("(NULL, ");
+				}
 			}
 
 			IEnumerator<Parameter> fparams = fcall.refersto.parameters.GetEnumerator();
@@ -1614,7 +1776,7 @@ namespace bohc.generation.c
 				builder.Append(", ");
 			}
 
-			if (!fcall.refersto.modifiers.HasFlag(Modifiers.STATIC) || fcall.parameters.Length > 0)
+			if (!fcall.refersto.modifiers.HasFlag(Modifiers.NATIVE) || fcall.refersto.parameters.Count > 0)
 			{
 				builder.Remove(builder.Length - 2, 2);
 			}
@@ -1637,7 +1799,7 @@ namespace bohc.generation.c
 			{
 				Function objEq = StdType.obj.functions.Single(x => x.identifier == "valEquals");
 				builder.Append(mangler.getCFuncName(objEq));
-				builder.Append("(");
+				builder.Append("(NULL, ");
 				addExpressionImplCon(builder, left, StdType.obj);
 				builder.Append(", ");
 				addExpressionImplCon(builder, right, StdType.obj);
@@ -1668,7 +1830,7 @@ namespace bohc.generation.c
 			else if (binop.overloaded != null)
 			{
 				builder.Append(mangler.getCFuncName(binop.overloaded));
-				builder.Append("(");
+				builder.Append("(NULL, ");
 				addExpression(builder, binop.left);
 				builder.Append(", ");
 				addExpression(builder, binop.right);
@@ -1725,13 +1887,14 @@ namespace bohc.generation.c
 		{
 			if (exprvar.belongsto is ExprVariable)
 			{
-				addExpression(builder, exprvar.belongsto);
 				if (exprvar.belongsto.getType() is Struct)
 				{
+					addExpression(builder, exprvar.belongsto);
 					builder.Append(".");
 				}
 				else
 				{
+					addNullCheck(builder, exprvar.belongsto);
 					builder.Append("->");
 				}
 			}
@@ -1741,7 +1904,7 @@ namespace bohc.generation.c
 			{
 				StringBuilder temp = new StringBuilder();
 				temp.Append(mangler.getCFuncName(f.owner.staticConstr));
-				temp.Append("();");
+				temp.Append("(NULL);");
 				addPreStatStatement(temp.ToString());
 			}
 			builder.Append(mangler.getVarUsageName(exprvar.refersto, lambdaStack));
@@ -2115,7 +2278,7 @@ namespace bohc.generation.c
 
 			if (vdec.refersto.enclosed)
 			{
-				builder.Append(" = GC_MALLOC(sizeof(");
+				builder.Append(" = boh_gc_alloc(sizeof(");
 				builder.Append(mangler.getCTypeName(vdec.refersto.type));
 				builder.Append("))");
 				if (vdec.initial != null)
@@ -2216,7 +2379,7 @@ namespace bohc.generation.c
 			builder.AppendLine("{");
 			builder.Append("\t");
 			builder.Append(mangler.getCTypeName(iface));
-			builder.Append(" result = GC_MALLOC(sizeof(");
+			builder.Append(" result = boh_gc_alloc(sizeof(");
 			builder.Append(mangler.getCStructName(iface));
 			builder.AppendLine("));");
 			builder.AppendLine("\tresult->object = object;");

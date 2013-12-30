@@ -42,6 +42,8 @@ namespace bohc
 
 			File f = parseCommonFileHeader(header, file);
 
+			f.state = ParserState.TS;
+
 			string typedec = beforeTypeBody.Substring(lastSemicol + 1);
 			parseTypeStart(f, typedec);
 
@@ -159,6 +161,13 @@ namespace bohc
 
 		public void parseFileTP(File f, string file)
 		{
+			if (f.state >= bohc.ParserState.TP)
+			{
+				return;
+			}
+
+			f.state = ParserState.TP;
+
 			int openCurly = file.IndexOf('{');
 			string beforeTypeBody = file.Substring(0, openCurly - 1);
 			int lastSemicol = beforeTypeBody.LastIndexOf(';');
@@ -233,6 +242,13 @@ namespace bohc
 
 		public void parseFileTCS(File f, string file)
 		{
+			if (f.state >= ParserState.TCS)
+			{
+				return;
+			}
+
+			f.state = ParserState.TCS;
+
 			int typeStartCurly = file.IndexOf('{');
 			int typeStopCurly = file.LastIndexOf('}');
 
@@ -527,6 +543,12 @@ namespace bohc
 
 		public void parseFileTCP(File f, string file)
 		{
+			if (f.state >= ParserState.TCP)
+			{
+				return;
+			}
+			f.state = ParserState.TCP;
+
 			Class c = f.type as Class;
 			if (c != null)
 			{
@@ -551,6 +573,12 @@ namespace bohc
 
 		public void parseFileCP(File f, string file)
 		{
+			if (f.state >= ParserState.CP)
+			{
+				return;
+			}
+			f.state = ParserState.CP;
+
 			Class c = f.type as Class;
 			if (c == null)
 			{

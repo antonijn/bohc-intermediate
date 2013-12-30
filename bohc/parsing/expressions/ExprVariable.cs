@@ -39,7 +39,9 @@ namespace bohc.parsing
 			if (f != null)
 			{
 				// type is not modifiable if final, unless in constructor
-				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL) || ctx is typesys.Constructor;
+				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL) || 
+					(!ctx.modifiers.HasFlag(typesys.Modifiers.STATIC) && ctx is typesys.Constructor) ||
+					(ctx.modifiers.HasFlag(typesys.Modifiers.STATIC) && ctx is typesys.StaticConstructor);
 			}
 
 			typesys.Parameter param = refersto as typesys.Parameter;

@@ -37,6 +37,7 @@
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
     <Compile Include="generation\ICodeGen.cs" />
+    <Compile Include="generation\mangling\DebugMangler.cs" />
     <Compile Include="generation\mangling\IMangler.cs" />
     <Compile Include="Parser.cs" />
     <Compile Include="parsing\expressions\ConstructorCall.cs" />
@@ -164,7 +165,5 @@
       </Properties>
     </MonoDevelop>
   </ProjectExtensions>
-  <ItemGroup>
-    <Folder Include="generation\cs\" />
-  </ItemGroup>
+  <ItemGroup />
 </Project>

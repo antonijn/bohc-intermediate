@@ -87,7 +87,8 @@ namespace bohc.typesys
 				return 0;
 			}
 
-			return super.extends(other) + 1;
+			int tmp = super.extends(other);
+			return tmp == 0 ? 0 : tmp + 1;
 		}
 
 		public void addMember(IFunction f)

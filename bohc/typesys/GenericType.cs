@@ -71,7 +71,7 @@ namespace bohc.typesys
 			}
 		}
 
-		protected Type getNewTypeFor(Type[] what, Parser parser, int hash)
+		private Type getNewTypeFor(Type[] what, Parser parser, int hash)
 		{
 			// TODO: PROPER REPLACING FFS!!!
 

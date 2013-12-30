@@ -11,7 +11,7 @@ using bohc.typesys;
 
 namespace bohc.generation.mangling
 {
-	public class CMangler : IMangler
+	public class DebugMangler : IMangler
 	{
 		public string getFieldInitName(Class c)
 		{
@@ -104,54 +104,18 @@ namespace bohc.generation.mangling
 
 		public string getCName(typesys.Type type)
 		{
-			StringBuilder prefix = new StringBuilder();
-			StringBuilder tname = new StringBuilder();
-			foreach (string pkg in type.package.ToString().Split('.'))
+			FunctionRefType frType = type as FunctionRefType;
+			if (frType != null)
 			{
-				prefix.Append("p");
-				prefix.Append(pkg.Length);
-			}
-
-			if (type is Class)
-			{
-				prefix.Append("c");
-			}
-			else if (type is typesys.Enum)
-			{
-				prefix.Append("e");
-			}
-			else if (type is Interface)
-			{
-				prefix.Append("i");
-			}
-			else if (type is Struct)
-			{
-				prefix.Append("s");
-			}
-			else if (type is FunctionRefType)
-			{
-				prefix.Append("f");
-			}
-			prefix.Append(type.name.Length.ToString("X"));
-
-			FunctionRefType fRefType = type as FunctionRefType;
-			if (fRefType != null)
-			{
-				tname.Append(getCName(fRefType.retType));
-				foreach (typesys.Type t in fRefType.paramTypes)
+				StringBuilder sb = new StringBuilder("f_");
+				sb.Append(getCName(frType.retType));
+				foreach (typesys.Type t in frType.paramTypes)
 				{
-					tname.Append(getCName(t));
+					sb.Append(getCName(t));
 				}
-				prefix.Clear();
-				prefix.Append("f");
-				prefix.Append(tname.ToString().Length.ToString("X"));
+				return sb.ToString();
 			}
-			else
-			{
-				tname.Append(type.fullName().Replace(".", string.Empty));
-			}
-
-			return prefix.ToString() + "_" + tname.ToString();
+			return type.name;
 		}
 
 		public string getNewName(Constructor constr)
@@ -169,12 +133,12 @@ namespace bohc.generation.mangling
 			if (variable is Local)
 			{
 				// FIXME: won't work if the local was created in the lambda itself
-				return "l_" + variable.identifier;
+				return variable.identifier;
 			}
 
 			if (variable is Parameter || variable is LambdaParam)
 			{
-				return "p_" + variable.identifier;
+				return variable.identifier;
 			}
 
 			if (variable is Field)
@@ -182,9 +146,9 @@ namespace bohc.generation.mangling
 				Field f = (Field)variable;
 				if (f.modifiers.HasFlag(Modifiers.STATIC))
 				{
-					return getCName(f.owner) + "_sf_" + variable.identifier;
+					return getCName(f.owner) + variable.identifier;
 				}
-				return "f_" + variable.identifier;
+				return variable.identifier;
 			}
 
 			if (variable.identifier == "this")
@@ -209,7 +173,7 @@ namespace bohc.generation.mangling
 
 			if (variable is Parameter || variable is LambdaParam)
 			{
-				return "*e" + getVarName(variable);
+				return "*" + getVarName(variable);
 			}
 
 			return "*" + getVarName(variable);
@@ -219,7 +183,7 @@ namespace bohc.generation.mangling
 		{
 			if (variable is Parameter || variable is LambdaParam)
 			{
-				return "e" + getVarName(variable);
+				return getVarName(variable);
 			}
 
 			return getVarName(variable);
@@ -237,7 +201,7 @@ namespace bohc.generation.mangling
 					}
 					if (variable is Parameter || variable is LambdaParam)
 					{
-						return "(*e" + getVarName(variable) + ")";
+						return "(*" + getVarName(variable) + ")";
 					}
 					return "(*" + getVarName(variable) + ")";
 				}
@@ -249,7 +213,7 @@ namespace bohc.generation.mangling
 					}
 					if (variable is Parameter || variable is LambdaParam)
 					{
-						return "(*ctx->e" + getVarName(variable) + ")";
+						return "(*ctx->" + getVarName(variable) + ")";
 					}
 					return "(*ctx->" + getVarName(variable) + ")";
 				}
@@ -296,7 +260,8 @@ namespace bohc.generation.mangling
 
 		public string getFuncAddition(Function func)
 		{
-			StringBuilder builder = new StringBuilder();
+			return string.Empty;
+			/*StringBuilder builder = new StringBuilder();
 			if (!func.modifiers.HasFlag(Modifiers.STATIC))
 			{
 				builder.Append("self");
@@ -314,12 +279,12 @@ namespace bohc.generation.mangling
 			}
 			string str = builder.ToString();
 			uint hash = hashString(str);
-			return "_" + hash.ToString("X").ToLowerInvariant();
+			return "_" + hash.ToString("X").ToLowerInvariant();*/
 		}
 
 		public string getVFuncName(Function func)
 		{
-			return "m_" + func.identifier + getFuncAddition(func);
+			return func.identifier + getFuncAddition(func);
 		}
 
 		public string getOpName(Operator op)
@@ -338,7 +303,7 @@ namespace bohc.generation.mangling
 			{
 				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which) + getFuncAddition(func);
 			}
-			return getCName(func.owner) + "_m_" + func.identifier + getFuncAddition(func);
+			return getCName(func.owner) + "_" + func.identifier + getFuncAddition(func);
 		}
 
 		public string getVtableName(Class c)

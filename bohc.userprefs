@@ -1,24 +1,16 @@
-﻿<Properties>
+<Properties>
   <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="bohc/typesys/OverloadedOperator.cs">
+  <MonoDevelop.Ide.Workbench ActiveDocument="bohc/Program.cs">
     <Files>
-      <File FileName="bohc/generation/cs/CSCodeGen.cs" Line="103" Column="29" />
-      <File FileName="bohc/generation/mangling/CSMangler.cs" Line="28" Column="38" />
-      <File FileName="bohc/generation/c/CCodeGen.cs" Line="408" Column="4" />
-      <File FileName="bohc/typesys/Modifiers.cs" Line="52" Column="29" />
-      <File FileName="bohc/Parser.cs" Line="245" Column="49" />
-      <File FileName="bohc/parsing/expressions/DefaultExpressionParser.cs" Line="238" Column="45" />
-      <File FileName="bohc/typesys/NativeFunction.cs" Line="21" Column="95" />
-      <File FileName="bohc/parsing/expressions/NativeFunctionCall.cs" Line="17" Column="160" />
-      <File FileName="bohc/Program.cs" Line="169" Column="1" />
-      <File FileName="bohc/boh/Exception.cs" Line="33" Column="1" />
-      <File FileName="bohc/parsing/statements/DefaultStatementParser.cs" Line="230" Column="1" />
-      <File FileName="bohc/typesys/Class.cs" Line="250" Column="52" />
-      <File FileName="bohc/parsing/ParserTools.cs" Line="63" Column="10" />
+      <File FileName="bohc/generation/mangling/CMangler.cs" Line="313" Column="24" />
+      <File FileName="bohc/generation/c/CCodeGen.cs" Line="1462" Column="41" />
+      <File FileName="bohc/typesys/Type.cs" Line="179" Column="1" />
+      <File FileName="bohc/typesys/ModifierHelper.cs" Line="98" Column="16" />
+      <File FileName="bohc/Program.cs" Line="69" Column="37" />
       <File FileName="bohc/typesys/GenericType.cs" Line="63" Column="1" />
-      <File FileName="bohc/typesys/Type.cs" Line="220" Column="3" />
-      <File FileName="bohc/typesys/Struct.cs" Line="25" Column="4" />
-      <File FileName="bohc/typesys/OverloadedOperator.cs" Line="1" Column="1" />
+      <File FileName="bohc/boh/Exception.cs" Line="33" Column="1" />
+      <File FileName="bohc/parsing/expressions/DefaultExpressionParser.cs" Line="85" Column="35" />
+      <File FileName="bohc/typesys/Function.cs" Line="93" Column="1" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

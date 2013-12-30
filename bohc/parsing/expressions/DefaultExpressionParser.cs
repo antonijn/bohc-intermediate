@@ -707,6 +707,19 @@ namespace bohc.parsing.expressions
 			string nextnext = readNext(str, ref i);
 			if (nextnext == "(" && field == null)
 			{
+				// function
+				IEnumerable<Expression> parameters;
+				if (field == null)
+				{
+					typesys.Function f = typesys.Function.getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx, this);
+					// if static, remove thisvar, so it doesn't get enclosed
+					if (f.modifiers.HasFlag(typesys.Modifiers.STATIC) && expr is ThisVar)
+					{
+						expr = null;
+					}
+					FunctionCall call = new FunctionCall(f, expr, parameters);
+					expr = call;
+				}
 
 				// if belongsto is thisvar, the thisvar has to be enclosed
 				if (expr is ThisVar)
@@ -717,21 +730,6 @@ namespace bohc.parsing.expressions
 						tv.refersto.enclosed = true;
 						enclosedVars.Peek().Add(tv.refersto);
 					}
-				}
-
-				// function
-				IEnumerable<Expression> parameters;
-				if (field == null)
-				{
-					typesys.Function f = typesys.Function.getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx, this);
-					FunctionCall call = new FunctionCall(f, expr, parameters);
-					expr = call;
-				}
-				else
-				{
-					//FunctionVarCall call = new FunctionVarCall(expr, typesys.Function.getStringParams(str, i, vars, file, ctx, this));
-					//expr = call;
-					//i = ParserTools.getMatchingBraceChar(str, i - 1, ')') + 1;
 				}
 
 				//i -= nextnext.Length;

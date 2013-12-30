@@ -104,29 +104,28 @@ namespace bohc.parsing
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, ADD);
-			}
-			else if (operation == ASSIGN_DIV)
+			} else if (operation == ASSIGN_DIV)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, DIV);
-			}
-			else if (operation == ASSIGN_MUL)
+			} else if (operation == ASSIGN_MUL)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, MUL);
-			}
-			else if (operation == ASSIGN_REM)
+			} else if (operation == ASSIGN_REM)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, REM);
-			}
-			else if (operation == ASSIGN_SUB)
+			} else if (operation == ASSIGN_SUB)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, SUB);
 			}
 
-			overloaded = figureOutOverload();
+			if (operation != ASSIGN)
+			{
+				overloaded = figureOutOverload();
+			}
 		}
 
 		private typesys.OverloadedOperator figureOutOverload()
@@ -216,17 +215,19 @@ namespace bohc.parsing
 
 		private static typesys.OverloadedOperator getOtherTypeOlF(string op, typesys.Class c, typesys.Type other, bool shouldThrow)
 		{
-			return c.getFunctions(op, c)
-				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.Last().type)))
-				.OrderBy(x => x.Item2)
-				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
-				.Select(x => x.Item1)
-				.First() as typesys.OverloadedOperator;
+			Tuple<typesys.Function, int>[] funcs = c.getFunctions(op, c)
+					.Where(x => c.extends(x.parameters.First().type) != 0)
+					.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.Last().type)))
+					.OrderBy(x => x.Item2)
+					.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0).ToArray();
+			int i = other.extends(typesys.Primitive.CHAR);
+			return funcs.Select(x => x.Item1).First() as typesys.OverloadedOperator;
 		}
 
 		private static typesys.OverloadedOperator getOtherTypeOlF(string op, typesys.Type other, typesys.Class c, bool shouldThrow)
 		{
 			return c.getFunctions(op, c)
+				.Where(x => c.extends(x.parameters.Last().type) != 0)
 				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.First().type)))
 				.OrderBy(x => x.Item2)
 				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
@@ -237,6 +238,7 @@ namespace bohc.parsing
 		private static typesys.Type getOtherTypeArith(string op, typesys.Class c, typesys.Type other, bool shouldThrow)
 		{
 			return c.getFunctions(op, c)
+				.Where(x => c.extends(x.parameters.First().type) != 0)
 				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.Last().type)))
 				.OrderBy(x => x.Item2)
 				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
@@ -247,6 +249,7 @@ namespace bohc.parsing
 		private static typesys.Type getOtherTypeArith(string op, typesys.Type other, typesys.Class c, bool shouldThrow)
 		{
 			return c.getFunctions(op, c)
+				.Where(x => c.extends(x.parameters.Last().type) != 0)
 				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.First().type)))
 				.OrderBy(x => x.Item2)
 				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)

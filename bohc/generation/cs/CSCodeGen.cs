@@ -22,6 +22,11 @@ namespace bohc.generation.cs
 			this.mangler = mangler;
 		}
 
+		public void finish(IEnumerable<typesys.Type> types)
+		{
+
+		}
+
 		private void addIndent(StringBuilder builder)
 		{
 			for (int i = 0; i < indentation; ++i)
@@ -43,6 +48,9 @@ namespace bohc.generation.cs
 		{
 			StringBuilder builder = new StringBuilder();
 			builder.AppendLine();
+			builder.Append("[BohClass(\"");
+			builder.Append(c.fullName());
+			builder.AppendLine("\")]");
 
 			if (c.modifiers.HasFlag(Modifiers.PUBLIC))
 			{
@@ -245,7 +253,7 @@ namespace bohc.generation.cs
 				return;
 			}*/
 
-			throw new NotImplementedException();
+			//throw new NotImplementedException();
 		}
 	}
 }

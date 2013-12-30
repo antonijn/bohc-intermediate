@@ -30,34 +30,106 @@ namespace bohc
 		CP,
 	}
 
-	class Program
+	public class Program
 	{
+		public static class Options
+		{
+			public static bool optimize;
+			public static bool debugSymbols;
+
+			public static bool desktopMode;
+			public static bool webMode;
+
+			public static bool library;
+
+			public static bool noDelete;
+
+			public static bool unsafeCasts;
+			public static bool unsafeNullPtr;
+
+			public static bool sizeOverSpeedHint;
+			public static bool speedOverSizeHint;
+
+			public static string output = "application";
+			public static string outputDir = ".";
+
+			public static bool noStd;
+
+			public static bool thisMachine;
+		}
+
 		public static readonly Dictionary<string, parsing.File> genTypes = new Dictionary<string, parsing.File>();
 
 		public static ParserState pstate;
 
+		private static void displayHelp()
+		{
+			Console.WriteLine("The compiler for the Boh programming language. Intermediate version.");
+			Console.WriteLine("Usage: mono bohc.exe [options...] [input files...]");
+			Console.WriteLine();
+			Console.WriteLine("Options:");
+			Console.WriteLine("  --help");
+		}
+
+		private static IEnumerable<string> getInput(string[] args)
+		{
+			for (int i = 0; i < args.Length; ++i)
+			{
+				string s = args[i];
+				switch (s)
+				{
+					case "--help":
+						displayHelp();
+						Environment.Exit(0);
+						break;
+					case "-d":
+						Options.debugSymbols = true;
+						break;
+					case "-D":
+						Options.desktopMode = true;
+						break;
+					case "-e":
+						Console.Error.WriteLine("WARNING: External linking not implemented yet");
+						break;
+					case "-L":
+						Options.library = true;
+						break;
+					case "-n":
+						Options.noDelete = true;
+						break;
+					case "-N":
+						Console.Error.WriteLine("WARNING: Disabling of context deletion not implemented yet");
+						break;
+					case "-o":
+						Options.output = args[++i];
+						break;
+					case "-O":
+						Options.outputDir = args[++i];
+						break;
+					case "-r":
+						Console.Error.WriteLine("WARNING: Disabling of context deletion not implemented yet");
+						break;
+					case "-S":
+						Options.noStd = true;
+						break;
+					case "-t":
+						Options.thisMachine = true;
+						break;
+					case "-W":
+						Options.webMode = true;
+						break;
+					default:
+						yield return s;
+						break;
+				}
+			}
+		}
+
 		public static void Main(string[] args)
 		{
+#if DEBUG
 			string[] filenames = new string[]
 			{
-			/*"src/EnumExample.boh",
-				"src/Main.boh",
-				"src/Box.boh",
-				"src/Object.boh",
-				"src/String.boh",
-				"src/Type.boh",
-				"src/Exception.boh",
-				"src/Array.boh",
-				"src/ICollection.boh",
-				"src/IIndexedCollection.boh",
-				"src/IIterator.boh",
-				"src/Vector2f.boh",
-				"src/List.boh",
-				"src/StringBuilder.boh",
-				"src/Ptr.boh",
-				"src/VoidPtr.boh",
-				"src/Interop.boh",*/
-			
 				"stdlib/MainClass.boh",
 				"stdlib/Box.boh",
 				"stdlib/Object.boh",
@@ -75,7 +147,18 @@ namespace bohc
 				"stdlib/Interop.boh",
 				"stdlib/Query.boh",
 				"stdlib/WhereIterator.boh",
+				"stdlib/NullPtrException.boh",
+				"stdlib/System.boh",
+				"stdlib/FileOutStream.boh",
 			};
+#else
+			string[] filenames = getInput(args).ToArray();
+			if (filenames.Length == 0)
+			{
+				Console.Error.WriteLine("ERROR: No input files specified");
+				Environment.Exit(1);
+			}
+#endif
 			string[] files = new string[filenames.Length];
 
 			for (int i = 0; i < filenames.Length; ++i)
@@ -99,7 +182,7 @@ namespace bohc
 				filesassoc [file] = f;
 				if (f.type is typesys.Type)
 				{
-					Console.WriteLine("Type skimming for: {0}", ((typesys.Type)f.type).fullName());
+					//Console.WriteLine("Type skimming for: {0}", ((typesys.Type)f.type).fullName());
 				}
 			}
 
@@ -110,7 +193,7 @@ namespace bohc
 				if (f.type is typesys.Type)
 				{
 					parser.parseFileTP(f, file);
-					Console.WriteLine("Type parsing for: {0}", ((typesys.Type)f.type).fullName());
+					//Console.WriteLine("Type parsing for: {0}", ((typesys.Type)f.type).fullName());
 				}
 			}
 
@@ -125,7 +208,7 @@ namespace bohc
 					vpairs = genTypes.ToArray();
 				}
 				KeyValuePair<string, parsing.File> v = vpairs.ToArray() [i];
-				Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)v.Value.type).fullName());
+				//Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)v.Value.type).fullName());
 				parser.parseFileTCS(v.Value, v.Key);
 			}
 
@@ -134,7 +217,7 @@ namespace bohc
 				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
-					Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)f.type).fullName());
+					//Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)f.type).fullName());
 					parser.parseFileTCS(f, file);
 				}
 			}
@@ -152,7 +235,7 @@ namespace bohc
 					vpairs = genTypes.ToArray();
 				}
 				KeyValuePair<string, parsing.File> v = vpairs.ToArray() [i];
-				Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
+				//Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
 				parser.parseFileTCP(v.Value, v.Key);
 			}
 
@@ -161,7 +244,7 @@ namespace bohc
 				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
-					Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)f.type).fullName());
+					//Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)f.type).fullName());
 					parser.parseFileTCP(f, file);
 				}
 			}
@@ -174,7 +257,7 @@ namespace bohc
 					vpairs = genTypes.ToArray();
 				}
 				KeyValuePair<string, parsing.File> v = vpairs.ToArray() [i];
-				Console.WriteLine("Code parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
+				//Console.WriteLine("Code parsing for: {0}", ((typesys.Type)v.Value.type).fullName());
 				parser.parseFileCP(v.Value, v.Key);
 			}
 
@@ -183,7 +266,7 @@ namespace bohc
 				parsing.File f = filesassoc [file];
 				if (f.type is typesys.Type)
 				{
-					Console.WriteLine("Code parsing for: {0}", ((typesys.Type)f.type).fullName());
+					//Console.WriteLine("Code parsing for: {0}", ((typesys.Type)f.type).fullName());
 					parser.parseFileCP(f, file);
 				}
 			}
@@ -191,42 +274,51 @@ namespace bohc
 			//typesys.GenericType arrayt = filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).Single();
 			//arrayt.getTypeFor(new[] { typesys.Primitive.BOOLEAN });
 
-			Console.WriteLine("Generating code");
+			//Console.WriteLine("Generating code");
+
+			//IMangler mangler = new CMangler();
+			//ICodeGen codegen = new CCodeGen(mangler);
 
 			IMangler mangler = new CMangler();
-			ICodeGen codegen = new CCodeGen(mangler);
+			ICodeGen codegen = new generation.c.CCodeGen(mangler);
 
 			IEnumerable<typesys.Type> types = filesassoc.Values.Select(x => x.type as typesys.Type).Where(x => x != null).Concat(
 				filesassoc.Values.Select(x => x.type as typesys.GenericType).Where(x => x != null).SelectMany(x => x.types.Values));
 
-			Console.WriteLine("Generating lambdas");
+			//Console.WriteLine("Generating lambdas");
 			codegen.generateGeneralBit(types);
 
 			foreach (typesys.Type type in types)
 			{
-				Console.WriteLine("Generating code for: {0}", type.fullName());
+				//Console.WriteLine("Generating code for: {0}", type.fullName());
 				codegen.generateFor(type, types);
 			}
 
+			codegen.finish(types);
+
 			sw.Stop();
 
-			Console.WriteLine("Done generating code");
-			Console.WriteLine("Compilation of {0} files took: {1} milliseconds", files.Length, sw.Elapsed.TotalMilliseconds);
+			//Console.WriteLine("Done generating code");
+			//Console.WriteLine("Compilation of {0} files took: {1} milliseconds", files.Length, sw.Elapsed.TotalMilliseconds);
 
 			StringBuilder script = new StringBuilder();
 			script.AppendLine("#!/bin/sh");
 
 			string location = System.Reflection.Assembly.GetEntryAssembly().Location;
 			location = location.Substring(0, location.LastIndexOf(System.IO.Path.DirectorySeparatorChar));
-			script.AppendFormat("gcc -w -g -DPF_DESKTOP64 -DPF_LINUX boh_internal.c function_types.c ", location);
+			script.Append("gcc -w -g -DPF_DESKTOP64 -DPF_LINUX boh_internal.c function_types.c ");
+#if DEBUG
+			script.Append("stdlib/file.c ");
+#endif
 			foreach (typesys.Type type in types)
 			{
 				script.Append(mangler.getCodeFileName(type));
 				script.Append(" ");
 			}
-			script.Append("-lgc -pthread -std=c11");
+			script.Append("-lgc -pthread -std=c11 -o ");
+			script.Append(Options.outputDir + System.IO.Path.DirectorySeparatorChar + Options.output);
 			script.AppendLine();
-			System.IO.File.WriteAllText("make.sh", script.ToString());
+			System.IO.File.WriteAllText(Options.outputDir + System.IO.Path.DirectorySeparatorChar + "make.sh", script.ToString());
 
 			//Console.ReadKey();
 		}

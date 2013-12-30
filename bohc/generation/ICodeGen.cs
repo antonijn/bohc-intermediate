@@ -9,5 +9,6 @@ namespace bohc.generation
 	{
 		void generateGeneralBit(IEnumerable<typesys.Type> types);
 		void generateFor(typesys.Type t, IEnumerable<typesys.Type> others);
+		void finish(IEnumerable<typesys.Type> types);
 	}
 }
