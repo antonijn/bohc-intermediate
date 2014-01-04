@@ -44,6 +44,12 @@ namespace bohc.parsing
 					(ctx.modifiers.HasFlag(typesys.Modifiers.STATIC) && ctx is typesys.StaticConstructor);
 			}
 
+			typesys.Local l = refersto as typesys.Local;
+			if (l != null)
+			{
+				return !(l.modifiers.HasFlag(typesys.Modifiers.FINAL) && l.type is typesys.Primitive);
+			}
+
 			typesys.Parameter param = refersto as typesys.Parameter;
 			if (param != null)
 			{

@@ -14,9 +14,12 @@ namespace bohc.typesys
 {
 	public sealed class Local : Variable
 	{
-		public Local(string identifier, Type type)
+		public Modifiers modifiers;
+
+		public Local(string identifier, Type type, Modifiers modifiers)
 			: base(identifier, type)
 		{
+			this.modifiers = modifiers;
 		}
 	}
 }

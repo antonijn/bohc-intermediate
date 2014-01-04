@@ -227,19 +227,23 @@ namespace bohc.generation.mangling
 
 		public string getVarUsageName(Variable variable, int lambdaStack)
 		{
+			Local loc = variable as Local;
 			if (variable.enclosed)
 			{
 				if (variable.lambdaLevel == lambdaStack)
 				{
-					if (variable.identifier == "this")
+					if (loc == null || !loc.modifiers.HasFlag(Modifiers.STATIC))
 					{
-						return getVarName(variable);
+						if (variable.identifier == "this")
+						{
+							return getVarName(variable);
+						}
+						if (variable is Parameter || variable is LambdaParam)
+						{
+							return "(*e" + getVarName(variable) + ")";
+						}
+						return "(*" + getVarName(variable) + ")";
 					}
-					if (variable is Parameter || variable is LambdaParam)
-					{
-						return "(*e" + getVarName(variable) + ")";
-					}
-					return "(*" + getVarName(variable) + ")";
 				}
 				else
 				{

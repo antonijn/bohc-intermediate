@@ -125,6 +125,7 @@
     <Compile Include="generation\mangling\CSMangler.cs" />
     <Compile Include="typesys\NativeFunction.cs" />
     <Compile Include="parsing\expressions\NativeFunctionCall.cs" />
+    <Compile Include="generation\asm\IIntermediateGenerator.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">
@@ -166,4 +167,7 @@
     </MonoDevelop>
   </ProjectExtensions>
   <ItemGroup />
+  <ItemGroup>
+    <Folder Include="generation\asm\" />
+  </ItemGroup>
 </Project>

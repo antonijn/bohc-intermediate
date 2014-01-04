@@ -156,7 +156,7 @@ namespace bohc.parsing.statements
 			string b4semi = betw.Substring(0, idxSemi).Trim();
 			string after = betw.Substring(idxSemi + 1);
 
-			VarDeclaration vardec = parseVarDec(b4semi, vars, f, b4semi.LastIndexOf(' '), b4semi.Substring(0, b4semi.LastIndexOf(' ')));
+			VarDeclaration vardec = parseVarDec(b4semi, vars, f, b4semi.LastIndexOf(' '), b4semi.Substring(0, b4semi.LastIndexOf(' ')), Modifiers.NONE);
 			Expression expr = expressions.analyze(after, vars.SelectMany(x => x), f, func);
 
 			boh.Exception.require<ParserException>(
@@ -221,7 +221,7 @@ namespace bohc.parsing.statements
 			return new SwitchStatement(expr, labels);
 		}
 
-		private Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, File f)
+		private bool parseFullVarDec(string line, Function func, Stack<List<Variable>> vars, File f, Modifiers modifiers, out Statement s)
 		{
 			int wspace = Math.Max(ParserTools.indexOf(line, '<', '>', ' '), ParserTools.indexOf(line, '(', ')', ' '));
 			if (wspace != -1)
@@ -229,8 +229,28 @@ namespace bohc.parsing.statements
 				string beforeWspace = line.Substring(0, wspace);
 				if (typesys.Type.exists(f.getContext(), beforeWspace, parser))
 				{
-					return parseVarDec(line, vars, f, wspace, beforeWspace);
+					s = parseVarDec(line, vars, f, wspace, beforeWspace, modifiers);
+					return true;
 				}
+				else if (beforeWspace == "final")
+				{
+					return parseFullVarDec(line.Substring("final".Length).TrimStart(), func, vars, f, modifiers | Modifiers.FINAL, out s);
+				}
+				else if (beforeWspace == "static")
+				{
+					return parseFullVarDec(line.Substring("static".Length).TrimStart(), func, vars, f, modifiers | Modifiers.STATIC, out s);
+				}
+			}
+			s = null;
+			return false;
+		}
+
+		private Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, File f)
+		{
+			Statement s;
+			if (parseFullVarDec(line, func, vars, f, Modifiers.NONE, out s))
+			{
+				return s;
 			}
 
 			if (startsWithKW(line, "return"))
@@ -277,7 +297,7 @@ namespace bohc.parsing.statements
 			return new EmptyStatement();
 		}
 
-		private VarDeclaration parseVarDec(string line, Stack<List<Variable>> vars, File f, int wspace, string beforeWspace)
+		private VarDeclaration parseVarDec(string line, Stack<List<Variable>> vars, File f, int wspace, string beforeWspace, Modifiers modifiers)
 		{
 			typesys.Type type = typesys.Type.getExisting(f.getContext(), beforeWspace, parser);
 			string id = null;
@@ -296,7 +316,10 @@ namespace bohc.parsing.statements
 			{
 				id = line.Substring(wspace + 1).Trim();
 			}
-			Local variable = new Local(id, type);
+
+			boh.Exception.require<ParserException>(!modifiers.HasFlag(Modifiers.FINAL) || !(type is Primitive) || initial != null, "final local primitive must be initialized upon declaration");
+
+			Local variable = new Local(id, type, modifiers);
 			variable.lambdaLevel = expressions.getLambdaStack();
 			vars.Peek().Add(variable);
 

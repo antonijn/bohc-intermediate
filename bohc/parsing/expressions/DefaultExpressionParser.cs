@@ -405,6 +405,11 @@ namespace bohc.parsing.expressions
 				return true;
 			}
 
+			return analyzeNumericLiteral(ref last, next);
+		}
+
+		private static bool analyzeNumericLiteral(ref Expression last, string next)
+		{
 			byte b;
 			short s;
 			int _i;
@@ -499,56 +504,7 @@ namespace bohc.parsing.expressions
 			if (next == "new")
 			{
 				// constructor call
-
-				int idxOpen = str.IndexOf('(', i);
-				int idxIndexer = str.IndexOf('[', i);
-
-				if (idxIndexer != -1 && idxIndexer < idxOpen || idxOpen == -1)
-				{
-					string typeStr = str.Substring(i + 1, idxIndexer - i - 1);
-					typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr, statements.getParser());
-					typesys.Class arrayType = (typesys.Class)typesys.StdType.array.getTypeFor(new[] { typeExpr }, statements.getParser());
-					int idxClose = ParserTools.getMatchingBraceChar(str, idxIndexer, ']');
-					int len = idxClose - idxIndexer;
-					string paramStr = str.Substring(idxIndexer, len);
-					Expression paramExpr = analyze(paramStr, vars, file, ctx);
-					boh.Exception.require<exceptions.ParserException>((paramExpr.getType() as typesys.Primitive).isInt(),
-						"Array size must be an integer");
-					last = new ConstructorCall(
-						arrayType.constructors.Single(
-						x => x.parameters.Count == 1 && x.parameters.Single().type == typesys.Primitive.INT),
-						new[] { paramExpr });
-					i = idxClose + 1;
-				}
-				else
-				{
-					string typeStr = str.Substring(i + 1, idxOpen - i - 1);
-					typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr, statements.getParser());
-					i += typeStr.Length + 1;
-					int backup = i;
-					try
-					{
-						i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
-					}
-					catch (NullReferenceException)
-					{
-						// generic type
-						i = backup;
-						string after = readNext(str, ref i);
-						if (after != "<")
-						{
-							throw;
-						}
-						int greaterThan = ParserTools.getMatchingBraceChar(str, i - 1, '>');
-						string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
-						i = greaterThan + 1;
-
-						i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
-					}
-					FunctionCall flast = (FunctionCall)last;
-					typesys.Constructor constr = (typesys.Constructor)flast.refersto;
-					last = new ConstructorCall(constr, flast.parameters);
-				}
+				analyzeConstrCall(ref last, vars, ref i, str, file, ctx);
 			}
 			else if (last is ExprVariable)
 			{
@@ -566,16 +522,7 @@ namespace bohc.parsing.expressions
 			}
 			else if (vars.Any(x => x.identifier == next))
 			{
-				typesys.Variable v = vars.Single(x => x.identifier == next);
-				if (v.lambdaLevel < lambdaStack && !v.enclosed/* && !(v is typesys.LambdaParam)*/)
-				{
-					typesys.Parameter param = v as typesys.Parameter;
-					boh.Exception.require<exceptions.ParserException>(param == null || !param.modifiers.HasFlag(typesys.Modifiers.REF),
-						"ref parameters may not be used inside lambdas");
-					v.enclosed = true;
-					enclosedVars.Peek().Add(v);
-				}
-				last = new ExprVariable(v, null);
+				last = analyzeLocal(last, vars, next);
 			}
 			else if ((exprPack != null && (type = typesys.Type.getExisting(exprPack.refersto, next, statements.getParser())) != null) ||
 				((type = typesys.Type.getExisting(file.getContext(), next, statements.getParser())) != null))
@@ -584,41 +531,12 @@ namespace bohc.parsing.expressions
 			}
 			else if (typesys.GenericType.allGenTypes.Any(x => x.name == next))
 			{
-				int backup = i;
-				string after = readNext(str, ref i);
-				boh.Exception.require<exceptions.ParserException>(after == "<", "Generic type must be followed by <");
-				int greaterThan = ParserTools.getMatchingBraceChar(str, i - 1, '>');
-				string typename = str.Substring(backup - next.Length, greaterThan - backup + next.Length + 1);
-				last = new ExprType(typesys.Type.getExisting(exprPack != null ? new typesys.Package[] { exprPack.refersto } : file.getContext(), typename, getStats().getParser()));
-				i = greaterThan + 1;
+				analyzeGenType(ref last, ref i, str, file, exprPack, next);
 			}
 			else
 			{
 				// it's either a package, field
-				Expression lastBackup = last;
-				try
-				{
-					// thisvar
-					last = ((typesys.Class)file.type).THISVAR;
-					i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type, ctx);
-				}
-				catch
-				{
-					last = lastBackup;
-					ExprPackage prevPack = last as ExprPackage;
-					if (prevPack != null)
-					{
-						typesys.Package pack = typesys.Package.getFromStringExisting(prevPack.refersto.ToString() + "." + next);
-						boh.Exception.require<exceptions.ParserException>(pack != null, "Invalid identifier: " + next);
-						last = new ExprPackage(pack);
-					}
-					else
-					{
-						typesys.Package pack = typesys.Package.getFromStringExisting(next);
-						boh.Exception.require<exceptions.ParserException>(pack != null, "Invalid identifier: " + next);
-						last = new ExprPackage(pack);
-					}
-				}
+				analyzeFieldOrPackage(ref last, vars, ref i, str, file, ctx, next);
 			}
 
 			// recursively parse stuff
@@ -631,6 +549,114 @@ namespace bohc.parsing.expressions
 			}
 
 			return true;
+		}
+
+		private Expression analyzeLocal(Expression last, IEnumerable<typesys.Variable> vars, string next)
+		{
+			typesys.Variable v = vars.Single(x => x.identifier == next);
+			if (v.lambdaLevel < lambdaStack && !v.enclosed/* && !(v is typesys.LambdaParam)*/)
+			{
+				typesys.Parameter param = v as typesys.Parameter;
+				boh.Exception.require<exceptions.ParserException>(param == null || !param.modifiers.HasFlag(typesys.Modifiers.REF),
+					"ref parameters may not be used inside lambdas");
+				v.enclosed = true;
+				enclosedVars.Peek().Add(v);
+			}
+			last = new ExprVariable(v, null);
+			return last;
+		}
+
+		private void analyzeFieldOrPackage(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, string str, parsing.File file, typesys.Function ctx, string next)
+		{
+			Expression lastBackup = last;
+			try
+			{
+				// thisvar
+				last = ((typesys.Class)file.type).THISVAR;
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, (typesys.Type)file.type, ctx);
+			}
+			catch
+			{
+				last = lastBackup;
+				ExprPackage prevPack = last as ExprPackage;
+				if (prevPack != null)
+				{
+					typesys.Package pack = typesys.Package.getFromStringExisting(prevPack.refersto.ToString() + "." + next);
+					boh.Exception.require<exceptions.ParserException>(pack != null, "Invalid identifier: " + next);
+					last = new ExprPackage(pack);
+				}
+				else
+				{
+					typesys.Package pack = typesys.Package.getFromStringExisting(next);
+					boh.Exception.require<exceptions.ParserException>(pack != null, "Invalid identifier: " + next);
+					last = new ExprPackage(pack);
+				}
+			}
+		}
+
+		private void analyzeGenType(ref Expression last, ref int i, string str, parsing.File file, ExprPackage exprPack, string next)
+		{
+			int backup = i;
+			string after = readNext(str, ref i);
+			boh.Exception.require<exceptions.ParserException>(after == "<", "Generic type must be followed by <");
+			int greaterThan = ParserTools.getMatchingBraceChar(str, i - 1, '>');
+			string typename = str.Substring(backup - next.Length, greaterThan - backup + next.Length + 1);
+			last = new ExprType(typesys.Type.getExisting(exprPack != null ? new typesys.Package[] { exprPack.refersto } : file.getContext(), typename, getStats().getParser()));
+			i = greaterThan + 1;
+		}
+
+		private void analyzeConstrCall(ref Expression last, IEnumerable<typesys.Variable> vars, ref int i, string str, parsing.File file, typesys.Function ctx)
+		{
+
+			int idxOpen = str.IndexOf('(', i);
+			int idxIndexer = str.IndexOf('[', i);
+
+			if (idxIndexer != -1 && idxIndexer < idxOpen || idxOpen == -1)
+			{
+				string typeStr = str.Substring(i + 1, idxIndexer - i - 1);
+				typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr, statements.getParser());
+				typesys.Class arrayType = (typesys.Class)typesys.StdType.array.getTypeFor(new[] { typeExpr }, statements.getParser());
+				int idxClose = ParserTools.getMatchingBraceChar(str, idxIndexer, ']');
+				int len = idxClose - idxIndexer;
+				string paramStr = str.Substring(idxIndexer, len);
+				Expression paramExpr = analyze(paramStr, vars, file, ctx);
+				boh.Exception.require<exceptions.ParserException>((paramExpr.getType() as typesys.Primitive).isInt(),
+					"Array size must be an integer");
+				last = new ConstructorCall(
+					arrayType.constructors.Single(
+					x => x.parameters.Count == 1 && x.parameters.Single().type == typesys.Primitive.INT),
+					new[] { paramExpr });
+				i = idxClose + 1;
+			}
+			else
+			{
+				string typeStr = str.Substring(i + 1, idxOpen - i - 1);
+				typesys.Type typeExpr = typesys.Type.getExisting(file.getContext(), typeStr, statements.getParser());
+				i += typeStr.Length + 1;
+				int backup = i;
+				try
+				{
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
+				}
+				catch (NullReferenceException)
+				{
+					// generic type
+					i = backup;
+					string after = readNext(str, ref i);
+					if (after != "<")
+					{
+						throw;
+					}
+					int greaterThan = ParserTools.getMatchingBraceChar(str, i - 1, '>');
+					string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
+					i = greaterThan + 1;
+
+					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);
+				}
+				FunctionCall flast = (FunctionCall)last;
+				typesys.Constructor constr = (typesys.Constructor)flast.refersto;
+				last = new ConstructorCall(constr, flast.parameters);
+			}
 		}
 
 		private int solveIdentifierForType(ref Expression expr, IEnumerable<typesys.Variable> vars, int i, string next, string str, parsing.File file, typesys.Type type, typesys.Function ctx)
@@ -707,20 +733,38 @@ namespace bohc.parsing.expressions
 			string nextnext = readNext(str, ref i);
 			if (nextnext == "(" && field == null)
 			{
-				// function
-				IEnumerable<Expression> parameters;
-				if (field == null)
-				{
-					typesys.Function f = typesys.Function.getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx, this);
-					// if static, remove thisvar, so it doesn't get enclosed
-					if (f.modifiers.HasFlag(typesys.Modifiers.STATIC) && expr is ThisVar)
-					{
-						expr = null;
-					}
-					FunctionCall call = new FunctionCall(f, expr, parameters);
-					expr = call;
-				}
+				solveFunctionCall(ref expr, vars, ref i, next, str, file, ctx, functions, field);
+			}
+			else
+			{
+				solveVar(ref expr, ref i, next, file, field, nextnext);
+			}
+		}
 
+		private void solveVar(ref Expression expr, ref int i, string next, parsing.File file, typesys.Variable field, string nextnext)
+		{
+			if (next == "this")
+			{
+				ThisVar tv = ((typesys.Class)file.type).THISVAR;
+				if (lambdaStack > tv.refersto.lambdaLevel)
+				{
+					tv.refersto.enclosed = true;
+					enclosedVars.Peek().Add(tv.refersto);
+				}
+				expr = tv;
+			}
+			else if (next == "super")
+			{
+				SuperVar sv = new SuperVar((typesys.Class)file.type);
+				if (lambdaStack > sv.refersto.lambdaLevel)
+				{
+					sv.refersto.enclosed = true;
+					enclosedVars.Peek().Add(sv.refersto);
+				}
+				expr = sv;
+			}
+			else
+			{
 				// if belongsto is thisvar, the thisvar has to be enclosed
 				if (expr is ThisVar)
 				{
@@ -732,51 +776,44 @@ namespace bohc.parsing.expressions
 					}
 				}
 
-				//i -= nextnext.Length;
-				//i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
+				expr = new ExprVariable(field, ((typesys.Field)field).modifiers.HasFlag(typesys.Modifiers.STATIC) ? null : expr);
+				if (nextnext != null)
+				{
+					i -= nextnext.Length;
+				}
 			}
-			else
-			{
-				if (next == "this")
-				{
-					ThisVar tv = ((typesys.Class)file.type).THISVAR;
-					if (lambdaStack > tv.refersto.lambdaLevel)
-					{
-						tv.refersto.enclosed = true;
-						enclosedVars.Peek().Add(tv.refersto);
-					}
-					expr = tv;
-				}
-				else if (next == "super")
-				{
-					SuperVar sv = new SuperVar((typesys.Class)file.type);
-					if (lambdaStack > sv.refersto.lambdaLevel)
-					{
-						sv.refersto.enclosed = true;
-						enclosedVars.Peek().Add(sv.refersto);
-					}
-					expr = sv;
-				}
-				else
-				{
-					// if belongsto is thisvar, the thisvar has to be enclosed
-					if (expr is ThisVar)
-					{
-						ThisVar tv = ((typesys.Class)file.type).THISVAR;
-						if (lambdaStack > tv.refersto.lambdaLevel)
-						{
-							tv.refersto.enclosed = true;
-							enclosedVars.Peek().Add(tv.refersto);
-						}
-					}
+		}
 
-					expr = new ExprVariable(field, ((typesys.Field)field).modifiers.HasFlag(typesys.Modifiers.STATIC) ? null : expr);
-					if (nextnext != null)
-					{
-						i -= nextnext.Length;
-					}
+		private void solveFunctionCall(ref Expression expr, IEnumerable<typesys.Variable> vars, ref int i, string next, string str, parsing.File file, typesys.Function ctx, IEnumerable<typesys.Function> functions, typesys.Variable field)
+		{
+			// function
+			IEnumerable<Expression> parameters;
+			if (field == null)
+			{
+				typesys.Function f = typesys.Function.getCompatibleFunction(ref i, next, str, file, vars, functions, out parameters, ctx, this);
+				// if static, remove thisvar, so it doesn't get enclosed
+				// TODO: why is it even there?!
+				if (f.modifiers.HasFlag(typesys.Modifiers.STATIC) && expr is ThisVar)
+				{
+					expr = null;
+				}
+				FunctionCall call = new FunctionCall(f, expr, parameters);
+				expr = call;
+			}
+
+			// if belongsto is thisvar, the thisvar has to be enclosed
+			if (expr is ThisVar)
+			{
+				ThisVar tv = ((typesys.Class)file.type).THISVAR;
+				if (lambdaStack > tv.refersto.lambdaLevel)
+				{
+					tv.refersto.enclosed = true;
+					enclosedVars.Peek().Add(tv.refersto);
 				}
 			}
+
+			//i -= nextnext.Length;
+			//i = Parser.getMatchingBraceChar(str, i - 1, ')') + 1;
 		}
 	}
 }

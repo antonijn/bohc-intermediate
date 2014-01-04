@@ -88,6 +88,15 @@ namespace bohc.typesys
 				return false;
 			}
 
+			if (mod.HasFlag(Modifiers.NATIVE) && !mod.HasFlag(Modifiers.STATIC))
+			{
+				return false;
+			}
+			if (mod.HasFlag(Modifiers.NATIVE) && !Program.Options.desktopMode)
+			{
+				return false;
+			}
+
 			return true;
 		}
 

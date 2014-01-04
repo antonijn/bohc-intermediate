@@ -1,11 +1,11 @@
 ﻿<Properties>
-  <MonoDevelop.Ide.Workspace ActiveConfiguration="Debug|x86" />
-  <MonoDevelop.Ide.Workbench ActiveDocument="generation/c/CCodeGen.cs">
+  <MonoDevelop.Ide.Workspace ActiveConfiguration="Release|x86" />
+  <MonoDevelop.Ide.Workbench ActiveDocument="Program.cs">
     <Files>
-      <File FileName="boh_internal.c" Line="10" Column="2" />
-      <File FileName="boh_internal.h" Line="22" Column="62" />
-      <File FileName="generation/c/CCodeGen.cs" Line="1703" Column="7" />
-      <File FileName="Program.cs" Line="87" Column="29" />
+      <File FileName="boh_internal.c" Line="10" Column="1" />
+      <File FileName="boh_internal.h" Line="22" Column="1" />
+      <File FileName="generation/c/CCodeGen.cs" Line="45" Column="28" />
+      <File FileName="Program.cs" Line="327" Column="24" />
     </Files>
   </MonoDevelop.Ide.Workbench>
   <MonoDevelop.Ide.DebuggingService.Breakpoints>

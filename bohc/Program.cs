@@ -56,6 +56,10 @@ namespace bohc
 			public static bool noStd;
 
 			public static bool thisMachine;
+
+			public static bool gccOnly = true;
+
+			public static List<string> cfiles = new List<string>();
 		}
 
 		public static readonly Dictionary<string, parsing.File> genTypes = new Dictionary<string, parsing.File>();
@@ -82,6 +86,12 @@ namespace bohc
 						displayHelp();
 						Environment.Exit(0);
 						break;
+					case "-c":
+						Options.cfiles.Add(args[++i]);
+						break;
+					case "-C":
+						Options.unsafeCasts = true;
+						break;
 					case "-d":
 						Options.debugSymbols = true;
 						break;
@@ -98,13 +108,16 @@ namespace bohc
 						Options.noDelete = true;
 						break;
 					case "-N":
-						Console.Error.WriteLine("WARNING: Disabling of context deletion not implemented yet");
+						Options.unsafeNullPtr = true;
 						break;
 					case "-o":
 						Options.output = args[++i];
 						break;
 					case "-O":
 						Options.outputDir = args[++i];
+						break;
+					case "-P":
+						Console.Error.WriteLine("WARNING: Context preservation not implemented yet");
 						break;
 					case "-r":
 						Console.Error.WriteLine("WARNING: Disabling of context deletion not implemented yet");
@@ -128,7 +141,7 @@ namespace bohc
 		public static void Main(string[] args)
 		{
 #if DEBUG
-			string[] filenames = new string[]
+			string[] filenames = getInput(new string[]
 			{
 				"stdlib/MainClass.boh",
 				"stdlib/Box.boh",
@@ -150,15 +163,19 @@ namespace bohc
 				"stdlib/NullPtrException.boh",
 				"stdlib/System.boh",
 				"stdlib/FileOutStream.boh",
-			};
+				"-c",
+				"stdlib/file.c",
+				"-n",
+			}
+			).ToArray();
 #else
 			string[] filenames = getInput(args).ToArray();
+#endif
 			if (filenames.Length == 0)
 			{
 				Console.Error.WriteLine("ERROR: No input files specified");
 				Environment.Exit(1);
 			}
-#endif
 			string[] files = new string[filenames.Length];
 
 			for (int i = 0; i < filenames.Length; ++i)
@@ -302,23 +319,47 @@ namespace bohc
 			//Console.WriteLine("Compilation of {0} files took: {1} milliseconds", files.Length, sw.Elapsed.TotalMilliseconds);
 
 			StringBuilder script = new StringBuilder();
-			script.AppendLine("#!/bin/sh");
+			//script.AppendLine("#!/bin/sh");
 
 			string location = System.Reflection.Assembly.GetEntryAssembly().Location;
 			location = location.Substring(0, location.LastIndexOf(System.IO.Path.DirectorySeparatorChar));
-			script.Append("gcc -w -g -DPF_DESKTOP64 -DPF_LINUX boh_internal.c function_types.c ");
-#if DEBUG
-			script.Append("stdlib/file.c ");
-#endif
+			script.Append("-w -O3 -DPF_DESKTOP64 -DPF_LINUX .c/boh_internal.c .c/function_types.c ");
+			foreach (string s in Options.cfiles)
+			{
+				script.Append(s);
+				script.Append(" ");
+			}
 			foreach (typesys.Type type in types)
 			{
+				script.Append(" .c/");
 				script.Append(mangler.getCodeFileName(type));
 				script.Append(" ");
 			}
 			script.Append("-lgc -pthread -std=c11 -o ");
 			script.Append(Options.outputDir + System.IO.Path.DirectorySeparatorChar + Options.output);
-			script.AppendLine();
-			System.IO.File.WriteAllText(Options.outputDir + System.IO.Path.DirectorySeparatorChar + "make.sh", script.ToString());
+			Process.Start("gcc", script.ToString()).WaitForExit();
+
+			script.Clear();
+			script.Append("-w -O3 -DPF_DESKTOP32 -m32 -DPF_LINUX .c/boh_internal.c .c/function_types.c ");
+			foreach (string s in Options.cfiles)
+			{
+				script.Append(s);
+				script.Append(" ");
+			}
+			foreach (typesys.Type type in types)
+			{
+				script.Append(" .c/");
+				script.Append(mangler.getCodeFileName(type));
+				script.Append(" ");
+			}
+			script.Append("-lgc -pthread -std=c11 -o ");
+			script.Append(Options.outputDir + System.IO.Path.DirectorySeparatorChar + Options.output + "32");
+			Process.Start("gcc", script.ToString()).WaitForExit();
+
+			if (!Options.noDelete)
+			{
+				System.IO.Directory.Delete(".c", true);
+			}
 
 			//Console.ReadKey();
 		}
