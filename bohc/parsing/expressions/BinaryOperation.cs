@@ -220,7 +220,7 @@ namespace bohc.parsing
 					.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.Last().type)))
 					.OrderBy(x => x.Item2)
 					.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0).ToArray();
-			int i = other.extends(typesys.Primitive.CHAR);
+			//int i = other.extends(typesys.Primitive.CHAR);
 			return funcs.Select(x => x.Item1).First() as typesys.OverloadedOperator;
 		}
 

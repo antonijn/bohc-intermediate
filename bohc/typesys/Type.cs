@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Xml.Linq;
 
 using bohc.parsing;
 
@@ -85,7 +86,7 @@ namespace bohc.typesys
 
 		public parsing.File file;
 
-		private static readonly List<Type> types = new List<Type>();
+		public static readonly List<Type> types = new List<Type>();
 
 		public Type(Package package, Modifiers modifiers, string name)
 		{
@@ -112,7 +113,12 @@ namespace bohc.typesys
 
 		public static Type getExisting(string name, Parser parser)
 		{
-			int lidxDot = name.LastIndexOf('.');
+			if (name.TrimEnd().EndsWith(")"))
+			{
+				return getFRefType(new[] { Package.GLOBAL }, name, parser);
+			}
+			int idxLt = name.IndexOf('<');
+			int lidxDot = idxLt == -1 ? name.LastIndexOf('.') : name.Substring(0, idxLt).LastIndexOf('.');
 			string pkg = name.Substring(0, lidxDot != -1 ? lidxDot : 0);
 			string cname = name.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
 			return typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname, parser);
@@ -123,6 +129,25 @@ namespace bohc.typesys
 		{
 			return getExisting(package, new[] { package }, name, parser);
 		}
+
+		static Type getFRefType(IEnumerable<Package> packages, string name, Parser parser)
+		{
+			string nameTrimEnd = name.TrimEnd();
+			int startParent = ParserTools.getMatchingBraceCharBackwards(nameTrimEnd, nameTrimEnd.Length - 1, '(');
+			IEnumerable<Type> fParamTypes = ParserTools.split(nameTrimEnd, startParent, ')', ',').Select(x => getExisting(packages, x.Trim(), parser));
+			if (string.IsNullOrWhiteSpace(nameTrimEnd.Substring(startParent + 1, nameTrimEnd.Length - startParent - 2)))
+			{
+				fParamTypes = Enumerable.Empty<Type>();
+			}
+			string retTypeStr = nameTrimEnd.Substring(0, startParent);
+			Type retType = getExisting(packages, retTypeStr, parser);
+			if (fParamTypes.Any(x => x == null) || retType == null)
+			{
+				return null;
+			}
+			return FunctionRefType.get(retType, fParamTypes.ToArray());
+		}
+
 		public static Type getExisting(Package package, IEnumerable<Package> packages, string name, Parser parser)
 		{
 			if (name.EndsWith("[]"))
@@ -145,19 +170,7 @@ namespace bohc.typesys
 				string nameTrimEnd = name.TrimEnd();
 				if (nameTrimEnd.EndsWith(")"))
 				{
-					int startParent = ParserTools.getMatchingBraceCharBackwards(nameTrimEnd, nameTrimEnd.Length - 1, '(');
-					IEnumerable<Type> fParamTypes = ParserTools.split(nameTrimEnd, startParent, ')', ',').Select(x => getExisting(packages, x, parser));
-					if (string.IsNullOrWhiteSpace(nameTrimEnd.Substring(startParent + 1, nameTrimEnd.Length - startParent - 2)))
-					{
-						fParamTypes = Enumerable.Empty<Type>();
-					}
-					string retTypeStr = nameTrimEnd.Substring(0, startParent);
-					Type retType = getExisting(packages, retTypeStr, parser);
-					if (fParamTypes.Any(x => x == null) || retType == null)
-					{
-						return null;
-					}
-					return FunctionRefType.get(retType, fParamTypes.ToArray());
+					return getFRefType(packages, name, parser);
 				}
 				int idxL = name.IndexOf('<');
 				if (idxL != -1)
@@ -227,6 +240,18 @@ namespace bohc.typesys
 			return name;
 		}
 
+		public string genname;
+
+		public virtual string externName()
+		{
+			if (originalGenType != null)
+			{
+				string pckg = package.ToString();
+				return (string.IsNullOrEmpty(pckg) ? string.Empty : pckg + '.') + genname.Replace("<", "&lt;").Replace(">", "&gt;");
+			}
+			return fullName();
+		}
+
 		public string fullName()
 		{
 			string pckg = package.ToString();
@@ -234,5 +259,11 @@ namespace bohc.typesys
 		}
 
 		public abstract parsing.Expression defaultVal();
+
+		public XElement xelement;
+		public bool isExtern()
+		{
+			return xelement != null;
+		}
 	}
 }

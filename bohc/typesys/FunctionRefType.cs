@@ -72,5 +72,23 @@ namespace bohc.typesys
 				return c;
 			}
 		}
+
+		public override string externName()
+		{
+			StringBuilder b = new StringBuilder();
+			b.Append(retType.externName());
+			b.Append("(");
+			foreach (Type t in paramTypes)
+			{
+				b.Append(t.externName());
+				b.Append(", ");
+			}
+			if (paramTypes.Length > 0)
+			{
+				b.Remove(b.Length - 2, 2);
+			}
+			b.Append(")");
+			return b.ToString();
+		}
 	}
 }

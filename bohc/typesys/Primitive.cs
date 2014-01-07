@@ -93,7 +93,7 @@ namespace bohc.typesys
 		public static readonly Primitive SHORT = new Primitive("short", "int16_t", 2);
 		public static readonly Primitive INT = new Primitive("int", "int32_t", 4);
 		public static readonly Primitive LONG = new Primitive("long", "int64_t", 8);
-		public static readonly Primitive BOOLEAN = new Primitive("boolean", "_Bool", 4);
+		public static readonly Primitive BOOLEAN = new Primitive("boolean", "uint8_t", 1);
 		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
 		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
 		public static readonly Primitive DECIMAL = new Primitive("decimal", "_Decimal64", 8);

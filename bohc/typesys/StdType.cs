@@ -21,9 +21,13 @@ namespace bohc.typesys
 		public static readonly Class type = (Class)Type.getExisting(boh_lang, "Type", null);
 
 		// TODO: check that package is boh.std
-		public static readonly GenericType array = GenericType.allGenTypes.Single(x => x.name == "Array");
-		public static readonly GenericType box = GenericType.allGenTypes.Single(x => x.name == "Box");
-		public static readonly GenericType icollection = GenericType.allGenTypes.Single(x => x.name == "ICollection");
-		public static readonly GenericType iiterator = GenericType.allGenTypes.Single(x => x.name == "IIterator");
+		public static readonly GenericType array = GenericType.allGenTypes.Single(
+			x => x.name == "Array" && x.file.package == Package.getFromString("boh.std"));
+		public static readonly GenericType box = GenericType.allGenTypes.Single(
+			x => x.name == "Box" && x.file.package == Package.getFromString("boh.std"));
+		public static readonly GenericType icollection = GenericType.allGenTypes.Single(
+			x => x.name == "ICollection" && x.file.package == Package.getFromString("boh.std"));
+		public static readonly GenericType iiterator = GenericType.allGenTypes.Single(
+			x => x.name == "IIterator" && x.file.package == Package.getFromString("boh.std"));
 	}
 }

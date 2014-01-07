@@ -131,6 +131,10 @@ namespace bohc.typesys
 
 		public static Modifiers getModifiersFromString(string str)
 		{
+			if (str == null)
+			{
+				return Modifiers.NONE;
+			}
 			IEnumerable<string> split = str.Split(' ').Where(x => !string.IsNullOrWhiteSpace(x) && !string.IsNullOrEmpty(x));
 
 			return getModifiersFromStrings(split);

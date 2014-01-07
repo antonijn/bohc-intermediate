@@ -60,7 +60,7 @@ namespace bohc.typesys
 		/// </summary>
 		public static typesys.Function getCompatibleFunction(ref int i, string next, string str, parsing.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters, typesys.Function ctx, IExpressionParser ep)
 		{
-			typesys.Function[] compatiblefs = functions.ToArray();
+			//typesys.Function[] compatiblefs = functions.ToArray();
 
 			parameters = getStringParams(str, i, locals, file, ctx, ep);
 			IEnumerable<Expression> _parameters = parameters;

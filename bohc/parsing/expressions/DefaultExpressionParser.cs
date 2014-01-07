@@ -648,7 +648,7 @@ namespace bohc.parsing.expressions
 						throw;
 					}
 					int greaterThan = ParserTools.getMatchingBraceChar(str, i - 1, '>');
-					string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
+					//string genpars = str.Substring(backup + 1, greaterThan - backup - 1);
 					i = greaterThan + 1;
 
 					i = solveIdentifierForType(ref last, vars, i, "this", str, file, (typesys.Class)typeExpr, ctx);

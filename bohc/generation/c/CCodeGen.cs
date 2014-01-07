@@ -37,7 +37,7 @@ namespace bohc.generation.c
 			{
 				System.IO.File.Copy(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + System.IO.Path.DirectorySeparatorChar + "boh_internal.h", ".c/boh_internal.h");
 			}
-			if (!System.IO.File.Exists(".c/boh_internal.c"))
+			if (Program.Options.noStd && !System.IO.File.Exists(".c/boh_internal.c"))
 			{
 				System.IO.File.Copy(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + System.IO.Path.DirectorySeparatorChar + "boh_internal.c", ".c/boh_internal.c");
 			}
@@ -261,9 +261,11 @@ namespace bohc.generation.c
 				addStructPrototype(builder, c);
 			}
 
-			foreach (typesys.Type t in types.Where(x => (!(x is Class) || x is Struct) && !(x is Interface)).Concat(FunctionRefType.instances).OrderBy(x => x, new DependencyBasedTypeSorter()))
+			foreach (typesys.Type t in types
+			         .Where(x => !(x is Primitive))
+			         .Where(x => (!(x is Class) || x is Struct) && !(x is Interface)).Concat(FunctionRefType.instances).OrderBy(x => x, new DependencyBasedTypeSorter()))
 			{
-				if (t is Struct)
+				if (t is Struct || t is typesys.Enum)
 				{
 					builder.AppendFormat("#include \"{0}\"", mangler.getCName(t) + ".type.h");
 					builder.AppendLine();
@@ -274,7 +276,7 @@ namespace bohc.generation.c
 				}
 			}
 
-			foreach (typesys.Type t in types)
+			foreach (typesys.Type t in types.Where(x => !(x is FunctionRefType)))
 			{
 				builder.AppendFormat("#include \"{0}\"", mangler.getCName(t) + ".type.h");
 				builder.AppendLine();
@@ -293,8 +295,11 @@ namespace bohc.generation.c
 
 			generateHeaders(type, others);
 
-			string code = generateCode(type, others);
-			System.IO.File.WriteAllText(".c/" + mangler.getCodeFileName(type), code);
+			if (!type.isExtern() && !(type is typesys.Primitive))
+			{
+				string code = generateCode(type, others);
+				System.IO.File.WriteAllText(".c/" + mangler.getCodeFileName(type), code);
+			}
 		}
 
 		private void generateHeaders(typesys.Type type, IEnumerable<typesys.Type> others)
@@ -324,6 +329,11 @@ namespace bohc.generation.c
 			if (e != null)
 			{
 				generateEnumHeaders(e, others);
+				return;
+			}
+
+			if (type is typesys.Primitive)
+			{
 				return;
 			}
 
@@ -361,7 +371,8 @@ namespace bohc.generation.c
 
 			--indentation;
 
-			System.IO.File.WriteAllText(".c/" + mangler.getCName(e) + ".enum.h", builder.ToString());
+			System.IO.File.WriteAllText(".c/" + mangler.getCName(e) + ".type.h", builder.ToString());
+			System.IO.File.WriteAllText(".c/" + mangler.getCName(e) + ".sigs.h", string.Empty);
 		}
 
 		private void generateInterfaceHeaders(Interface iface, IEnumerable<typesys.Type> others)
@@ -1495,27 +1506,6 @@ namespace bohc.generation.c
 			builder.Append(tmp);
 		}
 
-		private int getStrLitLen(string str)
-		{
-			int len = 0;
-			for (int i = 0; i < str.Length; ++i)
-			{
-				char ch = str[i];
-				if (ch == '\\')
-				{
-					if (++i >= str.Length || str[i] != '\\')
-					{
-					}
-					else
-					{
-						--i;
-					}
-				}
-				++len;
-			}
-			return len - 2;
-		}
-
 		private void addFvCall(StringBuilder builder, FunctionVarCall fvCall)
 		{
 			string tmp = addTemp(fvCall.belongsto);
@@ -1563,9 +1553,8 @@ namespace bohc.generation.c
 			{
                 if (prim == Primitive.CHAR)
                 {
-                    //builder.Append("u8");
-                    builder.Append(lit.representation);
-                }
+					addCharLit(builder, lit);
+				}
                 else if (prim == Primitive.BOOLEAN)
                 {
                     builder.Append(lit.representation == "true" ? 1 : 0);
@@ -1604,6 +1593,7 @@ namespace bohc.generation.c
                 }
                 else if (prim == Primitive.DECIMAL)
                 {
+					boh.Exception.require<CodeGenException>(Program.Options.gccOnly, "decimal literals may only be used in gcc mode");
                     builder.Append(lit.representation.ToUpperInvariant());
                 }
 			}
@@ -1611,11 +1601,7 @@ namespace bohc.generation.c
 			{
 				if (lit.type == StdType.str && lit.representation != "NULL")
 				{
-					builder.Append("boh_create_string(u8");
-					builder.Append(lit.representation);
-					builder.Append(", ");
-					builder.Append(getStrLitLen(lit.representation));
-					builder.Append(")");
+					addStrLit(builder, lit);
 				}
 				else if (lit.representation == "BOH_FP_NULL")
 				{
@@ -1628,6 +1614,104 @@ namespace bohc.generation.c
 					builder.Append(lit.representation);
 				}
 			}
+		}
+
+		private void addCharLit(StringBuilder builder, Literal lit)
+		{
+			builder.Append("'");
+			string actStr = lit.representation.Substring(1, lit.representation.Length - 2);
+			UTF8Encoding encoding = new UTF8Encoding();
+
+			int byteCount = 0;
+			for (int i = 0; i < actStr.Length; ++i)
+			{
+				char ch = actStr[i];
+				if (ch == '\\')
+				{
+					foreach (byte b in encoding.GetBytes(getEscSeq(actStr, ++i)))
+					{
+						builder.AppendFormat("\\x{0:X2}", b);
+						++byteCount;
+					}
+					continue;
+				}
+				foreach (byte b in encoding.GetBytes(new string(ch, 1)))
+				{
+					builder.AppendFormat("\\x{0:X2}", b);
+					++byteCount;
+				}
+			}
+
+			builder.Append("'");
+		}
+
+		private void addStrLit(StringBuilder builder, Literal lit)
+		{
+			builder.Append("boh_create_string(\"");
+			string actStr = lit.representation.Substring(1, lit.representation.Length - 2);
+			UTF8Encoding encoding = new UTF8Encoding();
+
+			int byteCount = 0;
+			for (int i = 0; i < actStr.Length; ++i)
+			{
+				char ch = actStr[i];
+				if (ch == '\\')
+				{
+					foreach (byte b in encoding.GetBytes(getEscSeq(actStr, ++i)))
+					{
+						builder.AppendFormat("\\x{0:X2}", b);
+						++byteCount;
+					}
+					continue;
+				}
+				foreach (byte b in encoding.GetBytes(new string(ch, 1)))
+				{
+					builder.AppendFormat("\\x{0:X2}", b);
+					++byteCount;
+				}
+			}
+
+			builder.Append("\", ");
+			builder.Append(byteCount);
+			builder.Append(")");
+		}
+
+		private static string getEscSeq(string str, int i)
+		{
+			char next = str[i];
+			switch (next)
+			{
+				case '0':
+					return "\0";
+				case 'a':
+					return "\a";
+				case 'b':
+					return "\b";
+				case 'f':
+					return "\f";
+				case 'n':
+					return "\n";
+				case 'r':
+					return "\r";
+				case 't':
+					return "\t";
+				case 'v':
+					return "\v";
+				case '\'':
+					return "\'";
+				case '"':
+					return "\"";
+				case '\\':
+					return "\\";
+				case 'u':
+					++i;
+					string rep = str.Substring(i, 2);
+					byte b = byte.Parse(rep);
+
+					UTF8Encoding enc = new UTF8Encoding();
+					return enc.GetString(new[] { b });
+			}
+			throw new CodeGenException();
 		}
 
 		private void addCCall(StringBuilder builder, ConstructorCall ccall)
@@ -2479,7 +2563,8 @@ namespace bohc.generation.c
 			addStaticFieldProtos(builder, c.fields, string.Empty);
 			builder.AppendLine();
 
-			addFunctionSigs(builder, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT)), "static ");
+			addFunctionSigs(builder, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.PRIVATE) && !x.modifiers.HasFlag(Modifiers.ABSTRACT) && !x.modifiers.HasFlag(Modifiers.NATIVE)), "static ");
+			addFunctionSigs(builder, c.functions.Where(x => x.modifiers.HasFlag(Modifiers.NATIVE)), string.Empty);
 			builder.AppendLine();
 
 			if (!(c is Struct))

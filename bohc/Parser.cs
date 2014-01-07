@@ -125,7 +125,7 @@ namespace bohc
 			{
 				// generic
 				int f = name.IndexOf('<');
-				int l = name.LastIndexOf('>');
+				//int l = name.LastIndexOf('>');
 				string genname = name.Substring(0, f);
 				string[] types = ParserTools.split(name, f, '>', ',').ToArray();
 				file.type = new GenericType(types, genname);
@@ -479,6 +479,7 @@ namespace bohc
 			}
 
 			type = typesys.Type.getExisting(f.getContext(), typeName, this);
+			boh.Exception.require<ParserException>(type != null, "type doesn't exist");
 		}
 
 		private void parseFieldTCS(File f, string fDec)

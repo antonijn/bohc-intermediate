@@ -131,7 +131,19 @@ namespace bohc.typesys
 
 			try
 			{
+				replaceWhat.Clear();
+				replaceWhat.Append(name);
+				replaceWhat.Append("<");
+				foreach (Type t in what)
+				{
+					replaceWhat.Append(t.externName());
+					replaceWhat.Append(",");
+				}
+				replaceWhat.Remove(replaceWhat.Length - 1, 1);
+				replaceWhat.Append(">");
+
 				((Type)newf.type).originalGenType = this;
+				((Type)newf.type).genname = replaceWhat.ToString();
 				return (Type)newf.type;
 			}
 			catch
