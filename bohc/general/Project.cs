@@ -155,7 +155,7 @@ namespace bohc.general
 		{
 			cstrat.compile(this);
 
-			buildgcc(mangler, typesys.Type.types.Where(x => !(x is Primitive)));
+			buildgcc(mangler, typesys.Type.types.Where(x => !(x is Primitive) && !x.isExtern()));
 
 			if (library)
 			{
@@ -257,7 +257,7 @@ namespace bohc.general
 				{
 					script.Append(" -fPIC -shared");
 				}
-				script.Append(" .c/boh_internal.c .c/function_types.c ");
+				script.Append(" .c/function_types.c ");
 				foreach (string s in cfiles)
 				{
 					script.Append(s);
