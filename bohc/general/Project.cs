@@ -155,7 +155,7 @@ namespace bohc.general
 		{
 			cstrat.compile(this);
 
-			buildgcc(mangler, typesys.Type.types);
+			buildgcc(mangler, typesys.Type.types.Where(x => !(x is Primitive)));
 
 			if (library)
 			{
