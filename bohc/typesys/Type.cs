@@ -111,7 +111,7 @@ namespace bohc.typesys
 			}
 		}
 
-		public static Type getExisting(string name, Parser parser)
+		public static Type getExisting(string name, IFileParser parser)
 		{
 			if (name.TrimEnd().EndsWith(")"))
 			{
@@ -125,12 +125,12 @@ namespace bohc.typesys
 		}
 
 		/// <returns>null on failure</returns>
-		public static Type getExisting(Package package, string name, Parser parser)
+		public static Type getExisting(Package package, string name, IFileParser parser)
 		{
 			return getExisting(package, new[] { package }, name, parser);
 		}
 
-		static Type getFRefType(IEnumerable<Package> packages, string name, Parser parser)
+		static Type getFRefType(IEnumerable<Package> packages, string name, IFileParser parser)
 		{
 			string nameTrimEnd = name.TrimEnd();
 			int startParent = ParserTools.getMatchingBraceCharBackwards(nameTrimEnd, nameTrimEnd.Length - 1, '(');
@@ -148,7 +148,7 @@ namespace bohc.typesys
 			return FunctionRefType.get(retType, fParamTypes.ToArray());
 		}
 
-		public static Type getExisting(Package package, IEnumerable<Package> packages, string name, Parser parser)
+		public static Type getExisting(Package package, IEnumerable<Package> packages, string name, IFileParser parser)
 		{
 			if (name.EndsWith("[]"))
 			{
@@ -195,7 +195,7 @@ namespace bohc.typesys
 			}
 		}
 
-		public static Type getExisting(IEnumerable<Package> packages, string name, Parser parser)
+		public static Type getExisting(IEnumerable<Package> packages, string name, IFileParser parser)
 		{
 			lock (types)
 			{
@@ -214,7 +214,7 @@ namespace bohc.typesys
 			return null;
 		}
 
-		public static bool exists(IEnumerable<Package> packages, string name, Parser parser)
+		public static bool exists(IEnumerable<Package> packages, string name, IFileParser parser)
 		{
 			foreach (Package p in packages.Concat(new[] { Package.GLOBAL }))
 			{

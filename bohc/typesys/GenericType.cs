@@ -17,6 +17,7 @@ namespace bohc.typesys
 	public class GenericType : IType
 	{
 		public static readonly List<GenericType> allGenTypes = new List<GenericType>();
+		public static readonly List<Type> typeInstances = new List<Type>();
 
 		public readonly string[] genTypeNames;
 		public readonly string name;
@@ -56,7 +57,7 @@ namespace bohc.typesys
 			return result;
 		}
 
-		public typesys.Type getTypeFor(typesys.Type[] what, Parser parser)
+		public typesys.Type getTypeFor(typesys.Type[] what, IFileParser parser)
 		{
 			lock (types)
 			{
@@ -71,7 +72,7 @@ namespace bohc.typesys
 			}
 		}
 
-		private Type getNewTypeFor(Type[] what, Parser parser, int hash)
+		private Type getNewTypeFor(Type[] what, IFileParser parser, int hash)
 		{
 			// TODO: PROPER REPLACING FFS!!!
 
@@ -112,19 +113,19 @@ namespace bohc.typesys
 
 			parsing.File newf = parser.parseFileTS(ref code);
 			types[hash] = (Type)newf.type;
-			Program.genTypes.Add(code, newf);
-			parser.parseFileTP(newf, code);
-			if (Program.pstate >= ParserState.TCS)
+			//parser.proj().pstrat.registerRtType(newf.type as typesys.Type);
+			parser.parseFileTP(newf);
+			if (parser.proj().pstrat.getpstate() >= ParserState.TCS)
 			{
-				parser.parseFileTCS(newf, code);
+				parser.parseFileTCS(newf);
 			}
-			if (Program.pstate >= ParserState.TCP)
+			if (parser.proj().pstrat.getpstate() >= ParserState.TCP)
 			{
-				parser.parseFileTCP(newf, code);
+				parser.parseFileTCP(newf);
 			}
-			if (Program.pstate >= ParserState.CP)
+			if (parser.proj().pstrat.getpstate() >= ParserState.CP)
 			{
-				parser.parseFileCP(newf, code);
+				parser.parseFileCP(newf);
 			}
 
 			newf.type.setFile(newf);
@@ -144,6 +145,9 @@ namespace bohc.typesys
 
 				((Type)newf.type).originalGenType = this;
 				((Type)newf.type).genname = replaceWhat.ToString();
+
+				typeInstances.Add((Type)newf.type);
+
 				return (Type)newf.type;
 			}
 			catch

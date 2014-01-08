@@ -32,7 +32,6 @@
     <Compile Include="generation\ICodeGen.cs" />
     <Compile Include="generation\mangling\DebugMangler.cs" />
     <Compile Include="generation\mangling\IMangler.cs" />
-    <Compile Include="Parser.cs" />
     <Compile Include="parsing\expressions\ConstructorCall.cs" />
     <Compile Include="parsing\expressions\DefaultExpressionParser.cs" />
     <Compile Include="parsing\expressions\ExprEnumerator.cs" />
@@ -119,6 +118,13 @@
     <Compile Include="typesys\NativeFunction.cs" />
     <Compile Include="parsing\expressions\NativeFunctionCall.cs" />
     <Compile Include="generation\asm\IIntermediateGenerator.cs" />
+    <Compile Include="general\Project.cs" />
+    <Compile Include="general\IParserStrategy.cs" />
+    <Compile Include="general\DefaultParserStrategy.cs" />
+    <Compile Include="parsing\IFileParser.cs" />
+    <Compile Include="parsing\FileParser.cs" />
+    <Compile Include="general\ICompilerStrategy.cs" />
+    <Compile Include="general\DefaultCompilerStrategy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">
@@ -162,5 +168,6 @@
   <ItemGroup />
   <ItemGroup>
     <Folder Include="generation\asm\" />
+    <Folder Include="general\" />
   </ItemGroup>
 </Project>

@@ -11,8 +11,8 @@ namespace bohc.parsing.statements
 	{
 		Body parseBody(string body, Function func, File f);
 		Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f);
-		void init(Parser parser);
-		Parser getParser();
+		void init(FileParser parser);
+		IFileParser getParser();
 		IExpressionParser getExpressions();
 	}
 }

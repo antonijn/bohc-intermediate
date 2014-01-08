@@ -59,7 +59,7 @@ namespace bohc.typesys
 				     mod.HasFlag(Modifiers.NOCONTEXT) || mod.HasFlag(Modifiers.PROTECTED));
 		}
 
-		public static bool areModifiersLegal(Modifiers mod, bool classmember)
+		public static bool areModifiersLegal(Modifiers mod, bool classmember, bohc.general.Project ctx)
 		{
 			if (!isAccessLegal(mod, classmember))
 			{
@@ -92,7 +92,7 @@ namespace bohc.typesys
 			{
 				return false;
 			}
-			if (mod.HasFlag(Modifiers.NATIVE) && !Program.Options.desktopMode)
+			if (mod.HasFlag(Modifiers.NATIVE) && !ctx.desktopMode)
 			{
 				return false;
 			}

@@ -10,6 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
+using bohc.parsing;
+
 namespace bohc.typesys
 {
 	public class Enum : Type
@@ -75,7 +77,7 @@ namespace bohc.typesys
 			body.statements.Add(ifs);
 		}
 
-		public void sortOutFunctions(Parser parser)
+		public void sortOutFunctions(IFileParser parser)
 		{
 			StdType.box.getTypeFor(new [] { this }, parser);
 

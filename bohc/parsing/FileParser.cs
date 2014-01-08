@@ -16,17 +16,25 @@ using bohc.exceptions;
 using bohc.typesys;
 using bohc.parsing;
 using bohc.parsing.statements;
+using bohc.general;
 
-namespace bohc
+namespace bohc.parsing
 {
-	public class Parser
+	public class FileParser : IFileParser
 	{
 		public readonly IStatementParser statements;
+		public readonly Project input;
 
-		public Parser(IStatementParser statements)
+		public FileParser(IStatementParser statements, Project input)
 		{
 			this.statements = statements;
 			this.statements.init(this);
+			this.input = input;
+		}
+
+		public Project proj()
+		{
+			return input;
 		}
 
 		#region Type Skimming (TS)
@@ -159,8 +167,10 @@ namespace bohc
 		
 		#region Type Parsing (TP)
 
-		public void parseFileTP(File f, string file)
+		public void parseFileTP(File f)
 		{
+			string file = f.content;
+
 			if (f.state >= bohc.ParserState.TP)
 			{
 				return;
@@ -240,8 +250,10 @@ namespace bohc
 
 		#region Type Content Skimming (TCS)
 
-		public void parseFileTCS(File f, string file)
+		public void parseFileTCS(File f)
 		{
+			string file = f.content;
+
 			if (f.state >= ParserState.TCS)
 			{
 				return;
@@ -507,7 +519,7 @@ namespace bohc
 			Modifiers mods = ModifierHelper.getModifiersFromStrings(modifiers);
 
 			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
-			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true), mods.ToString() + ": invalid modifiers");
+			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true, proj()), mods.ToString() + ": invalid modifiers");
 
 			Field field = new Field(mods, identifier, actualType, (Class)f.type, initvalstr);
 			((Class)f.type).addMember(field);
@@ -542,8 +554,10 @@ namespace bohc
 
 		#region Type Content Parsing
 
-		public void parseFileTCP(File f, string file)
+		public void parseFileTCP(File f)
 		{
+			string file = f.content;
+
 			if (f.state >= ParserState.TCP)
 			{
 				return;
@@ -572,8 +586,10 @@ namespace bohc
 
 		#region Code Parsing
 
-		public void parseFileCP(File f, string file)
+		public void parseFileCP(File f)
 		{
+			string file = f.content;
+
 			if (f.state >= ParserState.CP)
 			{
 				return;

@@ -22,10 +22,12 @@ namespace bohc.generation.c
 	public class CCodeGen : ICodeGen
 	{
 		private readonly IMangler mangler;
+		private readonly bohc.general.Project proj;
 
-		public CCodeGen(IMangler mangler)
+		public CCodeGen(IMangler mangler, bohc.general.Project p)
 		{
 			this.mangler = mangler;
+			this.proj = p;
 		}
 
 		public void generateGeneralBit(IEnumerable<typesys.Type> others)
@@ -37,7 +39,7 @@ namespace bohc.generation.c
 			{
 				System.IO.File.Copy(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + System.IO.Path.DirectorySeparatorChar + "boh_internal.h", ".c/boh_internal.h");
 			}
-			if (Program.Options.noStd && !System.IO.File.Exists(".c/boh_internal.c"))
+			if (proj.noStd && !System.IO.File.Exists(".c/boh_internal.c"))
 			{
 				System.IO.File.Copy(System.IO.Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location) + System.IO.Path.DirectorySeparatorChar + "boh_internal.c", ".c/boh_internal.c");
 			}
@@ -537,7 +539,7 @@ namespace bohc.generation.c
 			else if (!func.modifiers.HasFlag(Modifiers.NATIVE))
 			{
 				builder.Append("void * const ");
-				if (Program.Options.gccOnly)
+				if (proj.gccOnly)
 				{
 					builder.Append(" __attribute__((unused)) ");
 				}
@@ -1593,7 +1595,7 @@ namespace bohc.generation.c
                 }
                 else if (prim == Primitive.DECIMAL)
                 {
-					boh.Exception.require<CodeGenException>(Program.Options.gccOnly, "decimal literals may only be used in gcc mode");
+					boh.Exception.require<CodeGenException>(proj.gccOnly, "decimal literals may only be used in gcc mode");
                     builder.Append(lit.representation.ToUpperInvariant());
                 }
 			}
@@ -1769,12 +1771,12 @@ namespace bohc.generation.c
 		private void addNullCheck(StringBuilder builder, Expression expr)
 		{
 			ThisVar tvar = expr as ThisVar;
-			if (!Program.Options.unsafeNullPtr && tvar == null)
+			if (!proj.unsafeNullPtr && tvar == null)
 			{
 				builder.Append("boh_check_null(");
 			}
 			addExpression(builder, expr);
-			if (!Program.Options.unsafeNullPtr && tvar == null)
+			if (!proj.unsafeNullPtr && tvar == null)
 			{
 				builder.Append(", ");
 				builder.Append(mangler.getCTypeName(expr.getType()));

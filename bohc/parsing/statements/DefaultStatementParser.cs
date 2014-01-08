@@ -12,7 +12,7 @@ namespace bohc.parsing.statements
 	public class DefaultStatementParser : IStatementParser
 	{
 		private readonly IExpressionParser expressions;
-		private Parser parser;
+		private FileParser parser;
 
 		public DefaultStatementParser(IExpressionParser expressions)
 		{
@@ -25,12 +25,12 @@ namespace bohc.parsing.statements
 			return expressions;
 		}
 
-		public void init(Parser parser)
+		public void init(FileParser parser)
 		{
 			this.parser = parser;
 		}
 
-		public Parser getParser()
+		public IFileParser getParser()
 		{
 			return parser;
 		}
