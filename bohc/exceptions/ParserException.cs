@@ -10,9 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.exceptions
+namespace Bohc.Exceptions
 {
-	public class ParserException : boh.Exception
+	public class ParserException : Boh.Exception
 	{
 	}
 }

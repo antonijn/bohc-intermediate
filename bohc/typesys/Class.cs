@@ -10,25 +10,27 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.exceptions;
+using Bohc.Exceptions;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
-	public class Class : typesys.Type
+	public class Class : Bohc.TypeSystem.Type
 	{
-		public readonly Variable THIS;
-		public readonly parsing.ThisVar THISVAR;
+		public readonly Variable This;
+		public readonly Parsing.ExprVariable ThisVarExpr;
+		public readonly Variable SuperVar;
+		public readonly Parsing.ExprVariable SuperVarExpr;
 
-		public List<Interface> implements = new List<Interface>();
-		public Class super;
+		public List<Interface> Implements = new List<Interface>();
+		public Class Super;
 
-		public List<Function> functions = new List<Function>();
-		public List<Constructor> constructors = new List<Constructor>();
-		public List<OverloadedOperator> operators = new List<OverloadedOperator>();
-		public List<Field> fields = new List<Field>();
-		public List<IMember> members = new List<IMember>();
-		public List<GenericFunction> genfuncs = new List<GenericFunction>();
-		public StaticConstructor staticConstr;
+		public List<Function> Functions = new List<Function>();
+		public List<Constructor> Constructors = new List<Constructor>();
+		public List<OverloadedOperator> Operators = new List<OverloadedOperator>();
+		public List<Field> Fields = new List<Field>();
+		public List<IMember> Members = new List<IMember>();
+		public List<GenericFunction> GenFuncs = new List<GenericFunction>();
+		public StaticConstructor StaticConstr;
 
 		private class FuncComp : IEqualityComparer<Function>
 		{
@@ -40,10 +42,9 @@ namespace bohc.typesys
 				// parameter types must be equal
 				// neither can be override
 
-				return !(f0.modifiers.HasFlag(Modifiers.PRIVATE) || f1.modifiers.HasFlag(Modifiers.PRIVATE)) &&
-					(f0.identifier == f1.identifier) &&
-					(f0.parameters.Select(x => x.type).SequenceEqual(f1.parameters.Select(x => x.type))) &&
-					!(f0.modifiers.HasFlag(Modifiers.OVERRIDE) || f1.modifiers.HasFlag(Modifiers.OVERRIDE));
+				return (f0.Identifier == f1.Identifier) &&
+					(f0.Parameters.Select(x => x.Type).SequenceEqual(f1.Parameters.Select(x => x.Type))) &&
+					!(f0.Modifiers.HasFlag(Modifiers.Override) || f1.Modifiers.HasFlag(Modifiers.Override));
 			}
 
 			public int GetHashCode(Function f)
@@ -52,29 +53,32 @@ namespace bohc.typesys
 			}
 		}
 
-		public IEnumerable<Function> getAllFuncs()
+		public IEnumerable<Function> GetAllFuncs()
 		{
-			if (super != null)
+			if (Super != null)
 			{
-				return functions.Union(super.functions, new FuncComp());
+				return Functions.Union(Super.Functions
+				                        .Where(x => !x.Modifiers.HasFlag(TypeSystem.Modifiers.Private))
+				                        .Where(x => !(x is TypeSystem.Constructor))
+				                        .Where(x => !(x is TypeSystem.StaticConstructor)), new FuncComp());
 			}
 
-			return functions;
+			return Functions;
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			return new parsing.Literal(this, "NULL");
+			return new Parsing.Literal(this, "NULL");
 		}
 
-		public override int extends(Type other)
+		public override int Extends(Type other)
 		{
 			if (other == this)
 			{
 				return 1;
 			}
 
-			foreach (Interface iface in implements)
+			foreach (Interface iface in Implements)
 			{
 				if (iface == other)
 				{
@@ -82,50 +86,50 @@ namespace bohc.typesys
 				}
 			}
 
-			if (super == null)
+			if (Super == null)
 			{
 				return 0;
 			}
 
-			int tmp = super.extends(other);
+			int tmp = Super.Extends(other);
 			return tmp == 0 ? 0 : tmp + 1;
 		}
 
-		public void addMember(IFunction f)
+		public void AddMember(IFunction f)
 		{
 			Function func = f as Function;
 			if (func != null)
 			{
-				addMember(func);
+				AddMember(func);
 			}
 			else
 			{
-				genfuncs.Add((GenericFunction)f);
+				GenFuncs.Add((GenericFunction)f);
 			}
 		}
 
-		public void addMember(StaticConstructor f)
+		public void AddMember(StaticConstructor f)
 		{
-			staticConstr = f;
-			functions.Add(f);
-			members.Add(f);
+			StaticConstr = f;
+			Functions.Add(f);
+			Members.Add(f);
 		}
 
-		public void addMember(Constructor f)
+		public void AddMember(Constructor f)
 		{
-			functions.Add(f);
-			constructors.Add(f);
-			members.Add(f);
+			Functions.Add(f);
+			Constructors.Add(f);
+			Members.Add(f);
 		}
 
-		public void addMember(OverloadedOperator f)
+		public void AddMember(OverloadedOperator f)
 		{
-			functions.Add(f);
-			operators.Add(f);
-			members.Add(f);
+			Functions.Add(f);
+			Operators.Add(f);
+			Members.Add(f);
 		}
 
-		public void addMember(Function f)
+		public void AddMember(Function f)
 		{
 			Constructor constr = f as Constructor;
 			OverloadedOperator op = f as OverloadedOperator;
@@ -133,55 +137,57 @@ namespace bohc.typesys
 
 			if (constr != null)
 			{
-				addMember(constr);
+				AddMember(constr);
 			}
 			else if (op != null)
 			{
-				addMember(op);
+				AddMember(op);
 			}
 			else if (sconstr != null)
 			{
-				addMember(sconstr);
+				AddMember(sconstr);
 			}
 			else
 			{
-				functions.Add(f);
-				members.Add(f);
+				Functions.Add(f);
+				Members.Add(f);
 			}
 		}
 
-		public void addMember(Field f)
+		public void AddMember(Field f)
 		{
-			fields.Add(f);
-			members.Add(f);
+			Fields.Add(f);
+			Members.Add(f);
 		}
 
-		private static readonly List<Class> instances = new List<Class>();
+		private static readonly List<Class> Instances = new List<Class>();
 
 		protected Class(Package package, Modifiers modifiers, string name)
 			: base(package, modifiers, name)
 		{
-			this.THIS = new Variable("this", this);
-			this.THISVAR = new parsing.ThisVar(this);
+			this.This = new Variable("this", this);
+			this.ThisVarExpr = new Parsing.ExprVariable(This, null);
+			this.SuperVar = new Variable("super", this);
+			this.SuperVarExpr = new Parsing.ExprVariable(SuperVar, null);
 		}
 
-		public static Class get<T>(Package package, Modifiers modifiers, string name)
+		public static Class Get<T>(Package package, Modifiers modifiers, string name)
 			where T : Class
 		{
-			lock (instances)
+			lock (Instances)
 			{
-				T c = (T)instances.SingleOrDefault(x => (x.package == package && x.name == name));
+				T c = (T)Instances.SingleOrDefault(x => (x.Package == package && x.Name == name));
 				if (c == default(T))
 				{
 					if (typeof(T) == typeof(Class))
 					{
 						Class newc = new Class(package, modifiers, name);
-						instances.Add(newc);
+						Instances.Add(newc);
 						return newc;
 					}
 
 					Struct news = new Struct(package, modifiers, name);
-					instances.Add(news);
+					Instances.Add(news);
 					return news;
 				}
 
@@ -189,87 +195,87 @@ namespace bohc.typesys
 			}
 		}
 
-		public void implement(Interface iface)
+		public void Implement(Interface iface)
 		{
-			foreach (Interface other in iface.implements)
+			foreach (Interface other in iface.Implements)
 			{
-				implement(other);
+				Implement(other);
 			}
 
-			boh.Exception.require<ParserException>(!implements.Contains(iface), "Interfaces may not be implemented multiple times");
-			implements.Add(iface);
+			Boh.Exception.require<ParserException>(!Implements.Contains(iface), "Interfaces may not be implemented multiple times");
+			Implements.Add(iface);
 		}
 
-		public bool compatibleWith(Type other)
+		public bool CompatibleWith(Type other)
 		{
-			return extends(other) != 0;
+			return Extends(other) != 0;
 		}
 
-		private bool sameGenType(Class ctx)
+		private bool SameGenType(Class ctx)
 		{
-			return ctx.originalGenType == originalGenType && originalGenType != null;
+			return ctx.OriginalGenType == OriginalGenType && OriginalGenType != null;
 		}
 
-		public IEnumerable<Function> getFunctions(string id, Class context)
+		public IEnumerable<Function> GetFunctions(string id, Class context)
 		{
 			bool _private = false;
 			bool _protected = false;
 			bool _public = true;
 
-			if (context == this || sameGenType(context))
+			if (context == this || SameGenType(context))
 			{
 				_private = true;
 				_protected = true;
 			}
-			else if (compatibleWith(context))
+			else if (CompatibleWith(context))
 			{
 				_protected = true;
 			}
 
-			return getAllFuncs().Where(x => x.identifier == id &&
-				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
-				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
-				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));
+			return GetAllFuncs().Where(x => x.Identifier == id &&
+				((_public && x.Modifiers.HasFlag(Modifiers.Public)) ||
+				(_protected && x.Modifiers.HasFlag(Modifiers.Protected)) ||
+				(_private && x.Modifiers.HasFlag(Modifiers.Private))));
 		}
 
-		public Field getField(string id, Class context)
+		public Field GetField(string id, Class context)
 		{
 			bool _private = false;
 			bool _protected = false;
 			bool _public = true;
 
-			if (context == this || sameGenType(context))
+			if (context == this || SameGenType(context))
 			{
 				_private = true;
 				_protected = true;
 			}
-			else if (compatibleWith(context))
+			else if (CompatibleWith(context))
 			{
 				_protected = true;
 			}
 
 			// TODO: pf_stuff, firstordefault isn't ideal...
-			Field result = fields.FirstOrDefault(x => x.identifier == id &&
-				((_public && x.modifiers.HasFlag(Modifiers.PUBLIC)) ||
-				(_protected && x.modifiers.HasFlag(Modifiers.PROTECTED)) ||
-				(_private && x.modifiers.HasFlag(Modifiers.PRIVATE))));
+			Field result = Fields.FirstOrDefault(x => x.Identifier == id &&
+				((_public && x.Modifiers.HasFlag(Modifiers.Public)) ||
+				(_protected && x.Modifiers.HasFlag(Modifiers.Protected)) ||
+				(_private && x.Modifiers.HasFlag(Modifiers.Private))));
 
-			if (result == null && super != null)
+			if (result == null && Super != null)
 			{
-				return super.getField(id, context);
+				return Super.GetField(id, context);
 			}
 
 			return result;
 		}
 
-		public IEnumerable<Field> getAllFields()
+		public IEnumerable<Field> GetAllFields()
 		{
-			if (super == null)
+			if (Super == null)
 			{
-				return fields;
+				return Fields;
 			}
 
-			return super.getAllFields().Concat(fields);
+			return Super.GetAllFields().Concat(Fields);
 		}
 	}
 }

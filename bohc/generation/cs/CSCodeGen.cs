@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.boh;
-using bohc.exceptions;
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.typesys;
-using bohc.generation.mangling;
+using Bohc.Boh;
+using Bohc.Exceptions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
+using Bohc.TypeSystem;
+using Bohc.Generation.Mangling;
 
-namespace bohc.generation.cs
+namespace Bohc.Generation
 {
 	public class CSCodeGen : ICodeGen
 	{
@@ -22,7 +22,7 @@ namespace bohc.generation.cs
 			this.mangler = mangler;
 		}
 
-		public void finish(IEnumerable<typesys.Type> types)
+		public void finish(IEnumerable<Bohc.TypeSystem.Type> types)
 		{
 
 		}
@@ -35,61 +35,61 @@ namespace bohc.generation.cs
 			}
 		}
 		
-		public void generateGeneralBit(IEnumerable<bohc.typesys.Type> types)
+		public void generateGeneralBit(IEnumerable<Bohc.TypeSystem.Type> types)
 		{
 		}
 
-		public void generateFor(bohc.typesys.Type t, IEnumerable<bohc.typesys.Type> others)
+		public void generateFor(Bohc.TypeSystem.Type t, IEnumerable<Bohc.TypeSystem.Type> others)
 		{
 			throw new System.NotImplementedException();
 		}
 	
-		public void generateFor(typesys.Class c, IEnumerable<typesys.Type> others)
+		public void generateFor(Bohc.TypeSystem.Class c, IEnumerable<Bohc.TypeSystem.Type> others)
 		{
 			StringBuilder builder = new StringBuilder();
 			builder.AppendLine();
 			builder.Append("[BohClass(\"");
-			builder.Append(c.fullName());
+			builder.Append(c.FullName());
 			builder.AppendLine("\")]");
 
-			if (c.modifiers.HasFlag(Modifiers.PUBLIC))
+			if (c.Modifiers.HasFlag(Modifiers.Public))
 			{
 				builder.Append("public ");
 			}
-			if (c.modifiers.HasFlag(Modifiers.PRIVATE))
+			if (c.Modifiers.HasFlag(Modifiers.Private))
 			{
 				builder.Append("internal ");
 			}
 
-			if (c.modifiers.HasFlag(Modifiers.ABSTRACT))
+			if (c.Modifiers.HasFlag(Modifiers.Abstract))
 			{
 				builder.Append("abstract ");
 			}
-			if (c.modifiers.HasFlag(Modifiers.FINAL))
+			if (c.Modifiers.HasFlag(Modifiers.Final))
 			{
 				builder.Append("sealed ");
 			}
 
 			builder.Append("class ");
 			builder.Append(mangler.getCName(c));
-			if (c.super != null || c.implements.Count > 0)
+			if (c.Super != null || c.Implements.Count > 0)
 			{
 				builder.Append(" : ");
 			}
-			if (c.super != null)
+			if (c.Super != null)
 			{
-				builder.Append(mangler.getCTypeName(c.super));
-				if (c.implements.Count > 0)
+				builder.Append(mangler.getCTypeName(c.Super));
+				if (c.Implements.Count > 0)
 				{
 					builder.Append(", ");
 				}
 			}
-			foreach (Interface iface in c.implements)
+			foreach (Interface iface in c.Implements)
 			{
 				builder.Append(mangler.getCTypeName(iface));
 				builder.Append(", ");
 			}
-			if (c.implements.Count > 0)
+			if (c.Implements.Count > 0)
 			{
 				builder.Remove(builder.Length - 2, 2);
 			}
@@ -98,17 +98,17 @@ namespace bohc.generation.cs
 
 			++indentation;
 
-			foreach (Field f in c.fields)
+			foreach (Field f in c.Fields)
 			{
 				addIndent(builder);
 
 				addFieldModifiers(c, builder);
-				builder.Append(f.identifier);
+				builder.Append(f.Identifier);
 
-				if (f.initial != null)
+				if (f.Initial != null)
 				{
 					builder.Append(" = ");
-					addExpression(builder, f.initial);
+					addExpression(builder, f.Initial);
 				}
 
 				builder.AppendLine(";");
@@ -117,23 +117,23 @@ namespace bohc.generation.cs
 
 		private void addFieldModifiers(Class c, StringBuilder builder)
 		{
-			if (c.modifiers.HasFlag(Modifiers.PUBLIC))
+			if (c.Modifiers.HasFlag(Modifiers.Public))
 			{
 				builder.Append("public ");
 			}
-			if (c.modifiers.HasFlag(Modifiers.PRIVATE))
+			if (c.Modifiers.HasFlag(Modifiers.Private))
 			{
 				builder.Append("private ");
 			}
-			if (c.modifiers.HasFlag(Modifiers.PRIVATE))
+			if (c.Modifiers.HasFlag(Modifiers.Private))
 			{
 				builder.Append("protected ");
 			}
-			if (c.modifiers.HasFlag(Modifiers.FINAL))
+			if (c.Modifiers.HasFlag(Modifiers.Final))
 			{
 				builder.Append("readonly ");
 			}
-			if (c.modifiers.HasFlag(Modifiers.STATIC))
+			if (c.Modifiers.HasFlag(Modifiers.Static))
 			{
 				builder.Append("static ");
 			}

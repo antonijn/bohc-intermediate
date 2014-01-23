@@ -1,6 +1,6 @@
 using System;
 
-namespace bohc.generation.mangling
+namespace Bohc.Generation.Mangling
 {
 	public class CSMangler : IMangler
 	{
@@ -8,104 +8,104 @@ namespace bohc.generation.mangling
 		{
 		}
 
-		public string getFieldInitName (bohc.typesys.Class c)
+		public string getFieldInitName (Bohc.TypeSystem.Class c)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getIncludeGuardName (bohc.typesys.Type type)
+		public string getIncludeGuardName (Bohc.TypeSystem.Type type)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getHeaderName (bohc.typesys.Type type)
+		public string getHeaderName (Bohc.TypeSystem.Type type)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getCodeFileName (bohc.typesys.Type type)
+		public string getCodeFileName (Bohc.TypeSystem.Type type)
 		{
-			return type.fullName().Replace('.', System.IO.Path.DirectorySeparatorChar) + ".cs";
+			return type.FullName().Replace('.', System.IO.Path.DirectorySeparatorChar) + ".cs";
 		}
 
-		public string getThisParamTypeName (bohc.typesys.Type type)
-		{
-			throw new System.NotImplementedException ();
-		}
-
-		public string getCTypeName (bohc.typesys.Type type)
-		{
-			return type.fullName();
-		}
-
-		public string getCStructName (bohc.typesys.Type type)
+		public string getThisParamTypeName (Bohc.TypeSystem.Type type)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getCName (bohc.typesys.Type type)
+		public string getCTypeName (Bohc.TypeSystem.Type type)
 		{
-			return type.name;
+			return type.FullName();
 		}
 
-		public string getNewName (bohc.typesys.Constructor constr)
-		{
-			return "new " + getCTypeName(constr.owner);
-		}
-
-		public string getVarName (bohc.typesys.Variable variable)
-		{
-			return variable.identifier;
-		}
-
-		public string getHeapVarDeclName (bohc.typesys.Variable variable)
+		public string getCStructName (Bohc.TypeSystem.Type type)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getHeapVarAssignName (bohc.typesys.Variable variable)
+		public string getCName (Bohc.TypeSystem.Type type)
+		{
+			return type.Name;
+		}
+
+		public string getNewName (Bohc.TypeSystem.Constructor constr)
+		{
+			return "new " + getCTypeName(constr.Owner);
+		}
+
+		public string getVarName (Bohc.TypeSystem.Variable variable)
+		{
+			return variable.Identifier;
+		}
+
+		public string getHeapVarDeclName (Bohc.TypeSystem.Variable variable)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getVarUsageName (bohc.typesys.Variable variable, int lambdaStack)
+		public string getHeapVarAssignName (Bohc.TypeSystem.Variable variable)
 		{
-			return variable.identifier;
+			throw new System.NotImplementedException ();
 		}
 
-		public string getParamTypeName (bohc.typesys.Parameter param)
+		public string getVarUsageName (Bohc.TypeSystem.Variable variable, int lambdaStack)
 		{
-			return param.identifier;
+			return variable.Identifier;
 		}
 
-		public string getParamTypeName (bohc.typesys.LambdaParam param)
+		public string getParamTypeName (Bohc.TypeSystem.Parameter param)
 		{
-			return param.identifier;
+			return param.Identifier;
 		}
 
-		public string getVFuncName (bohc.typesys.Function func)
+		public string getParamTypeName (Bohc.TypeSystem.LambdaParam param)
 		{
-			return func.identifier;
+			return param.Identifier;
 		}
 
-		public string getOpName (bohc.parsing.Operator op)
+		public string getVFuncName (Bohc.TypeSystem.Function func)
+		{
+			return func.Identifier;
+		}
+
+		public string getOpName (Bohc.Parsing.Operator op)
 		{
 			return op.representation;
 		}
 
-		public string getCFuncName (bohc.typesys.Function func)
+		public string getCFuncName (Bohc.TypeSystem.Function func)
 		{
-			return func.identifier;
+			return func.Identifier;
 		}
 
-		public string getVtableName (bohc.typesys.Class c)
+		public string getVtableName (Bohc.TypeSystem.Class c)
 		{
 			throw new System.NotImplementedException ();
 		}
 
-		public string getEnumeratorName (bohc.typesys.Enumerator e)
+		public string getEnumeratorName (Bohc.TypeSystem.Enumerator e)
 		{
-			return e.name;
+			return e.Name;
 		}
 	}
 }

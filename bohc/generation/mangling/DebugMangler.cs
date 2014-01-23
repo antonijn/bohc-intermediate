@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.boh;
-using bohc.exceptions;
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.typesys;
+using Bohc.Boh;
+using Bohc.Exceptions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
+using Bohc.TypeSystem;
 
-namespace bohc.generation.mangling
+namespace Bohc.Generation.Mangling
 {
 	public class DebugMangler : IMangler
 	{
@@ -18,22 +18,22 @@ namespace bohc.generation.mangling
 			return getCName(c) + "_fi";
 		}
 
-		public string getIncludeGuardName(typesys.Type type)
+		public string getIncludeGuardName(Bohc.TypeSystem.Type type)
 		{
 			return getCName(type) + "_H";
 		}
 
-		public string getHeaderName(typesys.Type type)
+		public string getHeaderName(Bohc.TypeSystem.Type type)
 		{
 			return "all.h";
 		}
 
-		public string getCodeFileName(typesys.Type type)
+		public string getCodeFileName(Bohc.TypeSystem.Type type)
 		{
 			return getCName(type) + ".c";
 		}
 
-		public string getThisParamTypeName(typesys.Type type)
+		public string getThisParamTypeName(Bohc.TypeSystem.Type type)
 		{
 			if (type is Struct)
 			{
@@ -42,35 +42,35 @@ namespace bohc.generation.mangling
 
 			if (type is Interface)
 			{
-				return getCTypeName(StdType.obj) + " const";
+				return getCTypeName(StdType.Obj) + " const";
 			}
 
 			return getCTypeName(type) + " const";
 		}
 
-		public string getCTypeName(typesys.Type type)
+		public string getCTypeName(Bohc.TypeSystem.Type type)
 		{
 			NativeType nt = type as NativeType;
 			if (nt != null)
 			{
-				int idxPtr = nt.crep.IndexOf('*');
+				int idxPtr = nt.CRep.IndexOf('*');
 				if (idxPtr != -1)
 				{
-					string prePtr = nt.crep.Substring(0, idxPtr != -1 ? idxPtr : nt.crep.Length);
+					string prePtr = nt.CRep.Substring(0, idxPtr != -1 ? idxPtr : nt.CRep.Length);
 
 					int lidxDot = prePtr.LastIndexOf('.');
 					string pkg = prePtr.Substring(0, lidxDot != -1 ? lidxDot : 0);
 					string cname = prePtr.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
 					// TODO: fix that null
-					typesys.Type t = typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname, null);
-					string ptrs = nt.crep.Substring(idxPtr);
+					Bohc.TypeSystem.Type t = Bohc.TypeSystem.Type.GetExisting(Package.GetFromStringExisting(pkg), cname, null);
+					string ptrs = nt.CRep.Substring(idxPtr);
 					return (t != null ? getCTypeName(t) : prePtr) + ptrs;
 				}
 
-				return nt.crep;
+				return nt.CRep;
 			}
 
-			if (type is Struct || type is FunctionRefType || type is typesys.Enum)
+			if (type is Struct || type is FunctionRefType || type is Bohc.TypeSystem.Enum)
 			{
 				return getCStructName(type);
 			}
@@ -82,7 +82,7 @@ namespace bohc.generation.mangling
 
 			if (type is Primitive)
 			{
-				return ((Primitive)type).cname;
+				return ((Primitive)type).CName;
 			}
 
 			if (type is NullType)
@@ -93,34 +93,34 @@ namespace bohc.generation.mangling
 			throw new NotImplementedException();
 		}
 
-		public string getCStructName(typesys.Type type)
+		public string getCStructName(Bohc.TypeSystem.Type type)
 		{
-			if (type is typesys.Enum)
+			if (type is Bohc.TypeSystem.Enum)
 			{
 				return "enum " + getCName(type);
 			}
 			return "struct " + getCName(type);
 		}
 
-		public string getCName(typesys.Type type)
+		public string getCName(Bohc.TypeSystem.Type type)
 		{
 			FunctionRefType frType = type as FunctionRefType;
 			if (frType != null)
 			{
 				StringBuilder sb = new StringBuilder("f_");
-				sb.Append(getCName(frType.retType));
-				foreach (typesys.Type t in frType.paramTypes)
+				sb.Append(getCName(frType.RetType));
+				foreach (Bohc.TypeSystem.Type t in frType.ParamTypes)
 				{
 					sb.Append(getCName(t));
 				}
 				return sb.ToString();
 			}
-			return type.name;
+			return type.Name;
 		}
 
 		public string getNewName(Constructor constr)
 		{
-			return "new_" + getCName(constr.owner) + getFuncAddition(constr);
+			return "new_" + getCName(constr.Owner) + getFuncAddition(constr);
 		}
 
 		public string getVarName(Variable variable)
@@ -133,27 +133,27 @@ namespace bohc.generation.mangling
 			if (variable is Local)
 			{
 				// FIXME: won't work if the local was created in the lambda itself
-				return variable.identifier;
+				return variable.Identifier;
 			}
 
 			if (variable is Parameter || variable is LambdaParam)
 			{
-				return variable.identifier;
+				return variable.Identifier;
 			}
 
 			if (variable is Field)
 			{
 				Field f = (Field)variable;
-				if (f.modifiers.HasFlag(Modifiers.STATIC))
+				if (f.Modifiers.HasFlag(Modifiers.Static))
 				{
-					return getCName(f.owner) + variable.identifier;
+					return getCName(f.Owner) + variable.Identifier;
 				}
-				return variable.identifier;
+				return variable.Identifier;
 			}
 
-			if (variable.identifier == "this")
+			if (variable.Identifier == "this")
 			{
-				if (variable.type is Struct)
+				if (variable.Type is Struct)
 				{
 					return "(*self)";
 				}
@@ -166,7 +166,7 @@ namespace bohc.generation.mangling
 		// to be used when an enclosed variable is declared (in the context struct)
 		public string getHeapVarDeclName(Variable variable)
 		{
-			if (variable.identifier == "this")
+			if (variable.Identifier == "this")
 			{
 				return "self";
 			}
@@ -191,11 +191,11 @@ namespace bohc.generation.mangling
 
 		public string getVarUsageName(Variable variable, int lambdaStack)
 		{
-			if (variable.enclosed)
+			if (variable.Enclosed)
 			{
-				if (variable.lambdaLevel == lambdaStack)
+				if (variable.LamdaLevel == lambdaStack)
 				{
-					if (variable.identifier == "this")
+					if (variable.Identifier == "this")
 					{
 						return getVarName(variable);
 					}
@@ -207,7 +207,7 @@ namespace bohc.generation.mangling
 				}
 				else
 				{
-					if (variable.identifier == "this")
+					if (variable.Identifier == "this")
 					{
 						return "(*ctx->self)";
 					}
@@ -222,7 +222,7 @@ namespace bohc.generation.mangling
 			Parameter param = variable as Parameter;
 			if (param != null)
 			{
-				if (param.modifiers.HasFlag(Modifiers.REF))
+				if (param.Modifiers.HasFlag(Modifiers.Ref))
 				{
 					return "(*" + getVarName(variable) + ")";
 				}
@@ -232,15 +232,15 @@ namespace bohc.generation.mangling
 
 		public string getParamTypeName(Parameter param)
 		{
-			if (param.modifiers.HasFlag(Modifiers.REF))
+			if (param.Modifiers.HasFlag(Modifiers.Ref))
 			{
-				return getCTypeName(param.type) + "* const";
+				return getCTypeName(param.Type) + "* const";
 			}
-			if (param.modifiers.HasFlag(Modifiers.FINAL))
+			if (param.Modifiers.HasFlag(Modifiers.Final))
 			{
-				return getCTypeName(param.type) + " const";
+				return getCTypeName(param.Type) + " const";
 			}
-			return getCTypeName(param.type);
+			return getCTypeName(param.Type);
 		}
 
 		public string getParamTypeName(LambdaParam param)
@@ -250,7 +250,7 @@ namespace bohc.generation.mangling
 			{
 				return getCTypeName(param.type) + "*";
 			}*/
-			return getCTypeName(param.type);
+			return getCTypeName(param.Type);
 		}
 
 		private uint hashString(string str)
@@ -284,7 +284,7 @@ namespace bohc.generation.mangling
 
 		public string getVFuncName(Function func)
 		{
-			return func.identifier + getFuncAddition(func);
+			return func.Identifier + getFuncAddition(func);
 		}
 
 		public string getOpName(Operator op)
@@ -294,16 +294,16 @@ namespace bohc.generation.mangling
 
 		public string getCFuncName(Function func)
 		{
-			if (func.modifiers.HasFlag(Modifiers.NATIVE))
+			if (func.Modifiers.HasFlag(Modifiers.Native))
 			{
-				return func.identifier;
+				return func.Identifier;
 			}
 
 			if (func is OverloadedOperator)
 			{
-				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which) + getFuncAddition(func);
+				return getCName(func.Owner) + "_op_" + getOpName(((OverloadedOperator)func).Which) + getFuncAddition(func);
 			}
-			return getCName(func.owner) + "_" + func.identifier + getFuncAddition(func);
+			return getCName(func.Owner) + "_" + func.Identifier + getFuncAddition(func);
 		}
 
 		public string getVtableName(Class c)
@@ -313,7 +313,7 @@ namespace bohc.generation.mangling
 
 		public string getEnumeratorName(Enumerator e)
 		{
-			return getCName(e.enumType) + e.name;
+			return getCName(e.EnumType) + e.Name;
 		}
 	}
 }

@@ -10,39 +10,39 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
-	public class Interface : typesys.Type
+	public class Interface : Bohc.TypeSystem.Type
 	{
-		public List<Interface> implements = new List<Interface>();
-		public readonly List<Function> functions = new List<Function>();
+		public List<Interface> Implements = new List<Interface>();
+		public readonly List<Function> Functions = new List<Function>();
 
-		private static readonly List<Interface> instances = new List<Interface>();
+		private static readonly List<Interface> Instances = new List<Interface>();
 
 		public Interface(Package package, Modifiers modifiers, string name)
 			: base(package, modifiers, name)
 		{
 		}
 
-		public IEnumerable<Function> getAllFuncs()
+		public IEnumerable<Function> GetAllFuncs()
 		{
-			return implements.SelectMany(x => x.functions).Concat(functions);
+			return Implements.SelectMany(x => x.Functions).Concat(Functions);
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			return new parsing.Literal(this, "NULL");
+			return new Parsing.Literal(this, "NULL");
 		}
 
-		public static Interface get(Package package, Modifiers modifiers, string name)
+		public static Interface Get(Package package, Modifiers modifiers, string name)
 		{
-			lock (instances)
+			lock (Instances)
 			{
-				Interface i = instances.SingleOrDefault(x => (x.package == package && x.name == name));
+				Interface i = Instances.SingleOrDefault(x => (x.Package == package && x.Name == name));
 				if (i == default(Interface))
 				{
 					Interface newi = new Interface(package, modifiers, name);
-					instances.Add(newi);
+					Instances.Add(newi);
 					return newi;
 				}
 
@@ -50,22 +50,22 @@ namespace bohc.typesys
 			}
 		}
 
-		public IEnumerable<Function> getFunctions(string id)
+		public IEnumerable<Function> GetFunctions(string id)
 		{
-			IEnumerable<Function> inThis = functions.Where(x => x.identifier == id).ToList();
-			return inThis.Concat(implements.SelectMany(x => x.getFunctions(id)));
+			IEnumerable<Function> inThis = Functions.Where(x => x.Identifier == id).ToList();
+			return inThis.Concat(Implements.SelectMany(x => x.GetFunctions(id)));
 		}
 
-		public override int extends(Type other)
+		public override int Extends(Type other)
 		{
 			if (other == this)
 			{
 				return 1;
 			}
 
-			foreach (Interface impl in implements)
+			foreach (Interface impl in Implements)
 			{
-				int extds = impl.extends(other);
+				int extds = impl.Extends(other);
 				if (extds > 0)
 				{
 					return extds + 1;

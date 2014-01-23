@@ -10,11 +10,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class ExprVariable : Expression
 	{
-		public readonly typesys.Variable refersto;
+		public readonly Bohc.TypeSystem.Variable refersto;
 
 		// NOTE:
 		// belongsto is null for static variables
@@ -22,38 +22,38 @@ namespace bohc.parsing
 		// refersto will be a field in that case, so the container class can be found out
 		public readonly Expression belongsto;
 
-		public ExprVariable(typesys.Variable refersto, Expression belongsto)
+		public ExprVariable(Bohc.TypeSystem.Variable refersto, Expression belongsto)
 		{
 			this.refersto = refersto;
 			this.belongsto = belongsto;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
-			return refersto.type;
+			return refersto.Type;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
-			typesys.Field f = refersto as typesys.Field;
+			Bohc.TypeSystem.Field f = refersto as Bohc.TypeSystem.Field;
 			if (f != null)
 			{
 				// type is not modifiable if final, unless in constructor
-				return !f.modifiers.HasFlag(typesys.Modifiers.FINAL) || 
-					(!ctx.modifiers.HasFlag(typesys.Modifiers.STATIC) && ctx is typesys.Constructor) ||
-					(ctx.modifiers.HasFlag(typesys.Modifiers.STATIC) && ctx is typesys.StaticConstructor);
+				return !f.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Final) || 
+					(!ctx.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Static) && ctx is Bohc.TypeSystem.Constructor) ||
+					(ctx.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Static) && ctx is Bohc.TypeSystem.StaticConstructor);
 			}
 
-			typesys.Local l = refersto as typesys.Local;
+			Bohc.TypeSystem.Local l = refersto as Bohc.TypeSystem.Local;
 			if (l != null)
 			{
-				return !(l.modifiers.HasFlag(typesys.Modifiers.FINAL) && l.type is typesys.Primitive);
+				return !(l.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Final) && l.Type is Bohc.TypeSystem.Primitive);
 			}
 
-			typesys.Parameter param = refersto as typesys.Parameter;
+			Bohc.TypeSystem.Parameter param = refersto as Bohc.TypeSystem.Parameter;
 			if (param != null)
 			{
-				return !param.modifiers.HasFlag(typesys.Modifiers.FINAL);
+				return !param.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Final);
 			}
 
 			return true;

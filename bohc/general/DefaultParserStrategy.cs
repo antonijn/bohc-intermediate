@@ -5,17 +5,16 @@ using System.Text;
 using System.Diagnostics;
 using System.Xml.Linq;
 
-using bohc.generation;
-using bohc.generation.c;
-using bohc.generation.mangling;
+using Bohc.Generation;
+using Bohc.Generation.C;
+using Bohc.Generation.Mangling;
 
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.parsing.expressions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
 
-using bohc.typesys;
+using Bohc.TypeSystem;
 
-namespace bohc.general
+namespace Bohc.General
 {
 	public class DefaultParserStrategy : IParserStrategy
 	{
@@ -34,7 +33,7 @@ namespace bohc.general
 
 		public void parse(Project input)
 		{
-			List<parsing.File> files = new List<parsing.File>();
+			List<Bohc.Parsing.File> files = new List<Bohc.Parsing.File>();
 
 			Stopwatch sw = new Stopwatch();
 			sw.Start();
@@ -43,13 +42,13 @@ namespace bohc.general
 
 			parseTP(files, fp);
 
-			typesys.Primitive.figureOutFunctionsForAll();
+			Bohc.TypeSystem.Primitive.FigureOutFunctionsForAll();
 
 			parseTCS(files, fp);
 
-			foreach (typesys.Enum e in typesys.Enum.instances)
+			foreach (Bohc.TypeSystem.Enum e in Bohc.TypeSystem.Enum.Instances)
 			{
-				e.sortOutFunctions(fp);
+				e.SortOutFunctions(fp);
 			}
 
 			parseTCP(files, fp);
@@ -64,7 +63,7 @@ namespace bohc.general
 			for (int i = 0; i < filenames.Length; ++i)
 			{
 				string file = System.IO.File.ReadAllText(filenames[i]);
-				parsing.File f = parser.parseFileTS(ref file);
+				Bohc.Parsing.File f = parser.parseFileTS(ref file);
 				files.Add(f);
 			}
 		}
@@ -74,114 +73,142 @@ namespace bohc.general
 			pstate = ParserState.TP;
 			foreach (File f in files)
 			{
+#if !DEBUG
 				try
 				{
-					if (f.type is typesys.Type)
+#endif
+					if (f.type is Bohc.TypeSystem.Type)
 					{
 						parser.parseFileTP(f);
-						//Console.WriteLine("Type parsing for: {0}", ((typesys.Type)f.type).fullName());
+						//Console.WriteLine("Type Parsing for: {0}", ((typesys.Type)f.type).fullName());
 					}
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 		}
 
 		private void parseTCS(List<File> filesassoc, IFileParser parser)
 		{
 			pstate = ParserState.TCS;
-			for (int i = 0; i < GenericType.typeInstances.Count; ++i)
+			for (int i = 0; i < GenericType.TypeInstances.Count; ++i)
 			{
-				File f = GenericType.typeInstances[i].file;
+				File f = GenericType.TypeInstances[i].File;
+#if !DEBUG
 				try
 				{
+#endif
 					parser.parseFileTCS(f);
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 			foreach (File f in filesassoc)
 			{
+#if !DEBUG
 				try
 				{
-					if (f.type is typesys.Type)
+#endif
+					if (f.type is Bohc.TypeSystem.Type)
 					{
 						//Console.WriteLine("Type Content skimming for: {0}", ((typesys.Type)f.type).fullName());
 						parser.parseFileTCS(f);
 					}
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 		}
 
 		private void parseTCP(List<File> filesassoc, IFileParser parser)
 		{
 			pstate = ParserState.TCP;
-			for (int i = 0; i < GenericType.typeInstances.Count; ++i)
+			for (int i = 0; i < GenericType.TypeInstances.Count; ++i)
 			{
-				File f = GenericType.typeInstances[i].file;
+				File f = GenericType.TypeInstances[i].File;
+#if !DEBUG
 				try
 				{
+#endif
 					parser.parseFileTCP(f);
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 			foreach (File f in filesassoc)
 			{
+#if !DEBUG
 				try
 				{
-					if (f.type is typesys.Type)
+#endif
+					if (f.type is Bohc.TypeSystem.Type)
 					{
-						//Console.WriteLine("Type Content parsing for: {0}", ((typesys.Type)f.type).fullName());
+						//Console.WriteLine("Type Content Parsing for: {0}", ((typesys.Type)f.type).fullName());
 						parser.parseFileTCP(f);
 					}
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 		}
 
 		private void parseCP(List<File> filesassoc, IFileParser parser)
 		{
 			pstate = ParserState.CP;
-			for (int i = 0; i < GenericType.typeInstances.Count; ++i)
+			for (int i = 0; i < GenericType.TypeInstances.Count; ++i)
 			{
-				File f = GenericType.typeInstances[i].file;
+				File f = GenericType.TypeInstances[i].File;
+#if !DEBUG
 				try
 				{
+#endif
 					parser.parseFileCP(f);
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 			foreach (File f in filesassoc)
 			{
+#if !DEBUG
 				try
 				{
-					if (f.type is typesys.Type)
+#endif
+					if (f.type is Bohc.TypeSystem.Type)
 					{
-						//Console.WriteLine("Code parsing for: {0}", ((typesys.Type)f.type).fullName());
+						//Console.WriteLine("Code Parsing for: {0}", ((typesys.Type)f.type).fullName());
 						parser.parseFileCP(f);
 					}
+#if !DEBUG
 				}
 				catch (Exception e)
 				{
-					Console.Error.WriteLine("ERROR: parsing file {0} failed: {1}", f, e.ToString());
+					Console.Error.WriteLine("ERROR: Parsing file {0} failed: {1}", f, e.ToString());
 				}
+#endif
 			}
 		}
 	}

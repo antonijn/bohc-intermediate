@@ -10,82 +10,82 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.parsing;
+using Bohc.Parsing;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class Function : IFunction
 	{
-		public readonly typesys.Type owner;
-		public readonly Modifiers modifiers;
-		public readonly Type returnType;
-		public readonly string identifier;
-		public readonly List<Parameter> parameters;
+		public readonly Bohc.TypeSystem.Type Owner;
+		public readonly Modifiers Modifiers;
+		public readonly Type ReturnType;
+		public readonly string Identifier;
+		public readonly List<Parameter> Parameters;
 
-		public readonly string bodystr;
-		public parsing.statements.Body body;
+		public readonly string BodyStr;
+		public Parsing.Statements.Body Body;
 
-		Modifiers IMember.getModifiers()
+		Modifiers IMember.GetModifiers()
 		{
-			return modifiers;
+			return Modifiers;
 		}
 
-		string IMember.getName()
+		string IMember.GetName()
 		{
-			return identifier;
+			return Identifier;
 		}
 
-		public Function(typesys.Type owner, Modifiers modifiers, typesys.Type returnType, string identifier, List<Parameter> parameters, string bodystr)
+		public Function(Bohc.TypeSystem.Type owner, Modifiers modifiers, Bohc.TypeSystem.Type returnType, string identifier, List<Parameter> parameters, string bodystr)
 		{
-			this.owner = owner;
-			this.modifiers = modifiers;
-			this.returnType = returnType;
-			this.identifier = identifier;
-			this.parameters = parameters;
-			this.bodystr = bodystr;
+			this.Owner = owner;
+			this.Modifiers = modifiers;
+			this.ReturnType = returnType;
+			this.Identifier = identifier;
+			this.Parameters = parameters;
+			this.BodyStr = bodystr;
 		}
 
-		public Function(typesys.Type owner, Modifiers modifiers, typesys.Type returnType, string identifier, List<Parameter> parameters, parsing.statements.Body body)
+		public Function(Bohc.TypeSystem.Type owner, Modifiers modifiers, Bohc.TypeSystem.Type returnType, string identifier, List<Parameter> parameters, Parsing.Statements.Body body)
 		{
-			this.owner = owner;
-			this.modifiers = modifiers;
-			this.returnType = returnType;
-			this.identifier = identifier;
-			this.parameters = parameters;
-			this.body = body;
+			this.Owner = owner;
+			this.Modifiers = modifiers;
+			this.ReturnType = returnType;
+			this.Identifier = identifier;
+			this.Parameters = parameters;
+			this.Body = body;
 		}
 
 		/// <summary>
 		/// Selects the function compatible with the given expressions.
 		/// </summary>
-		public static typesys.Function getCompatibleFunction(ref int i, string next, string str, parsing.File file, IEnumerable<typesys.Variable> locals, IEnumerable<typesys.Function> functions, out IEnumerable<Expression> parameters, typesys.Function ctx, IExpressionParser ep)
+		public static Bohc.TypeSystem.Function GetCompatibleFunction(ref int i, string next, string str, Parsing.File file, IEnumerable<Bohc.TypeSystem.Variable> locals, IEnumerable<Bohc.TypeSystem.Function> functions, out IEnumerable<Expression> parameters, Bohc.TypeSystem.Function ctx, IExpressionParser ep, char close)
 		{
 			//typesys.Function[] compatiblefs = functions.ToArray();
 
-			parameters = getStringParams(str, i, locals, file, ctx, ep);
+			parameters = GetStringParams(str, i, locals, file, ctx, ep, close);
 			IEnumerable<Expression> _parameters = parameters;
-			typesys.Function compatible = functions
-				.Where(x => x.parameters.Count == _parameters.Count())
-				.Select(x => new Tuple<typesys.Function, int[]>(x, getArrayParams(_parameters, x)))
+			Bohc.TypeSystem.Function compatible = functions
+				.Where(x => x.Parameters.Count == _parameters.Count())
+				.Select(x => new Tuple<Bohc.TypeSystem.Function, int[]>(x, GetArrayParams(_parameters, x)))
 				.Where(x => !x.Item2.Contains(0))
-				.Select(x => new Tuple<typesys.Function, int>(x.Item1, x.Item2.Sum()))
+				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x.Item1, x.Item2.Sum()))
 				.OrderBy(x => x.Item2)
-				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
+				.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0)
 				.Select(x => x.Item1)
 				.FirstOrDefault();
 
-			boh.Exception.require<exceptions.ParserException>(compatible != default(typesys.Function), "Method not found: " + next);
+			Boh.Exception.require<Exceptions.ParserException>(compatible != default(Bohc.TypeSystem.Function), "Method not found: " + next);
 
-			int closeParent = ParserTools.getMatchingBraceChar(str, i - 1, ')');
+			int closeParent = ParserTools.getMatchingBraceChar(str, i - 1, close);
 			i = closeParent + 1;
 			return compatible;
 		}
 
-		public static IEnumerable<Expression> getStringParams(string str, int i, IEnumerable<typesys.Variable> locals, parsing.File file, typesys.Function ctx, IExpressionParser ep)
+		public static IEnumerable<Expression> GetStringParams(string str, int i, IEnumerable<Bohc.TypeSystem.Variable> locals, Parsing.File file, Bohc.TypeSystem.Function ctx, IExpressionParser ep, char close)
 		{
-			int close = ParserTools.getMatchingBraceChar(str, i - 1, ')');
-			string paramstring = str.Substring(i - 1, close - i + 2);
-			Expression[] result = ParserTools.split(paramstring, 0, ')', ',')
+			int _close = ParserTools.getMatchingBraceChar(str, i - 1, close);
+			string paramstring = str.Substring(i - 1, _close - i + 2);
+			Expression[] result = ParserTools.split(paramstring, 0, close, ',')
 							.Select(x => x.Trim())
 							.Where(x => !string.IsNullOrEmpty(x))
 							.Select(x => ep.analyze(x, locals, file, ctx))
@@ -94,21 +94,21 @@ namespace bohc.typesys
 			return result;
 		}
 
-		public static int[] getArrayParams(IEnumerable<Expression> parameters, typesys.Function func)
+		public static int[] GetArrayParams(IEnumerable<Expression> parameters, Bohc.TypeSystem.Function func)
 		{
-			return getArrayParams(parameters.Select(x => x.getType()), func);
+			return GetArrayParams(parameters.Select(x => x.getType()), func);
 		}
-		public static int[] getArrayParams(IEnumerable<typesys.Type> parameters, typesys.Function func)
+		public static int[] GetArrayParams(IEnumerable<Bohc.TypeSystem.Type> parameters, Bohc.TypeSystem.Function func)
 		{
 			int i = 0;
 			int[] result = new int[parameters.Count()];
-			using (IEnumerator<typesys.Type> exprsns = parameters.GetEnumerator())
+			using (IEnumerator<Bohc.TypeSystem.Type> exprsns = parameters.GetEnumerator())
 			{
-				using (IEnumerator<typesys.Parameter> paramsf = func.parameters.GetEnumerator())
+				using (IEnumerator<Bohc.TypeSystem.Parameter> paramsf = func.Parameters.GetEnumerator())
 				{
 					while (exprsns.MoveNext() && paramsf.MoveNext())
 					{
-						result[i] = exprsns.Current.extends(paramsf.Current.type);
+						result[i] = exprsns.Current.Extends(paramsf.Current.Type);
 						++i;
 					}
 				}

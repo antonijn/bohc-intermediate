@@ -10,44 +10,44 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.parsing;
+using Bohc.Parsing;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class GenericType : IType
 	{
-		public static readonly List<GenericType> allGenTypes = new List<GenericType>();
-		public static readonly List<Type> typeInstances = new List<Type>();
+		public static readonly List<GenericType> AllGenTypes = new List<GenericType>();
+		public static readonly List<Type> TypeInstances = new List<Type>();
 
-		public readonly string[] genTypeNames;
-		public readonly string name;
+		public readonly string[] GenTypeNames;
+		public readonly string Name;
 
 		public GenericType(string[] genTypeNames, string name)
 		{
-			this.genTypeNames = genTypeNames;
-			this.name = name;
+			this.GenTypeNames = genTypeNames;
+			this.Name = name;
 
-			lock (allGenTypes)
+			lock (AllGenTypes)
 			{
-				allGenTypes.Add(this);
+				AllGenTypes.Add(this);
 			}
 		}
 
-		File IType.getFile()
+		File IType.GetFile()
 		{
-			return file;
+			return File;
 		}
 
-		void IType.setFile(File f)
+		void IType.SetFile(File f)
 		{
-			file = f;
+			File = f;
 		}
 
-		public File file;
+		public File File;
 
-		public readonly Dictionary<int, typesys.Type> types = new Dictionary<int, typesys.Type>();
+		private readonly Dictionary<int, Bohc.TypeSystem.Type> Types = new Dictionary<int, Bohc.TypeSystem.Type>();
 
-		public static int getArrHash<T>(T[] arr)
+		public static int GetArrHash<T>(T[] arr)
 		{
 			int result = 666;
 			foreach (T item in arr)
@@ -57,51 +57,51 @@ namespace bohc.typesys
 			return result;
 		}
 
-		public typesys.Type getTypeFor(typesys.Type[] what, IFileParser parser)
+		public Bohc.TypeSystem.Type GetTypeFor(Bohc.TypeSystem.Type[] what, IFileParser parser)
 		{
-			lock (types)
+			lock (Types)
 			{
-				int hash = getArrHash(what);
-				if (types.ContainsKey(hash))
+				int hash = GetArrHash(what);
+				if (Types.ContainsKey(hash))
 				{
-					return types[hash];
+					return Types[hash];
 				}
 
-				typesys.Type newType = getNewTypeFor(what, parser, hash);
+				Bohc.TypeSystem.Type newType = GetNewTypeFor(what, parser, hash);
 				return newType;
 			}
 		}
 
-		private Type getNewTypeFor(Type[] what, IFileParser parser, int hash)
+		private Type GetNewTypeFor(Type[] what, IFileParser parser, int hash)
 		{
 			// TODO: PROPER REPLACING FFS!!!
 
-			string code = ParserTools.remDupW(file.content).Replace(" ,", ",").Replace(", ", ",");
+			string code = ParserTools.remDupW(File.content).Replace(" ,", ",").Replace(", ", ",");
 			for (int i = 0; i < what.Length; ++i)
 			{
-				string gtname = genTypeNames[i];
+				string gtname = GenTypeNames[i];
 				Type w = what[i];
 
-				code = code.Replace(gtname, w.fullName());
+				code = code.Replace(gtname, w.FullName());
 			}
 
 			StringBuilder replaceWhat = new StringBuilder();
-			replaceWhat.Append(name);
+			replaceWhat.Append(Name);
 			replaceWhat.Append("<");
 			foreach (Type t in what)
 			{
-				replaceWhat.Append(t.fullName());
+				replaceWhat.Append(t.FullName());
 				replaceWhat.Append(",");
 			}
 			replaceWhat.Remove(replaceWhat.Length - 1, 1);
 			replaceWhat.Append(">");
 
 			StringBuilder byWhat = new StringBuilder();
-			byWhat.Append(name);
+			byWhat.Append(Name);
 			byWhat.Append("_");
 			foreach (Type t in what)
 			{
-				byWhat.Append(t.fullName().Replace(".", "_"));
+				byWhat.Append(t.FullName().Replace(".", "_"));
 				byWhat.Append("_");
 			}
 			byWhat.Remove(byWhat.Length - 1, 1);
@@ -111,8 +111,8 @@ namespace bohc.typesys
 			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
 
-			parsing.File newf = parser.parseFileTS(ref code);
-			types[hash] = (Type)newf.type;
+			Parsing.File newf = parser.parseFileTS(ref code);
+			Types[hash] = (Type)newf.type;
 			//parser.proj().pstrat.registerRtType(newf.type as typesys.Type);
 			parser.parseFileTP(newf);
 			if (parser.proj().pstrat.getpstate() >= ParserState.TCS)
@@ -128,38 +128,38 @@ namespace bohc.typesys
 				parser.parseFileCP(newf);
 			}
 
-			newf.type.setFile(newf);
+			newf.type.SetFile(newf);
 
 			try
 			{
 				replaceWhat.Clear();
-				replaceWhat.Append(name);
+				replaceWhat.Append(Name);
 				replaceWhat.Append("<");
 				foreach (Type t in what)
 				{
-					replaceWhat.Append(t.externName());
+					replaceWhat.Append(t.ExternName());
 					replaceWhat.Append(",");
 				}
 				replaceWhat.Remove(replaceWhat.Length - 1, 1);
 				replaceWhat.Append(">");
 
-				((Type)newf.type).originalGenType = this;
-				((Type)newf.type).genname = replaceWhat.ToString();
+				((Type)newf.type).OriginalGenType = this;
+				((Type)newf.type).GenName = replaceWhat.ToString();
 
-				typeInstances.Add((Type)newf.type);
+				TypeInstances.Add((Type)newf.type);
 
 				return (Type)newf.type;
 			}
 			catch
 			{
 				StringBuilder typestrrep = new StringBuilder();
-				foreach (typesys.Type t in what)
+				foreach (Bohc.TypeSystem.Type t in what)
 				{
-					typestrrep.Append(t.fullName());
+					typestrrep.Append(t.FullName());
 					typestrrep.Append(", ");
 				}
 				typestrrep.Remove(typestrrep.Length - 2, 2);
-				boh.Exception._throw<exceptions.CodeGenException>(typestrrep.ToString() + " are not valid types for " + name);
+				Boh.Exception._throw<Exceptions.CodeGenException>(typestrrep.ToString() + " are not valid types for " + Name);
 				return null;
 			}
 		}

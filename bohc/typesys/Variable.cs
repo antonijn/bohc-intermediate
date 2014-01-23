@@ -10,21 +10,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class Variable
 	{
-		public readonly string identifier;
-		public readonly typesys.Type type;
+		public readonly string Identifier;
+		public readonly Bohc.TypeSystem.Type Type;
 
 		// 0 if not in lambda, 1 if in lambda, 2 if in lambda in lambda, etc.
-		public int lambdaLevel = 0;
-		public bool enclosed = false;
+		public int LamdaLevel = 0;
+		public bool Enclosed = false;
 
-		public Variable(string identifier, typesys.Type type)
+		public Variable(string identifier, Bohc.TypeSystem.Type type)
 		{
-			this.identifier = identifier;
-			this.type = type;
+			this.Identifier = identifier;
+			this.Type = type;
 		}
 	}
 }

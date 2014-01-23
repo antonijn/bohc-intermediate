@@ -10,23 +10,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class NullType : Type
 	{
-		public static readonly NullType NULL = new NullType();
+		public static readonly NullType Null = new NullType();
 
 		private NullType()
-			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, "\r")
+			: base(Package.Global, Modifiers.Public | Modifiers.Final, "\r")
 		{
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			return new parsing.Literal(this, "NULL");
+			return new Parsing.Literal(this, "NULL");
 		}
 
-		public override int extends(Type other)
+		public override int Extends(Type other)
 		{
 			if (other is Class || other is Interface)
 			{

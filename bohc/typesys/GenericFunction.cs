@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class GenericFunction : IFunction
 	{
@@ -15,15 +15,15 @@ namespace bohc.typesys
 		public readonly List<Parameter> parameters;
 
 		public readonly string bodystr;
-		public parsing.statements.Body body;*/
+		public Parsing.Statements.Body body;*/
 
-		Modifiers IMember.getModifiers()
+		Modifiers IMember.GetModifiers()
 		{
 			throw new NotImplementedException();
 			//return modifiers;
 		}
 
-		string IMember.getName()
+		string IMember.GetName()
 		{
 			throw new NotImplementedException();
 			//return identifier;

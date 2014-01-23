@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class ExprEnumerator : Expression
 	{
-		public readonly typesys.Enumerator enumerator;
+		public readonly Bohc.TypeSystem.Enumerator enumerator;
 
-		public ExprEnumerator(typesys.Enumerator enumerator)
+		public ExprEnumerator(Bohc.TypeSystem.Enumerator enumerator)
 		{
 			this.enumerator = enumerator;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
-			return enumerator.enumType;
+			return enumerator.EnumType;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

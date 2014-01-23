@@ -10,17 +10,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public sealed class Enumerator
 	{
-		public readonly string name;
-		public readonly Enum enumType;
+		public readonly string Name;
+		public readonly Enum EnumType;
 
 		public Enumerator(string name, Enum enumType)
 		{
-			this.name = name;
-			this.enumType = enumType;
+			this.Name = name;
+			this.EnumType = enumType;
 		}
 	}
 }

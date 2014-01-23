@@ -12,17 +12,16 @@ using System.Text;
 using System.Diagnostics;
 using System.Xml.Linq;
 
-using bohc.generation;
-using bohc.generation.c;
-using bohc.generation.mangling;
+using Bohc.Generation;
+using Bohc.Generation.C;
+using Bohc.Generation.Mangling;
 
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.parsing.expressions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
 
-using bohc.general;
+using Bohc.General;
 
-namespace bohc
+namespace Bohc
 {
 	public enum ParserState
 	{
@@ -41,14 +40,14 @@ namespace bohc
 #if DEBUG
 			args = new string[]
 			{
-				"/home/antonijn/code/cs/bohp/bohp/bin/Release/hw/MainClass.boh",
+				"TestClass.boh",
 				"-n",
 			};
 #endif
 
 			Project p = new Project(args);
-			p.parse();
-			p.build();
+			p.Parse();
+			p.Build();
 		}
 	}
 }

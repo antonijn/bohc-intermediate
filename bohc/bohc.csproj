@@ -49,7 +49,6 @@
     <Compile Include="parsing\expressions\Operator.cs" />
     <Compile Include="parsing\expressions\ExprPackage.cs" />
     <Compile Include="parsing\expressions\RefExpression.cs" />
-    <Compile Include="parsing\expressions\SuperVar.cs" />
     <Compile Include="parsing\expressions\TypeCast.cs" />
     <Compile Include="parsing\ParserTools.cs" />
     <Compile Include="parsing\statements\Body.cs" />
@@ -78,7 +77,6 @@
     <Compile Include="parsing\statements\TryStatement.cs" />
     <Compile Include="parsing\statements\VarDeclaration.cs" />
     <Compile Include="parsing\statements\WhileStatement.cs" />
-    <Compile Include="parsing\expressions\ThisVar.cs" />
     <Compile Include="parsing\expressions\UnaryOperation.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -125,6 +123,9 @@
     <Compile Include="parsing\FileParser.cs" />
     <Compile Include="general\ICompilerStrategy.cs" />
     <Compile Include="general\DefaultCompilerStrategy.cs" />
+    <Compile Include="typesys\Indexer.cs" />
+    <Compile Include="parsing\expressions\IndexerCall.cs" />
+    <Compile Include="parsing\expressions\SetIndexerCall.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">

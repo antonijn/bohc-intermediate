@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-using bohc.generation;
-using bohc.generation.mangling;
-using bohc.generation.c;
+using Bohc.Generation;
+using Bohc.Generation.Mangling;
+using Bohc.Generation.C;
 
-namespace bohc.general
+namespace Bohc.General
 {
 	public class DefaultCompilerStrategy : ICompilerStrategy
 	{
@@ -31,11 +31,11 @@ namespace bohc.general
 
 		public void compile(Project p)
 		{
-			IEnumerable<typesys.Type> types =
-				typesys.Type.types.Where(x => !(x is typesys.Primitive));
+			IEnumerable<Bohc.TypeSystem.Type> types =
+				Bohc.TypeSystem.Type.Types.Where(x => !(x is Bohc.TypeSystem.Primitive));
 			codegen.generateGeneralBit(types);
 
-			foreach (typesys.Type type in types)
+			foreach (Bohc.TypeSystem.Type type in types)
 			{
 				codegen.generateFor(type, types);
 			}

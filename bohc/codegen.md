@@ -15,10 +15,10 @@ The writing of the header file has multiple steps:
 		- <stdint.h>
 		- <stdbool.h>
 		- <stddef.h>
-		- "boh_compiler.h"
-			- This file contains boh-to-c and c-to-boh marshalling functions, used for
-				- String <-> char pointer conversion (boh-to-c and c-to-boh)
-				- Array <-> pointer conversion (boh-to-c and c-to-boh)
+		- "Boh_compiler.h"
+			- This file contains Boh-to-c and c-to-Boh marshalling functions, used for
+				- String <-> char pointer conversion (Boh-to-c and c-to-Boh)
+				- Array <-> pointer conversion (Boh-to-c and c-to-Boh)
 1.2. Writing the struct prototype
 	- C doesn't actually have these, but it allows the use of the class as a pointer, which is exactly what we want
 1.3. Writing function prototypes 

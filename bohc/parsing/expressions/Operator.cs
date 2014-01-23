@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class Operator
 	{
@@ -39,14 +39,14 @@ namespace bohc.parsing
 			IEnumerable<Operator> result = operators.Where(x => x.representation == op &&
 				(otype == OperationType.BINARY ? BinaryOperation.BINARY_PRECEDENCES.Contains(x.precedence) :
 				(otype == OperationType.UNARY ? UnaryOperation.UNARY_PRECENDENCES.Contains(x.precedence) : true)));
-			boh.Exception.require<exceptions.ParserException>(result.Count() != 0, "No operator found for '" + op + "'");
+			Boh.Exception.require<Exceptions.ParserException>(result.Count() != 0, "No operator found for '" + op + "'");
 			if (result.Count() == 2)
 			{
 				if (result.First() == UnaryOperation.INCREMENT || result.First() == UnaryOperation.DECREMENT)
 				{
 					return result.First();
 				}
-				return result.Single(x => !parsing.UnaryOperation.UNARY_PRECENDENCES.Contains(x.precedence));
+				return result.Single(x => !Bohc.Parsing.UnaryOperation.UNARY_PRECENDENCES.Contains(x.precedence));
 			}
 
 			return result.Single();

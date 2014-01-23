@@ -10,13 +10,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public class CatchStatement : BodyStatement
 	{
-		public readonly typesys.Parameter param;
+		public readonly Bohc.TypeSystem.Parameter param;
 
-		public CatchStatement(typesys.Parameter param, Body body)
+		public CatchStatement(Bohc.TypeSystem.Parameter param, Body body)
 			: base(body)
 		{
 			this.param = param;

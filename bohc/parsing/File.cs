@@ -10,9 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.typesys;
+using Bohc.TypeSystem;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class File
 	{
@@ -34,6 +34,11 @@ namespace bohc.parsing
 			this.imports = imports;
 			this.package = package;
 			this.content = content;
+		}
+
+		public override string ToString()
+		{
+			return type.ToString();
 		}
 	}
 }

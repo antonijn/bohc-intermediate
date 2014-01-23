@@ -5,7 +5,7 @@
 // Please refer to the long version for a list of rights and restrictions
 // pertaining to source file use and modification.
 
-namespace bohc.boh
+namespace Bohc.Boh
 {
 	public class Exception : System.Exception
 	{
@@ -17,7 +17,7 @@ namespace bohc.boh
 		}
 
 		public static void require<T>(bool cond, string msg)
-			where T : boh.Exception, new()
+			where T : Boh.Exception, new()
 		{
 			if (!cond)
 			{
@@ -26,7 +26,7 @@ namespace bohc.boh
 		}
 
 		public static void _throw<T>(string msg)
-			where T : boh.Exception, new()
+			where T : Boh.Exception, new()
 		{
 			T exc = new T();
 			exc.whatsWrong = msg;

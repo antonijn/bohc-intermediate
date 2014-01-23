@@ -1,6 +1,6 @@
 using System;
 
-namespace bohc.general
+namespace Bohc.General
 {
 	public interface ICompilerStrategy
 	{

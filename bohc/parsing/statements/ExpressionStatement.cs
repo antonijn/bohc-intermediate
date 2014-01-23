@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public sealed class ExpressionStatement : Statement
 	{
@@ -18,7 +18,7 @@ namespace bohc.parsing.statements
 
 		public ExpressionStatement(Expression expression)
 		{
-			boh.Exception.require<exceptions.ParserException>(expression.isStatement(), "Expression is not a statement");
+			Boh.Exception.require<Exceptions.ParserException>(expression.isStatement(), "Expression is not a statement");
 
 			this.expression = expression;
 		}

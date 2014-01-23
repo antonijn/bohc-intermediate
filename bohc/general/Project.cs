@@ -5,17 +5,16 @@ using System.Text;
 using System.Diagnostics;
 using System.Xml.Linq;
 
-using bohc.generation;
-using bohc.generation.c;
-using bohc.generation.mangling;
+using Bohc.Generation;
+using Bohc.Generation.C;
+using Bohc.Generation.Mangling;
 
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.parsing.expressions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
 
-using bohc.typesys;
+using Bohc.TypeSystem;
 
-namespace bohc.general
+namespace Bohc.General
 {
 	public class Project
 	{
@@ -146,16 +145,16 @@ namespace bohc.general
 			}
 		}
 
-		public void parse()
+		public void Parse()
 		{
 			pstrat.parse(this);
 		}
 
-		public void build()
+		public void Build()
 		{
 			cstrat.compile(this);
 
-			buildgcc(mangler, typesys.Type.types.Where(x => !(x is Primitive) && !x.isExtern()));
+			buildgcc(mangler, Bohc.TypeSystem.Type.Types.Where(x => !(x is Primitive) && !x.IsExtern()));
 
 			if (library)
 			{
@@ -165,14 +164,14 @@ namespace bohc.general
 
 		private void writeInstallScript()
 		{
-			foreach (typesys.GenericType g in typesys.GenericType.allGenTypes)
+			foreach (Bohc.TypeSystem.GenericType g in Bohc.TypeSystem.GenericType.AllGenTypes)
 			{
 				string str = outputDir + System.IO.Path.DirectorySeparatorChar + getGenTypePath(g);
 				if (!System.IO.Directory.Exists(System.IO.Path.GetDirectoryName(str)))
 				{
 					System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(str));
 				}
-				System.IO.File.WriteAllText(str, g.file.content);
+				System.IO.File.WriteAllText(str, g.File.content);
 			}
 
 			StringBuilder b = new StringBuilder();
@@ -199,22 +198,22 @@ namespace bohc.general
 				.WaitForExit();
 		}
 
-		private string getGenTypePath(typesys.GenericType type)
+		private string getGenTypePath(Bohc.TypeSystem.GenericType type)
 		{
 			StringBuilder builder = new StringBuilder();
 			builder.Append(output);
 			builder.Append(".gen");
 			builder.Append(System.IO.Path.DirectorySeparatorChar);
 
-			builder.Append(type.file.package.ToString().Replace('.', System.IO.Path.DirectorySeparatorChar));
-			if (type.file.package != typesys.Package.GLOBAL)
+			builder.Append(type.File.package.ToString().Replace('.', System.IO.Path.DirectorySeparatorChar));
+			if (type.File.package != Bohc.TypeSystem.Package.Global)
 			{
 				builder.Append("/");
 			}
-			return builder.Append(type.name).Append(".boh").ToString();
+			return builder.Append(type.Name).Append(".Boh").ToString();
 		}
 
-		private void buildgcc(IMangler mangler, IEnumerable<bohc.typesys.Type> types)
+		private void buildgcc(IMangler mangler, IEnumerable<Bohc.TypeSystem.Type> types)
 		{
 			if (!System.IO.Directory.Exists(outputDir))
 			{
@@ -263,7 +262,7 @@ namespace bohc.general
 					script.Append(s);
 					script.Append(" ");
 				}
-				foreach (typesys.Type type in types)
+				foreach (Bohc.TypeSystem.Type type in types)
 				{
 					script.Append(" .c/");
 					script.Append(mangler.getCodeFileName(type));
@@ -323,7 +322,7 @@ namespace bohc.general
 					script.Append(s);
 					script.Append(" ");
 				}
-				foreach (typesys.Type type in types)
+				foreach (Bohc.TypeSystem.Type type in types)
 				{
 					script.Append(" .c/");
 					script.Append(mangler.getCodeFileName(type));
@@ -350,108 +349,108 @@ namespace bohc.general
 			if (library)
 			{
 				new XDocument(new XElement("lib",
-				                           types.Where(x => x.originalGenType == null).Select(getXElementForType)
-				                           .Concat(typesys.GenericType.allGenTypes.Select(getXElementsForType))))
+				                           types.Where(x => x.OriginalGenType == null).Select(getXElementForType)
+				                           .Concat(Bohc.TypeSystem.GenericType.AllGenTypes.Select(getXElementsForType))))
 					.Save(outputDir + System.IO.Path.DirectorySeparatorChar + output + ".xml");
 			}
 		}
 
-		private XElement getXElementsForType(typesys.GenericType t)
+		private XElement getXElementsForType(Bohc.TypeSystem.GenericType t)
 		{
-			XElement x = new XElement("gentype", t.genTypeNames.Select(z =>
+			XElement x = new XElement("gentype", t.GenTypeNames.Select(z =>
 			                                                           {
 				XElement tmp = new XElement("param");
 				tmp.SetAttributeValue("name", z);
 				return tmp;
 			}));
-			x.SetAttributeValue("name", t.file.package.ToString() + ((t.file.package != typesys.Package.GLOBAL) ? "." + t.name : t.name));
+			x.SetAttributeValue("name", t.File.package.ToString() + ((t.File.package != Bohc.TypeSystem.Package.Global) ? "." + t.Name : t.Name));
 			x.SetAttributeValue("file", getGenTypePath(t));
 			return x;
 		}
 
-		private XElement getXElementForType(typesys.Type t)
+		private XElement getXElementForType(Bohc.TypeSystem.Type t)
 		{
-			typesys.Class c = t as typesys.Class;
+			Bohc.TypeSystem.Class c = t as Bohc.TypeSystem.Class;
 			if (c != null)
 			{
-				XElement x = new XElement(c is typesys.Struct ? "struct" : "class", getFieldXElements(c)
-				                          .Concat(getFunctionsXElements(c.functions)));
-				x.SetAttributeValue("name", c.externName());
-				if (c.super != null)
+				XElement x = new XElement(c is Bohc.TypeSystem.Struct ? "struct" : "class", getFieldXElements(c)
+				                          .Concat(getFunctionsXElements(c.Functions)));
+				x.SetAttributeValue("name", c.ExternName());
+				if (c.Super != null)
 				{
-					x.SetAttributeValue("super", c.super.externName());
+					x.SetAttributeValue("super", c.Super.ExternName());
 				}
-				x.SetAttributeValue("modifiers", c.modifiers.ToString().ToLowerInvariant().Replace(",", ""));
+				x.SetAttributeValue("modifiers", c.Modifiers.ToString().ToLowerInvariant().Replace(",", ""));
 				return x;
 			}
 
-			typesys.Interface i = t as typesys.Interface;
+			Bohc.TypeSystem.Interface i = t as Bohc.TypeSystem.Interface;
 			if (i != null)
 			{
-				XElement x = new XElement("interface", getFunctionsXElements(c.functions));
-				x.SetAttributeValue("name", i.externName());
-				x.SetAttributeValue("modifiers", i.modifiers.ToString().ToLowerInvariant().Replace(",", ""));
+				XElement x = new XElement("interface", getFunctionsXElements(c.Functions));
+				x.SetAttributeValue("name", i.ExternName());
+				x.SetAttributeValue("modifiers", i.Modifiers.ToString().ToLowerInvariant().Replace(",", ""));
 				return x;
 			}
 
-			typesys.Enum e = t as typesys.Enum;
+			Bohc.TypeSystem.Enum e = t as Bohc.TypeSystem.Enum;
 			if (e != null)
 			{
-				XElement x = new XElement("enum", e.enumerators.Select(y =>
+				XElement x = new XElement("enum", e.Enumerators.Select(y =>
 				                                                       {
 					XElement z = new XElement("enumerator");
-					z.SetAttributeValue("name", y.name);
+					z.SetAttributeValue("name", y.Name);
 					return z;
 				}));
-				x.SetAttributeValue("name", e.externName());
-				x.SetAttributeValue("modifiers", e.modifiers.ToString().ToLowerInvariant().Replace(",", ""));
+				x.SetAttributeValue("name", e.ExternName());
+				x.SetAttributeValue("modifiers", e.Modifiers.ToString().ToLowerInvariant().Replace(",", ""));
 				return x;
 			}
 
 			throw new NotImplementedException();
 		}
 
-		private IEnumerable<XElement> getFieldXElements(bohc.typesys.Class c)
+		private IEnumerable<XElement> getFieldXElements(Bohc.TypeSystem.Class c)
 		{
-			return c.fields.Select(x =>
+			return c.Fields.Select(x =>
 			                       {
 				XElement xe = new XElement("field");
-				xe.SetAttributeValue("id", x.identifier);
-				xe.SetAttributeValue("type", x.type.externName());
-				xe.SetAttributeValue("modifiers", x.modifiers.ToString().ToLowerInvariant().Replace(",", ""));
+				xe.SetAttributeValue("id", x.Identifier);
+				xe.SetAttributeValue("type", x.Type.ExternName());
+				xe.SetAttributeValue("modifiers", x.Modifiers.ToString().ToLowerInvariant().Replace(",", ""));
 				return xe;
 			});
 		}
 
-		private IEnumerable<XElement> getFunctionsXElements(IEnumerable<typesys.Function> functions)
+		private IEnumerable<XElement> getFunctionsXElements(IEnumerable<Bohc.TypeSystem.Function> functions)
 		{
 			return functions.Select(x =>
 			                        {
 				XElement xe = new XElement("method", getParamXElements(x));
-				xe.SetAttributeValue("id", x.identifier);
-				xe.SetAttributeValue("type", x.returnType.externName());
-				if (x.modifiers != bohc.typesys.Modifiers.NONE)
+				xe.SetAttributeValue("id", x.Identifier);
+				xe.SetAttributeValue("type", x.ReturnType.ExternName());
+				if (x.Modifiers != Bohc.TypeSystem.Modifiers.None)
 				{
-					xe.SetAttributeValue("modifiers", x.modifiers.ToString().ToLowerInvariant().Replace(",", ""));
+					xe.SetAttributeValue("modifiers", x.Modifiers.ToString().ToLowerInvariant().Replace(",", ""));
 				}
 				return xe;
 			});
 		}
 
-		private XElement[] getParamXElements(bohc.typesys.Function x)
+		private XElement[] getParamXElements(Bohc.TypeSystem.Function x)
 		{
-			if (x.parameters.Count == 0)
+			if (x.Parameters.Count == 0)
 			{
 				return Enumerable.Empty<XElement>().ToArray();
 			}
-			return x.parameters.Select(z =>
+			return x.Parameters.Select(z =>
 			                           {
 				XElement xe = new XElement("param");
-				xe.SetAttributeValue("id", z.identifier);
-				xe.SetAttributeValue("type", z.type.externName());
-				if (z.modifiers != bohc.typesys.Modifiers.NONE)
+				xe.SetAttributeValue("id", z.Identifier);
+				xe.SetAttributeValue("type", z.Type.ExternName());
+				if (z.Modifiers != Bohc.TypeSystem.Modifiers.None)
 				{
-					xe.SetAttributeValue("modifiers", z.modifiers.ToString().Replace('|', ' '));
+					xe.SetAttributeValue("modifiers", z.Modifiers.ToString().Replace('|', ' '));
 				}
 				return xe;
 			}).ToArray();
@@ -465,7 +464,7 @@ namespace bohc.general
 		private void loadExtern(string ext, IFileParser parser)
 		{
 			// call static constructors
-			typesys.Primitive.BOOLEAN.GetType();
+			Bohc.TypeSystem.Primitive.Boolean.GetType();
 
 			XDocument doc = XDocument.Load(ext + ".xml");
 			XElement root = doc.Root;
@@ -480,9 +479,9 @@ namespace bohc.general
 			externTcsTcp(parser, types);
 		}
 
-		private void externTcsTcp(IFileParser parser, List<bohc.typesys.Type> types)
+		private void externTcsTcp(IFileParser parser, List<Bohc.TypeSystem.Type> types)
 		{
-			foreach (typesys.Type t in types)
+			foreach (Bohc.TypeSystem.Type t in types)
 			{
 				externTcsTcpClass(t, parser);
 				externTcsTcpInterface(parser, t);
@@ -490,23 +489,23 @@ namespace bohc.general
 			}
 		}
 
-		private void externTcsTcpClass(typesys.Type t, IFileParser parser)
+		private void externTcsTcpClass(Bohc.TypeSystem.Type t, IFileParser parser)
 		{
-			typesys.Class c = t as typesys.Class;
+			Bohc.TypeSystem.Class c = t as Bohc.TypeSystem.Class;
 			if (c != null)
 			{
-				var super = t.xelement.Attribute("super");
+				var super = t.XElement.Attribute("super");
 				if (super != null)
 				{
-					c.super = (typesys.Class)typesys.Class.getExisting(extname(super.Value), parser);
+					c.Super = (Bohc.TypeSystem.Class)Bohc.TypeSystem.Class.GetExisting(extname(super.Value), parser);
 				}
-				foreach (XElement impl in t.xelement.Elements("implements"))
+				foreach (XElement impl in t.XElement.Elements("implements"))
 				{
 					string implstr = impl.Value;
-					c.implement((typesys.Interface)typesys.Interface.getExisting(extname(implstr), parser));
+					c.Implement((Bohc.TypeSystem.Interface)Bohc.TypeSystem.Interface.GetExisting(extname(implstr), parser));
 				}
 				addFunctions(t, parser, c);
-				foreach (XElement f in t.xelement.Elements("field"))
+				foreach (XElement f in t.XElement.Elements("field"))
 				{
 					string name = f.Attribute("id").Value;
 					string mods = f.Attribute("modifiers").Value;
@@ -515,38 +514,38 @@ namespace bohc.general
 					{
 						System.Diagnostics.Debugger.Break();
 					}*/
-					typesys.Field field = new bohc.typesys.Field(typesys.ModifierHelper.getModifiersFromString(mods), name, typesys.Type.getExisting(type, parser), c, null);
-					c.addMember(field);
+					Bohc.TypeSystem.Field field = new Bohc.TypeSystem.Field(Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(mods), name, Bohc.TypeSystem.Type.GetExisting(type, parser), c, null);
+					c.AddMember(field);
 				}
 			}
 		}
 
-		private void addFunctions(bohc.typesys.Type t, IFileParser parser, bohc.typesys.Class c)
+		private void addFunctions(Bohc.TypeSystem.Type t, IFileParser parser, Bohc.TypeSystem.Class c)
 		{
-			foreach (XElement met in t.xelement.Elements("method"))
+			foreach (XElement met in t.XElement.Elements("method"))
 			{
 				string name = met.Attribute("id").Value;
 				string mods = met.Attribute("modifiers").Value;
 				string rettype = extname(met.Attribute("type").Value);
-				typesys.Function f = null;
+				Bohc.TypeSystem.Function f = null;
 				if (name == "this")
 				{
-					f = new bohc.typesys.Constructor(typesys.ModifierHelper.getModifiersFromString(mods), c, new List<bohc.typesys.Parameter>(), string.Empty);
+					f = new Bohc.TypeSystem.Constructor(Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(mods), c, new List<Bohc.TypeSystem.Parameter>(), string.Empty);
 				}
 				else if (name == "static")
 				{
-					f = new bohc.typesys.StaticConstructor(c, string.Empty);
+					f = new Bohc.TypeSystem.StaticConstructor(c, string.Empty);
 				}
-				else if (parsing.BinaryOperation.isOperator(name))
+				else if (Bohc.Parsing.BinaryOperation.isOperator(name))
 				{
-					f = new typesys.OverloadedOperator(c, parsing.BinaryOperation.get(name),
-					                                   typesys.Type.getExisting(rettype, parser),
-					                                   new List<bohc.typesys.Parameter>(),
+					f = new Bohc.TypeSystem.OverloadedOperator(c, Bohc.Parsing.BinaryOperation.get(name),
+					                                   Bohc.TypeSystem.Type.GetExisting(rettype, parser),
+					                                   new List<Bohc.TypeSystem.Parameter>(),
 					                                   string.Empty);
 				}
 				else
 				{
-					f = new bohc.typesys.Function(t, typesys.ModifierHelper.getModifiersFromString(mods), typesys.Type.getExisting(rettype, parser), name, new List<bohc.typesys.Parameter>(), string.Empty);
+					f = new Bohc.TypeSystem.Function(t, Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(mods), Bohc.TypeSystem.Type.GetExisting(rettype, parser), name, new List<Bohc.TypeSystem.Parameter>(), string.Empty);
 				}
 				foreach (XElement p in met.Elements("param"))
 				{
@@ -558,57 +557,57 @@ namespace bohc.general
 					{
 						pmods = pmodsattr.Value;
 					}
-					typesys.Parameter param = new bohc.typesys.Parameter(f, typesys.ModifierHelper.getModifiersFromString(pmods), pid, typesys.Type.getExisting(extname(pt), parser));
-					f.parameters.Add(param);
+					Bohc.TypeSystem.Parameter param = new Bohc.TypeSystem.Parameter(f, Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(pmods), pid, Bohc.TypeSystem.Type.GetExisting(extname(pt), parser));
+					f.Parameters.Add(param);
 				}
-				c.addMember(f);
+				c.AddMember(f);
 			}
 		}
 
-		private void externTcsTcpEnum(bohc.typesys.Type t)
+		private void externTcsTcpEnum(Bohc.TypeSystem.Type t)
 		{
-			typesys.Enum e = t as typesys.Enum;
+			Bohc.TypeSystem.Enum e = t as Bohc.TypeSystem.Enum;
 			if (e != null)
 			{
-				foreach (XElement enumerator in e.xelement.Elements("enumerator"))
+				foreach (XElement enumerator in e.XElement.Elements("enumerator"))
 				{
-					e.enumerators.Add(new bohc.typesys.Enumerator(enumerator.Attribute("name").Value, e));
+					e.Enumerators.Add(new Bohc.TypeSystem.Enumerator(enumerator.Attribute("name").Value, e));
 				}
 			}
 		}
 
-		private void externTcsTcpInterface(IFileParser parser, bohc.typesys.Type t)
+		private void externTcsTcpInterface(IFileParser parser, Bohc.TypeSystem.Type t)
 		{
-			typesys.Interface i = t as typesys.Interface;
+			Bohc.TypeSystem.Interface i = t as Bohc.TypeSystem.Interface;
 			if (i != null)
 			{
-				foreach (XElement impl in t.xelement.Elements("implements"))
+				foreach (XElement impl in t.XElement.Elements("implements"))
 				{
 					string implstr = impl.Value;
-					i.implements.Add((typesys.Interface)typesys.Interface.getExisting(extname(implstr), parser));
+					i.Implements.Add((Bohc.TypeSystem.Interface)Bohc.TypeSystem.Interface.GetExisting(extname(implstr), parser));
 				}
-				foreach (XElement met in t.xelement.Elements("method"))
+				foreach (XElement met in t.XElement.Elements("method"))
 				{
 					string name = met.Attribute("id").Value;
 					string mods = met.Attribute("modifiers").Value;
 					string rettype = met.Attribute("type").Value;
-					typesys.Function f = new bohc.typesys.Function(t, typesys.ModifierHelper.getModifiersFromString(mods), typesys.Type.getExisting(extname(rettype), parser), name, new List<bohc.typesys.Parameter>(), string.Empty);
+					Bohc.TypeSystem.Function f = new Bohc.TypeSystem.Function(t, Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(mods), Bohc.TypeSystem.Type.GetExisting(extname(rettype), parser), name, new List<Bohc.TypeSystem.Parameter>(), string.Empty);
 					foreach (XElement p in met.Elements("param"))
 					{
 						string pid = p.Attribute("id").Value;
 						string pt = p.Attribute("type").Value;
 						string modss = p.Attribute("modifiers").Value;
-						typesys.Parameter param = new bohc.typesys.Parameter(f, typesys.ModifierHelper.getModifiersFromString(modss), pid, typesys.Type.getExisting(extname(pt), parser));
-						f.parameters.Add(param);
+						Bohc.TypeSystem.Parameter param = new Bohc.TypeSystem.Parameter(f, Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(modss), pid, Bohc.TypeSystem.Type.GetExisting(extname(pt), parser));
+						f.Parameters.Add(param);
 					}
-					i.functions.Add(f);
+					i.Functions.Add(f);
 				}
 			}
 		}
 
-		private List<typesys.Type> externTS(XElement root, string ext)
+		private List<Bohc.TypeSystem.Type> externTS(XElement root, string ext)
 		{
-			List<typesys.Type> types = new List<typesys.Type>();
+			List<Bohc.TypeSystem.Type> types = new List<Bohc.TypeSystem.Type>();
 			externClass(root, types);
 			externStruct(root, types);
 			externInterface(root, types);
@@ -617,7 +616,7 @@ namespace bohc.general
 			return types;
 		}
 
-		private void externClass(XElement root, List<bohc.typesys.Type> types)
+		private void externClass(XElement root, List<Bohc.TypeSystem.Type> types)
 		{
 			foreach (XElement x in root.Elements("class"))
 			{
@@ -628,12 +627,12 @@ namespace bohc.general
 				{
 					name = name.Substring(name.LastIndexOf('.') + 1);
 				}
-				types.Add(typesys.Class.get<typesys.Class>(typesys.Package.getFromString(pkg), typesys.ModifierHelper.getModifiersFromString(modifiers), name));
-				types.Last().xelement = x;
+				types.Add(Bohc.TypeSystem.Class.Get<Bohc.TypeSystem.Class>(Bohc.TypeSystem.Package.GetFromString(pkg), Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(modifiers), name));
+				types.Last().XElement = x;
 			}
 		}
 
-		private void externStruct(XElement root, List<bohc.typesys.Type> types)
+		private void externStruct(XElement root, List<Bohc.TypeSystem.Type> types)
 		{
 			foreach (XElement x in root.Elements("struct"))
 			{
@@ -644,12 +643,12 @@ namespace bohc.general
 				{
 					name = name.Substring(name.LastIndexOf('.') + 1);
 				}
-				types.Add(typesys.Class.get<typesys.Struct>(typesys.Package.getFromString(pkg), typesys.ModifierHelper.getModifiersFromString(modifiers), name));
-				types.Last().xelement = x;
+				types.Add(Bohc.TypeSystem.Class.Get<Bohc.TypeSystem.Struct>(Bohc.TypeSystem.Package.GetFromString(pkg), Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(modifiers), name));
+				types.Last().XElement = x;
 			}
 		}
 
-		private void externInterface(XElement root, List<bohc.typesys.Type> types)
+		private void externInterface(XElement root, List<Bohc.TypeSystem.Type> types)
 		{
 			foreach (XElement x in root.Elements("interface"))
 			{
@@ -660,12 +659,12 @@ namespace bohc.general
 				{
 					name = name.Substring(name.LastIndexOf('.') + 1);
 				}
-				types.Add(typesys.Interface.get(typesys.Package.getFromString(pkg), typesys.ModifierHelper.getModifiersFromString(modifiers), name));
-				types.Last().xelement = x;
+				types.Add(Bohc.TypeSystem.Interface.Get(Bohc.TypeSystem.Package.GetFromString(pkg), Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(modifiers), name));
+				types.Last().XElement = x;
 			}
 		}
 
-		private void externEnum(XElement root, List<bohc.typesys.Type> types)
+		private void externEnum(XElement root, List<Bohc.TypeSystem.Type> types)
 		{
 			foreach (XElement x in root.Elements("enum"))
 			{
@@ -676,8 +675,8 @@ namespace bohc.general
 				{
 					name = name.Substring(name.LastIndexOf('.') + 1);
 				}
-				types.Add(typesys.Enum.get(typesys.Package.getFromString(pkg), typesys.ModifierHelper.getModifiersFromString(modifiers), name));
-				types.Last().xelement = x;
+				types.Add(Bohc.TypeSystem.Enum.Get(Bohc.TypeSystem.Package.GetFromString(pkg), Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(modifiers), name));
+				types.Last().XElement = x;
 			}
 		}
 
@@ -692,9 +691,9 @@ namespace bohc.general
 				{
 					name = name.Substring(name.LastIndexOf('.') + 1);
 				}
-				parsing.File f = new File(null, typesys.Package.getFromString(pkg), System.IO.File.ReadAllText(System.IO.Path.GetDirectoryName(ext) + System.IO.Path.DirectorySeparatorChar + file));
-				typesys.GenericType gt = new bohc.typesys.GenericType(x.Elements("param").SelectMany(y => y.Attributes("name").Select(z => z.Value)).ToArray(), name);
-				gt.file = f;
+				Bohc.Parsing.File f = new File(null, Bohc.TypeSystem.Package.GetFromString(pkg), System.IO.File.ReadAllText(System.IO.Path.GetDirectoryName(ext) + System.IO.Path.DirectorySeparatorChar + file));
+				Bohc.TypeSystem.GenericType gt = new Bohc.TypeSystem.GenericType(x.Elements("param").SelectMany(y => y.Attributes("name").Select(z => z.Value)).ToArray(), name);
+				gt.File = f;
 			}
 		}
 	}

@@ -10,16 +10,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public sealed class Local : Variable
 	{
-		public Modifiers modifiers;
+		public Modifiers Modifiers;
 
 		public Local(string identifier, Type type, Modifiers modifiers)
 			: base(identifier, type)
 		{
-			this.modifiers = modifiers;
+			this.Modifiers = modifiers;
 		}
 	}
 }

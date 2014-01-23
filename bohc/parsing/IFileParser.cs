@@ -1,7 +1,7 @@
 using System;
-using bohc.general;
+using Bohc.General;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public interface IFileParser
 	{
@@ -12,7 +12,7 @@ namespace bohc.parsing
 		void parseFileCP(File f);
 		Project proj();
 		// TODO: get rid of this functions
-		void parseParam(File file, string x, out string id, out typesys.Modifiers mods, out typesys.Type type);
+		void parseParam(File file, string x, out string id, out Bohc.TypeSystem.Modifiers mods, out Bohc.TypeSystem.Type type);
 	}
 }
 

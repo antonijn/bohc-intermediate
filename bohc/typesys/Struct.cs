@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class Struct : Class
 	{
@@ -19,9 +19,9 @@ namespace bohc.typesys
 		{
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			return new parsing.ConstructorCall(constructors.Single(x => x.parameters.Count == 0), new parsing.Expression[] { });
+			return new Parsing.ConstructorCall(Constructors.Single(x => x.Parameters.Count == 0), new Parsing.Expression[] { });
 		}
 	}
 }

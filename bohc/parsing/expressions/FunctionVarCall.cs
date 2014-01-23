@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class FunctionVarCall : Expression
 	{
@@ -23,12 +23,12 @@ namespace bohc.parsing
 			this.parameters = parameters.ToArray();
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
-			return ((typesys.FunctionRefType)belongsto.getType()).retType;
+			return ((Bohc.TypeSystem.FunctionRefType)belongsto.getType()).RetType;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

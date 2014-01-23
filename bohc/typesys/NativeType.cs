@@ -10,26 +10,26 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class NativeType : Type
 	{
-		public readonly string crep;
+		public readonly string CRep;
 
 		public NativeType(string str)
-			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, "native." + str)
+			: base(Package.Global, Modifiers.Public | Modifiers.Final, "native." + str)
 		{
-			this.crep = str;
+			this.CRep = str;
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			if (crep.Contains('*'))
+			if (CRep.Contains('*'))
 			{
-				return NullType.NULL.defaultVal();
+				return NullType.Null.DefaultVal();
 			}
 
-			return new parsing.Literal(this, "0");
+			return new Parsing.Literal(this, "0");
 		}
 	}
 }

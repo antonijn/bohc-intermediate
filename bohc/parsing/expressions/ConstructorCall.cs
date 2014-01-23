@@ -10,25 +10,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class ConstructorCall : Expression
 	{
-		public readonly typesys.Constructor function;
+		public readonly Bohc.TypeSystem.Constructor function;
 		public readonly Expression[] parameters;
 
-		public ConstructorCall(typesys.Constructor function, Expression[] parameters)
+		public ConstructorCall(Bohc.TypeSystem.Constructor function, Expression[] parameters)
 		{
 			this.function = function;
 			this.parameters = parameters;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
-			return function.owner;
+			return function.Owner;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

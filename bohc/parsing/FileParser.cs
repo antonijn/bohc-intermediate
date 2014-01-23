@@ -11,24 +11,24 @@ using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
-using bohc.boh;
-using bohc.exceptions;
-using bohc.typesys;
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.general;
+using Bohc.Boh;
+using Bohc.Exceptions;
+using Bohc.TypeSystem;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
+using Bohc.General;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class FileParser : IFileParser
 	{
-		public readonly IStatementParser statements;
+		public readonly IStatementParser Statements;
 		public readonly Project input;
 
-		public FileParser(IStatementParser statements, Project input)
+		public FileParser(IStatementParser Statements, Project input)
 		{
-			this.statements = statements;
-			this.statements.init(this);
+			this.Statements = Statements;
+			this.Statements.init(this);
 			this.input = input;
 		}
 
@@ -71,27 +71,27 @@ namespace bohc.parsing
 			// either of those are optional
 
 			List<Package> imports = new List<Package>();
-			Package package = Package.GLOBAL;
+			Package package = Package.Global;
 
 			headerParts = headerParts.Select(x => ParserTools.remDupW(x));
 			foreach (string headerPart in headerParts)
 			{
 				string[] parts = headerPart.Split(' ');
-				boh.Exception.require<ParserException>(parts.Length == 2, "Invalid file header");
+				Boh.Exception.require<ParserException>(parts.Length == 2, "Invalid file header");
 
 				string kw = parts[0];
 				string pack = parts[1];
 				switch (kw)
 				{
 					case "package":
-						boh.Exception.require<ParserException>(package == Package.GLOBAL, "Cannot declare multiple package directives");
-						package = Package.getFromString(pack);
+						Boh.Exception.require<ParserException>(package == Package.Global, "Cannot declare multiple package directives");
+						package = Package.GetFromString(pack);
 						break;
 					case "import":
-						imports.Add(Package.getFromString(pack));
+						imports.Add(Package.GetFromString(pack));
 						break;
 					default:
-						boh.Exception._throw<ParserException>(kw + " invalid directive");
+						Boh.Exception._throw<ParserException>(kw + " invalid directive");
 						break;
 				}
 			}
@@ -117,13 +117,13 @@ namespace bohc.parsing
 			string name = parts[idxExtImpl - 1];
 			string type = parts[idxExtImpl - 2];
 
-			Modifiers mod = Modifiers.NONE;
+			Modifiers mod = Modifiers.None;
 
 			if (idxExtImpl > 2)
 			{
 				IEnumerable<string> mods = parts.Take(idxExtImpl - 2);
-				mod = ModifierHelper.getModifiersFromStrings(mods);
-				boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegalForType(mod), "Illegal modifier for type");
+				mod = ModifierHelper.GetModifiersFromStrings(mods);
+				Boh.Exception.require<ParserException>(ModifierHelper.AreModifiersLegalForType(mod), "Illegal modifier for type");
 			}
 
 			// TODO: better generics
@@ -143,24 +143,24 @@ namespace bohc.parsing
 				switch (type)
 				{
 					case "class":
-						file.type = Class.get<Class>(file.package, mod, name);
+						file.type = Class.Get<Class>(file.package, mod, name);
 						break;
 					case "struct":
-						file.type = Struct.get<Struct>(file.package, mod, name);
+						file.type = Struct.Get<Struct>(file.package, mod, name);
 						break;
 					case "enum":
-						file.type = typesys.Enum.get(file.package, mod, name);
+						file.type = Bohc.TypeSystem.Enum.Get(file.package, mod, name);
 						break;
 					case "interface":
-						file.type = Interface.get(file.package, mod, name);
+						file.type = Interface.Get(file.package, mod, name);
 						break;
 					default:
-						boh.Exception._throw<ParserException>("Invalid start of type detected");
+						Boh.Exception._throw<ParserException>("Invalid start of type detected");
 						break;
 				}
 			}
 
-			file.type.setFile(file);
+			file.type.SetFile(file);
 		}
 
 		#endregion
@@ -171,7 +171,7 @@ namespace bohc.parsing
 		{
 			string file = f.content;
 
-			if (f.state >= bohc.ParserState.TP)
+			if (f.state >= Bohc.ParserState.TP)
 			{
 				return;
 			}
@@ -186,27 +186,27 @@ namespace bohc.parsing
 			if (f.type is Class)
 			{
 				Class c = f.type as Class;
-				c.super = parseExt(f, typedec);
-				boh.Exception.require<ParserException>(c.super != c, "Type cannot inherit itself");
+				c.Super = parseExt(f, typedec);
+				Boh.Exception.require<ParserException>(c.Super != c, "Type cannot inherit itself");
 
-				if (c.super == null)
+				if (c.Super == null)
 				{
-					Class objClass = StdType.obj;
+					Class objClass = StdType.Obj;
 					if (c != objClass)
 					{
-						c.super = objClass;
+						c.Super = objClass;
 					}
 				}
 
 				foreach (Interface i in parseImpl(f, typedec))
 				{
-					c.implement(i);
+					c.Implement(i);
 				}
 			}
 			else if (f.type is Interface)
 			{
 				Interface i = f.type as Interface;
-				i.implements = parseImpl(f, typedec).ToList();
+				i.Implements = parseImpl(f, typedec).ToList();
 			}
 		}
 
@@ -218,12 +218,12 @@ namespace bohc.parsing
 			if (idxExt != -1)
 			{
 				string super = parts[idxExt + 1];
-				Class superClass = typesys.Type.getExisting(file.getContext(), super, this) as Class;
-				boh.Exception.require<ParserException>(superClass != null, "Type was not a class: " + super);
+				Class superClass = Bohc.TypeSystem.Type.GetExisting(file.getContext(), super, this) as Class;
+				Boh.Exception.require<ParserException>(superClass != null, "Type was not a class: " + super);
 				return superClass;
 			}
 
-			// TODO: should be default super class (boh.std.Object)
+			// TODO: should be default super class (Boh.std.Object)
 			return null;
 		}
 
@@ -239,8 +239,8 @@ namespace bohc.parsing
 				for (int i = idxIpml + 1; i < parts.Length; ++i)
 				{
 					string ifacestr = parts[i].Replace(",", string.Empty);
-					Interface iface = typesys.Type.getExisting(fileContext, ifacestr, this) as Interface;
-					boh.Exception.require<ParserException>(iface != null, "Type was not an interface: " + ifacestr);
+					Interface iface = Bohc.TypeSystem.Type.GetExisting(fileContext, ifacestr, this) as Interface;
+					Boh.Exception.require<ParserException>(iface != null, "Type was not an interface: " + ifacestr);
 					yield return iface;
 				}
 			}
@@ -270,20 +270,20 @@ namespace bohc.parsing
 			{
 				Class c = (Class)f.type;
 				parseClassTCS(f, content);
-				if (c.constructors.Count == 0 || c is Struct)
+				if (c.Constructors.Count == 0 || c is Struct)
 				{
-					c.addMember(new Constructor(Modifiers.PUBLIC, c, new List<Parameter>(), string.Empty));
+					c.AddMember(new Constructor(Modifiers.Public, c, new List<Parameter>(), string.Empty));
 				}
-				if (c.staticConstr == null)
+				if (c.StaticConstr == null)
 				{
-					c.addMember(new StaticConstructor(c, string.Empty));
+					c.AddMember(new StaticConstructor(c, string.Empty));
 				}
 			}
 			else if (f.type is Interface)
 			{
 				parseInterfaceTCS(f, content);
 			}
-			else if (f.type is typesys.Enum)
+			else if (f.type is Bohc.TypeSystem.Enum)
 			{
 				parseEnumTCS(f, content);
 			}
@@ -303,7 +303,7 @@ namespace bohc.parsing
 				int idxClose = ParserTools.getMatchingBraceChar(content, idxCurly, '}');
 				string body = content.Substring(idxCurly + 1, idxClose - idxCurly - 1);
 
-				((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxCurly), body, true));
+				((Class)f.type).AddMember(parseFunctionTCS(f, content.Substring(0, idxCurly), body, true));
 
 				int closingCurly = ParserTools.getMatchingBraceChar(content, idxCurly, '}');
 				string after = content.Substring(closingCurly + 1);
@@ -318,10 +318,10 @@ namespace bohc.parsing
 				{
 					if (b4semi.Contains(" abstract "))
 					{
-						boh.Exception.require<ParserException>(((Class)f.type).modifiers.HasFlag(Modifiers.ABSTRACT), "Abstract functions require the surrounding class to be abstract too");
+						Boh.Exception.require<ParserException>(((Class)f.type).Modifiers.HasFlag(Modifiers.Abstract), "Abstract functions require the surrounding class to be abstract too");
 					}
 
-					((Class)f.type).addMember(parseFunctionTCS(f, content.Substring(0, idxSemicol), null, true));
+					((Class)f.type).AddMember(parseFunctionTCS(f, content.Substring(0, idxSemicol), null, true));
 
 					string after = content.Substring(idxSemicol + 1);
 					parseClassTCS(f, after);
@@ -349,8 +349,8 @@ namespace bohc.parsing
 
 				func = content.Substring(0, semicol);
 				IFunction funcAct = parseFunctionTCS(f, func, null, false);
-				boh.Exception.require<ParserException>(funcAct is Function, "Interfaces may not contain generic functions");
-				((Interface)f.type).functions.Add((Function)funcAct);
+				Boh.Exception.require<ParserException>(funcAct is Function, "Interfaces may not contain generic functions");
+				((Interface)f.type).Functions.Add((Function)funcAct);
 				content = content.Substring(semicol + 1);
 			}
 		}
@@ -358,28 +358,37 @@ namespace bohc.parsing
 		private IFunction parseFunctionTCS(File f, string fDec, string body, bool requiresAccess)
 		{
 			// make sure the static constructors are called
-			parsing.BinaryOperation.ADD.GetType();
-			parsing.UnaryOperation.DECREMENT_POST.GetType();
+			Bohc.Parsing.BinaryOperation.ADD.GetType();
+			Bohc.Parsing.UnaryOperation.DECREMENT_POST.GetType();
 
 			fDec = fDec.Trim();
 
 			Modifiers mods;
-			typesys.Type type;
+			Bohc.TypeSystem.Type type;
 			string identifier;
 
 			parsePreFunctionParamsTCS(f, fDec, requiresAccess, out mods, out type, out identifier);
 
 			if (identifier == "this")
 			{
-				boh.Exception.require<ParserException>(
-					!(mods.HasFlag(Modifiers.ABSTRACT) || mods.HasFlag(Modifiers.FINAL) ||
-					mods.HasFlag(Modifiers.OVERRIDE) || mods.HasFlag(Modifiers.STATIC) ||
-					mods.HasFlag(Modifiers.VIRTUAL) || mods.HasFlag(Modifiers.NATIVE)), "Invalid modifier for constructor");
+				// constructor
+				Boh.Exception.require<ParserException>(
+					!(mods.HasFlag(Modifiers.Abstract) || mods.HasFlag(Modifiers.Final) ||
+					mods.HasFlag(Modifiers.Override) || mods.HasFlag(Modifiers.Static) ||
+					mods.HasFlag(Modifiers.Virtual) || mods.HasFlag(Modifiers.Native)), "Invalid modifier for constructor");
 
 				List<Parameter> parameters = new List<Parameter>();
 				Constructor func = new Constructor(mods, (Class)f.type, parameters, body);
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
+			}
+			else if (identifier == "indexer")
+			{
+				// indexer
+				List<Parameter> indices = new List<Parameter>();
+				Indexer idxer = new Indexer((Bohc.TypeSystem.Type)f.type, mods, type, indices, body);
+				parseFunctionParamsTCS(f, fDec, idxer);
+				return idxer;
 			}
 			else if (identifier == "static")
 			{
@@ -387,48 +396,58 @@ namespace bohc.parsing
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
 			}
-			else if (parsing.Operator.isOperator(identifier))
+			else if (Bohc.Parsing.Operator.isOperator(identifier))
 			{
-				boh.Exception.require<ParserException>(
-					mods.HasFlag(Modifiers.PUBLIC) && mods.HasFlag(Modifiers.STATIC), "Invalid modifier for constructor");
+				Boh.Exception.require<ParserException>(
+					mods.HasFlag(Modifiers.Public) && mods.HasFlag(Modifiers.Static), "Invalid modifier for constructor");
 
 				List<Parameter> parameters = new List<Parameter>();
 				OverloadedOperator func = new OverloadedOperator(
-					(typesys.Class)type,
-					parsing.Operator.getExisting(identifier, parsing.OperationType.DOESNT_MATTER),
+					(Bohc.TypeSystem.Class)type,
+					Bohc.Parsing.Operator.getExisting(identifier, Bohc.Parsing.OperationType.DOESNT_MATTER),
 					type, parameters, body);
 
 				parseFunctionParamsTCS(f, fDec, func);
 
-				boh.Exception.require<ParserException>(func.parameters.Any(x => x.type == f.type), "An overloaded operator must apply to the type on which it is overloaded");
-				boh.Exception.require<ParserException>(func.optype == parsing.OperationType.BINARY ? parameters.Count == 2 : parameters.Count == 1,
+				Boh.Exception.require<ParserException>(func.Parameters.Any(x => x.Type == f.type), "An overloaded operator must apply to the type on which it is overloaded");
+				Boh.Exception.require<ParserException>(func.OpType == Bohc.Parsing.OperationType.BINARY ? parameters.Count == 2 : parameters.Count == 1,
 					"Invalid parameter count for operator " + identifier);
 
 				return func;
 			}
 			else
 			{
-				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
+				Boh.Exception.require<ParserException>(Bohc.TypeSystem.Type.IsValidIdentifier(identifier), identifier + " is not a valid identifier");
 
 				List<Parameter> parameters = new List<Parameter>();
-				Function func = new Function((typesys.Type)f.type, mods, type, identifier, parameters, body);
+				Function func = new Function((Bohc.TypeSystem.Type)f.type, mods, type, identifier, parameters, body);
 				parseFunctionParamsTCS(f, fDec, func);
 				return func;
 			}
 
 		}
 
-		private void parsePreFunctionParamsTCS(File f, string fDec, bool requiresAccess, out Modifiers mods, out typesys.Type type, out string identifier)
+		private void parsePreFunctionParamsTCS(File f, string fDec, bool requiresAccess, out Modifiers mods, out Bohc.TypeSystem.Type type, out string identifier)
 		{
 			int idxClose = fDec.LastIndexOf(')');
 			int idxParent = ParserTools.getMatchingBraceCharBackwards(fDec, idxClose, '(');
 			fDec = ParserTools.remDupW(fDec.Substring(0, idxParent).Trim());
 
+			// check if indexer
+			bool indexer = false;
+			if (fDec.EndsWith("]"))
+			{
+				indexer = true;
+				idxClose = fDec.Length - 1;
+				idxParent = ParserTools.getMatchingBraceCharBackwards(fDec, idxClose, '[');
+				fDec = ParserTools.remDupW(fDec.Substring(0, idxParent));
+			}
+
 			string[] parts = fDec.Split(' ');
 			bool isStaticConstr = parts.Last() == "static";
-			bool isConstr = parts.Last() == "this" || isStaticConstr;
+			bool isConstr = !indexer && parts.Last() == "this" || isStaticConstr;
 
-			boh.Exception.require<ParserException>(
+			Boh.Exception.require<ParserException>(
 				isStaticConstr || (isConstr && parts.Length >= 2) || parts.Length >= 3 || (!requiresAccess && parts.Length >= 2),
 				fDec + ": function access modifier and/or type expected");
 
@@ -436,14 +455,42 @@ namespace bohc.parsing
 			string typeName = isConstr ? null : parts[parts.Length - 2];
 			IEnumerable<string> modifiers = parts.Take(parts.Length - (isConstr ? 1 : 2));
 
-			type = isConstr ? null : typesys.Type.getExisting(f.getContext(), typeName, this);
-			mods = isStaticConstr ? Modifiers.NONE : ModifierHelper.getModifiersFromStrings(modifiers);
+			type = isConstr ? null : Bohc.TypeSystem.Type.GetExisting(f.getContext(), typeName, this);
+			mods = isStaticConstr ? Modifiers.None : ModifierHelper.GetModifiersFromStrings(modifiers);
 		}
 
 		private void parseFunctionParamsTCS(File f, string fDec, Function func)
 		{
 			int idxClose = fDec.LastIndexOf(')');
 			int idxParent = ParserTools.getMatchingBraceCharBackwards(fDec, idxClose, '(');
+
+			Indexer indexer = func as Indexer;
+			if (indexer != null)
+			{
+				string assignment = ParserTools.remDupW(fDec.Substring(idxParent + 1, idxClose - idxParent - 1).Trim());
+				if (!string.IsNullOrEmpty(assignment))
+				{
+					string[] assnmnts = ParserTools.split(assignment, new[] { '<', '(' }, new[] { '>', ')' }, ',').ToArray();
+					for (int i = 0; i < assnmnts.Length; ++i)
+					{
+						assnmnts[i] = assnmnts[i].Trim();
+					}
+					Boh.Exception.require<ParserException>(
+						assnmnts.Length == 1, "Indexers may only have one assignment parameter");
+
+					string identifier;
+					Modifiers mods;
+					Bohc.TypeSystem.Type type;
+					parseParam(f, assnmnts.Single(), out identifier, out mods, out type);
+
+					Parameter param = new Parameter(func, mods, identifier, type);
+					indexer.Assignment = param;
+				}
+
+				string b4 = fDec.Substring(0, idxParent).TrimEnd();
+				idxClose = b4.Length - 1;
+				idxParent = ParserTools.getMatchingBraceCharBackwards(b4, idxClose, '[');
+			}
 
 			string paramString = ParserTools.remDupW(fDec.Substring(idxParent + 1, idxClose - idxParent - 1).Trim());
 
@@ -465,33 +512,33 @@ namespace bohc.parsing
 			{
 				string identifier;
 				Modifiers mods;
-				typesys.Type type;
+				Bohc.TypeSystem.Type type;
 				parseParam(f, part, out identifier, out mods, out type);
 
 				Parameter param = new Parameter(func, mods, identifier, type);
-				func.parameters.Add(param);
+				func.Parameters.Add(param);
 			}
 		}
 
-		public void parseParam(File f, string part, out string identifier, out Modifiers mods, out typesys.Type type)
+		public void parseParam(File f, string part, out string identifier, out Modifiers mods, out Bohc.TypeSystem.Type type)
 		{
 			string[] paramParts = part.Split(' ');
-			boh.Exception.require<ParserException>(paramParts.Length >= 2, "Parameter type expected");
-			boh.Exception.require<ParserException>(paramParts.Length <= 3, "Parameters may only have one modifier");
+			Boh.Exception.require<ParserException>(paramParts.Length >= 2, "Parameter type expected");
+			Boh.Exception.require<ParserException>(paramParts.Length <= 3, "Parameters may only have one modifier");
 
 			identifier = paramParts[paramParts.Length - 1];
 			string typeName = paramParts[paramParts.Length - 2];
 
-			mods = Modifiers.NONE;
+			mods = Modifiers.None;
 			if (paramParts.Length > 2)
 			{
-				boh.Exception.require<ParserException>(
+				Boh.Exception.require<ParserException>(
 					paramParts.First() == "final" || paramParts.First() == "ref", "'final' and 'ref' are the only legal modifiers for parameters");
-				mods = ModifierHelper.getModifierFromString(paramParts.First());
+				mods = ModifierHelper.GetModifierFromString(paramParts.First());
 			}
 
-			type = typesys.Type.getExisting(f.getContext(), typeName, this);
-			boh.Exception.require<ParserException>(type != null, "type doesn't exist");
+			type = Bohc.TypeSystem.Type.GetExisting(f.getContext(), typeName, this);
+			Boh.Exception.require<ParserException>(type != null, "type doesn't exist");
 		}
 
 		private void parseFieldTCS(File f, string fDec)
@@ -509,20 +556,20 @@ namespace bohc.parsing
 			fDec = ParserTools.remDupW(fDec);
 
 			string[] parts = fDec.Split(' ');
-			boh.Exception.require<ParserException>(parts.Length >= 3, fDec + ": field access modifier and/or type expected");
+			Boh.Exception.require<ParserException>(parts.Length >= 3, fDec + ": field access modifier and/or type expected");
 
 			string identifier = parts[parts.Length - 1];
 			string type = parts[parts.Length - 2];
 			IEnumerable<string> modifiers = parts.Take(parts.Length - 2);
 
-			typesys.Type actualType = typesys.Type.getExisting(f.getContext(), type, this);
-			Modifiers mods = ModifierHelper.getModifiersFromStrings(modifiers);
+			Bohc.TypeSystem.Type actualType = Bohc.TypeSystem.Type.GetExisting(f.getContext(), type, this);
+			Modifiers mods = ModifierHelper.GetModifiersFromStrings(modifiers);
 
-			boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(identifier), identifier + " is not a valid identifier");
-			boh.Exception.require<ParserException>(ModifierHelper.areModifiersLegal(mods, true, proj()), mods.ToString() + ": invalid modifiers");
+			Boh.Exception.require<ParserException>(Bohc.TypeSystem.Type.IsValidIdentifier(identifier), identifier + " is not a valid identifier");
+			Boh.Exception.require<ParserException>(ModifierHelper.AreModifiersLegal(mods, true, proj()), mods.ToString() + ": invalid modifiers");
 
 			Field field = new Field(mods, identifier, actualType, (Class)f.type, initvalstr);
-			((Class)f.type).addMember(field);
+			((Class)f.type).AddMember(field);
 		}
 
 		private void parseEnumTCS(File f, string content)
@@ -543,10 +590,10 @@ namespace bohc.parsing
 					break;
 				}
 
-				boh.Exception.require<ParserException>(typesys.Type.isValidIdentifier(enumerator), enumerator + " is not a valid enumerator");
-				boh.Exception.warnIf(enumerator.ToUpperInvariant() != enumerator, "Enumerator names should be uppercase");
+				Boh.Exception.require<ParserException>(Bohc.TypeSystem.Type.IsValidIdentifier(enumerator), enumerator + " is not a valid enumerator");
+				Boh.Exception.warnIf(enumerator.ToUpperInvariant() != enumerator, "Enumerator names should be uppercase");
 
-				((typesys.Enum)f.type).enumerators.Add(new Enumerator(enumerator, (typesys.Enum)f.type));
+				((Bohc.TypeSystem.Enum)f.type).Enumerators.Add(new Enumerator(enumerator, (Bohc.TypeSystem.Enum)f.type));
 			}
 		}
 
@@ -573,11 +620,11 @@ namespace bohc.parsing
 
 		private void parseClassTCP(Class c)
 		{
-			foreach (Field f in c.fields)
+			foreach (Field f in c.Fields)
 			{
-				if (f.initvalstr != null)
+				if (f.InitValStr != null)
 				{
-					f.initial = statements.getExpressions().analyze(f.initvalstr, new List<Variable>(), c.file);
+					f.Initial = Statements.getExpressions().analyze(f.InitValStr, new List<Variable>(), c.File);
 				}
 			}
 		}
@@ -602,21 +649,29 @@ namespace bohc.parsing
 				return;
 			}
 
-			foreach (Function func in c.functions)
+			foreach (Function func in c.Functions)
 			{
-				if (!func.modifiers.HasFlag(Modifiers.ABSTRACT) && !func.modifiers.HasFlag(Modifiers.NATIVE))
+				if (!func.Modifiers.HasFlag(Modifiers.Abstract) && !func.Modifiers.HasFlag(Modifiers.Native))
 				{
-					func.body = statements.parseBody(func.bodystr, func, f);
-					if (func.returnType != Primitive.VOID && func.returnType != null)
+					/*try
+					{*/
+						func.Body = Statements.parseBody(func.BodyStr, func, f);
+					/*}
+					catch (System.Exception e)
 					{
-						boh.Exception.require<ParserException>(func.body.hasReturned(), "Function must return a value");
+						throw new System.Exception(func.Identifier, e);
+					}*/
+
+					if (func.ReturnType != Primitive.Void && func.ReturnType != null)
+					{
+						Boh.Exception.require<ParserException>(func.Body.hasReturned(), "Function must return a value");
 					}
 					else if (func is Constructor)
 					{
-						boh.Exception.require<ParserException>(
-							c.super == null ||
-							c.super.constructors.Any(x => !(x.modifiers.HasFlag(Modifiers.PRIVATE) || x.modifiers.HasFlag(Modifiers.CVISIBLE)) && x.parameters.Count == 0) ||
-							func.body.hasSuperBeenCalled(),
+						Boh.Exception.require<ParserException>(
+							c.Super == null ||
+							c.Super.Constructors.Any(x => !(x.Modifiers.HasFlag(Modifiers.Private) || x.Modifiers.HasFlag(Modifiers.CVisible)) && x.Parameters.Count == 0) ||
+							func.Body.hasSuperBeenCalled(),
 							"Constructor must call super constructor");
 					}
 				}

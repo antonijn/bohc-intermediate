@@ -3,13 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.boh;
-using bohc.exceptions;
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.typesys;
+using Bohc.Boh;
+using Bohc.Exceptions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
+using Bohc.TypeSystem;
 
-namespace bohc.generation.mangling
+namespace Bohc.Generation.Mangling
 {
 	public class CMangler : IMangler
 	{
@@ -18,22 +18,22 @@ namespace bohc.generation.mangling
 			return getCName(c) + "_fi";
 		}
 
-		public string getIncludeGuardName(typesys.Type type)
+		public string getIncludeGuardName(Bohc.TypeSystem.Type type)
 		{
 			return getCName(type) + "_H";
 		}
 
-		public string getHeaderName(typesys.Type type)
+		public string getHeaderName(Bohc.TypeSystem.Type type)
 		{
 			return "all.h";
 		}
 
-		public string getCodeFileName(typesys.Type type)
+		public string getCodeFileName(Bohc.TypeSystem.Type type)
 		{
 			return getCName(type) + ".c";
 		}
 
-		public string getThisParamTypeName(typesys.Type type)
+		public string getThisParamTypeName(Bohc.TypeSystem.Type type)
 		{
 			if (type is Struct)
 			{
@@ -42,35 +42,35 @@ namespace bohc.generation.mangling
 
 			if (type is Interface)
 			{
-				return getCTypeName(StdType.obj) + " const";
+				return getCTypeName(StdType.Obj) + " const";
 			}
 
 			return getCTypeName(type) + " const";
 		}
 
-		public string getCTypeName(typesys.Type type)
+		public string getCTypeName(Bohc.TypeSystem.Type type)
 		{
 			NativeType nt = type as NativeType;
 			if (nt != null)
 			{
-				int idxPtr = nt.crep.IndexOf('*');
+				int idxPtr = nt.CRep.IndexOf('*');
 				if (idxPtr != -1)
 				{
-					string prePtr = nt.crep.Substring(0, idxPtr != -1 ? idxPtr : nt.crep.Length);
+					string prePtr = nt.CRep.Substring(0, idxPtr != -1 ? idxPtr : nt.CRep.Length);
 
 					int lidxDot = prePtr.LastIndexOf('.');
 					string pkg = prePtr.Substring(0, lidxDot != -1 ? lidxDot : 0);
 					string cname = prePtr.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
 					// TODO: fix that null
-					typesys.Type t = typesys.Type.getExisting(Package.getFromStringExisting(pkg), cname, null);
-					string ptrs = nt.crep.Substring(idxPtr);
+					Bohc.TypeSystem.Type t = Bohc.TypeSystem.Type.GetExisting(Package.GetFromStringExisting(pkg), cname, null);
+					string ptrs = nt.CRep.Substring(idxPtr);
 					return (t != null ? getCTypeName(t) : prePtr) + ptrs;
 				}
 
-				return nt.crep;
+				return nt.CRep;
 			}
 
-			if (type is Struct || type is FunctionRefType || type is typesys.Enum)
+			if (type is Struct || type is FunctionRefType || type is Bohc.TypeSystem.Enum)
 			{
 				return getCStructName(type);
 			}
@@ -82,7 +82,7 @@ namespace bohc.generation.mangling
 
 			if (type is Primitive)
 			{
-				return ((Primitive)type).cname;
+				return ((Primitive)type).CName;
 			}
 
 			if (type is NullType)
@@ -93,20 +93,20 @@ namespace bohc.generation.mangling
 			throw new NotImplementedException();
 		}
 
-		public string getCStructName(typesys.Type type)
+		public string getCStructName(Bohc.TypeSystem.Type type)
 		{
-			if (type is typesys.Enum)
+			if (type is Bohc.TypeSystem.Enum)
 			{
 				return "enum " + getCName(type);
 			}
 			return "struct " + getCName(type);
 		}
 
-		public string getCName(typesys.Type type)
+		public string getCName(Bohc.TypeSystem.Type type)
 		{
 			StringBuilder prefix = new StringBuilder();
 			StringBuilder tname = new StringBuilder();
-			foreach (string pkg in type.package.ToString().Split('.'))
+			foreach (string pkg in type.Package.ToString().Split('.'))
 			{
 				prefix.Append("p");
 				prefix.Append(pkg.Length);
@@ -116,7 +116,7 @@ namespace bohc.generation.mangling
 			{
 				prefix.Append("c");
 			}
-			else if (type is typesys.Enum)
+			else if (type is Bohc.TypeSystem.Enum)
 			{
 				prefix.Append("e");
 			}
@@ -132,13 +132,13 @@ namespace bohc.generation.mangling
 			{
 				prefix.Append("f");
 			}
-			prefix.Append(type.name.Length.ToString("X"));
+			prefix.Append(type.Name.Length.ToString("X"));
 
 			FunctionRefType fRefType = type as FunctionRefType;
 			if (fRefType != null)
 			{
-				tname.Append(getCName(fRefType.retType));
-				foreach (typesys.Type t in fRefType.paramTypes)
+				tname.Append(getCName(fRefType.RetType));
+				foreach (Bohc.TypeSystem.Type t in fRefType.ParamTypes)
 				{
 					tname.Append(getCName(t));
 				}
@@ -148,7 +148,7 @@ namespace bohc.generation.mangling
 			}
 			else
 			{
-				tname.Append(type.fullName().Replace(".", string.Empty));
+				tname.Append(type.FullName().Replace(".", string.Empty));
 			}
 
 			return prefix.ToString() + "_" + tname.ToString();
@@ -156,7 +156,7 @@ namespace bohc.generation.mangling
 
 		public string getNewName(Constructor constr)
 		{
-			return "new_" + getCName(constr.owner) + getFuncAddition(constr);
+			return "new_" + getCName(constr.Owner) + getFuncAddition(constr);
 		}
 
 		public string getVarName(Variable variable)
@@ -169,27 +169,27 @@ namespace bohc.generation.mangling
 			if (variable is Local)
 			{
 				// FIXME: won't work if the local was created in the lambda itself
-				return "l_" + variable.identifier;
+				return "l_" + variable.Identifier;
 			}
 
 			if (variable is Parameter || variable is LambdaParam)
 			{
-				return "p_" + variable.identifier;
+				return "p_" + variable.Identifier;
 			}
 
 			if (variable is Field)
 			{
 				Field f = (Field)variable;
-				if (f.modifiers.HasFlag(Modifiers.STATIC))
+				if (f.Modifiers.HasFlag(Modifiers.Static))
 				{
-					return getCName(f.owner) + "_sf_" + variable.identifier;
+					return getCName(f.Owner) + "_sf_" + variable.Identifier;
 				}
-				return "f_" + variable.identifier;
+				return "f_" + variable.Identifier;
 			}
 
-			if (variable.identifier == "this")
+			if (variable.Identifier == "this")
 			{
-				if (variable.type is Struct)
+				if (variable.Type is Struct)
 				{
 					return "(*self)";
 				}
@@ -202,7 +202,7 @@ namespace bohc.generation.mangling
 		// to be used when an enclosed variable is declared (in the context struct)
 		public string getHeapVarDeclName(Variable variable)
 		{
-			if (variable.identifier == "this")
+			if (variable.Identifier == "this")
 			{
 				return "self";
 			}
@@ -228,13 +228,13 @@ namespace bohc.generation.mangling
 		public string getVarUsageName(Variable variable, int lambdaStack)
 		{
 			Local loc = variable as Local;
-			if (variable.enclosed)
+			if (variable.Enclosed)
 			{
-				if (variable.lambdaLevel == lambdaStack)
+				if (variable.LamdaLevel == lambdaStack)
 				{
-					if (loc == null || !loc.modifiers.HasFlag(Modifiers.STATIC))
+					if (loc == null || !loc.Modifiers.HasFlag(Modifiers.Static))
 					{
-						if (variable.identifier == "this")
+						if (variable.Identifier == "this")
 						{
 							return getVarName(variable);
 						}
@@ -247,7 +247,7 @@ namespace bohc.generation.mangling
 				}
 				else
 				{
-					if (variable.identifier == "this")
+					if (variable.Identifier == "this")
 					{
 						return "(*ctx->self)";
 					}
@@ -262,7 +262,7 @@ namespace bohc.generation.mangling
 			Parameter param = variable as Parameter;
 			if (param != null)
 			{
-				if (param.modifiers.HasFlag(Modifiers.REF))
+				if (param.Modifiers.HasFlag(Modifiers.Ref))
 				{
 					return "(*" + getVarName(variable) + ")";
 				}
@@ -272,15 +272,15 @@ namespace bohc.generation.mangling
 
 		public string getParamTypeName(Parameter param)
 		{
-			if (param.modifiers.HasFlag(Modifiers.REF))
+			if (param.Modifiers.HasFlag(Modifiers.Ref))
 			{
-				return getCTypeName(param.type) + "* const";
+				return getCTypeName(param.Type) + "* const";
 			}
-			if (param.modifiers.HasFlag(Modifiers.FINAL))
+			if (param.Modifiers.HasFlag(Modifiers.Final))
 			{
-				return getCTypeName(param.type) + " const";
+				return getCTypeName(param.Type) + " const";
 			}
-			return getCTypeName(param.type);
+			return getCTypeName(param.Type);
 		}
 
 		public string getParamTypeName(LambdaParam param)
@@ -290,7 +290,7 @@ namespace bohc.generation.mangling
 			{
 				return getCTypeName(param.type) + "*";
 			}*/
-			return getCTypeName(param.type);
+			return getCTypeName(param.Type);
 		}
 
 		private uint hashString(string str)
@@ -301,13 +301,13 @@ namespace bohc.generation.mangling
 		public string getFuncAddition(Function func)
 		{
 			StringBuilder builder = new StringBuilder();
-			if (!func.modifiers.HasFlag(Modifiers.STATIC))
+			if (!func.Modifiers.HasFlag(Modifiers.Static))
 			{
 				builder.Append("self");
 			}
-			if (ModifierHelper.getPfMods(func.modifiers) == Modifiers.NONE)
+			if (ModifierHelper.GetPfMods(func.Modifiers) == Modifiers.None)
 			{
-				foreach (typesys.Type type in func.parameters.Select(x => x.type))
+				foreach (Bohc.TypeSystem.Type type in func.Parameters.Select(x => x.Type))
 				{
 					builder.Append(getCName(type));
 				}
@@ -323,7 +323,8 @@ namespace bohc.generation.mangling
 
 		public string getVFuncName(Function func)
 		{
-			return "m_" + func.identifier + getFuncAddition(func);
+			Indexer idxer = func as Indexer;
+			return (idxer == null ? "m_" : (idxer.IsAssignment() ? "is_" : "ig_")) + func.Identifier + getFuncAddition(func);
 		}
 
 		public string getOpName(Operator op)
@@ -333,16 +334,17 @@ namespace bohc.generation.mangling
 
 		public string getCFuncName(Function func)
 		{
-			if (func.modifiers.HasFlag(Modifiers.NATIVE))
+			if (func.Modifiers.HasFlag(Modifiers.Native))
 			{
-				return func.identifier;
+				return func.Identifier;
 			}
 
 			if (func is OverloadedOperator)
 			{
-				return getCName(func.owner) + "_op_" + getOpName(((OverloadedOperator)func).which) + getFuncAddition(func);
+				return getCName(func.Owner) + "_op_" + getOpName(((OverloadedOperator)func).Which) + getFuncAddition(func);
 			}
-			return getCName(func.owner) + "_m_" + func.identifier + getFuncAddition(func);
+			Indexer idxer = func as Indexer;
+			return getCName(func.Owner) + (idxer == null ? "_m_" : (idxer.IsAssignment() ? "_is_" : "_ig_")) + func.Identifier + getFuncAddition(func);
 		}
 
 		public string getVtableName(Class c)
@@ -352,7 +354,7 @@ namespace bohc.generation.mangling
 
 		public string getEnumeratorName(Enumerator e)
 		{
-			return getCName(e.enumType) + e.name;
+			return getCName(e.EnumType) + e.Name;
 		}
 	}
 }

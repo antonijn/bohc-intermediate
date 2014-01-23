@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public sealed class WhileStatement : BodyStatement
 	{
@@ -19,7 +19,7 @@ namespace bohc.parsing.statements
 		public WhileStatement(Expression condition, Body body)
 			: base(body)
 		{
-			boh.Exception.require<exceptions.ParserException>(condition.getType() == typesys.Primitive.BOOLEAN, "Condition must be boolean");
+			Boh.Exception.require<Exceptions.ParserException>(condition.getType() == Bohc.TypeSystem.Primitive.Boolean, "Condition must be boolean");
 
 			this.condition = condition;
 		}

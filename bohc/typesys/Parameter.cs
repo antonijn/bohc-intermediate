@@ -10,18 +10,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class Parameter : Variable
 	{
-		public readonly Function function;
-		public readonly Modifiers modifiers;
+		public readonly Function Function;
+		public readonly Modifiers Modifiers;
 
-		public Parameter(Function function, Modifiers modifiers, string identifier, typesys.Type type)
+		public Parameter(Function function, Modifiers modifiers, string identifier, Bohc.TypeSystem.Type type)
 			: base(identifier, type)
 		{
-			this.function = function;
-			this.modifiers = modifiers;
+			this.Function = function;
+			this.Modifiers = modifiers;
 		}
 	}
 }

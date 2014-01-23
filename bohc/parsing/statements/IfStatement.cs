@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public sealed class IfStatement : BodyStatement
 	{
@@ -20,7 +20,7 @@ namespace bohc.parsing.statements
 		public IfStatement(Expression condition, Body body, ElseStatement elsestat)
 			: base(body)
 		{
-			boh.Exception.require<exceptions.ParserException>(condition.getType() == typesys.Primitive.BOOLEAN, "Condition must be boolean");
+			Boh.Exception.require<Exceptions.ParserException>(condition.getType() == Bohc.TypeSystem.Primitive.Boolean, "Condition must be boolean");
 
 			this.condition = condition;
 			this.elsestat = elsestat;

@@ -10,27 +10,29 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class FunctionCall : Expression
 	{
-		public readonly typesys.Function refersto;
+		public readonly Bohc.TypeSystem.Function refersto;
 		public readonly Expression belongsto;
 		public readonly Expression[] parameters;
 
-		public FunctionCall(typesys.Function refersto, Expression belongsto, IEnumerable<Expression> parameters)
+		public FunctionCall(Bohc.TypeSystem.Function refersto, Expression belongsto, IEnumerable<Expression> parameters)
 		{
 			// check whether the refs are alright
+			TypeSystem.Indexer idxer = refersto as TypeSystem.Indexer;
+
 			int i = 0;
-			foreach (Expression expr in parameters)
+			foreach (Expression expr in idxer == null ? parameters : parameters.Take(refersto.Parameters.Count - 1))
 			{
-				typesys.Parameter corresponding = refersto.parameters[i++];
-				boh.Exception.require<exceptions.ParserException>(
-					(!corresponding.modifiers.HasFlag(typesys.Modifiers.REF) ||
+				Bohc.TypeSystem.Parameter corresponding = refersto.Parameters[i++];
+				Boh.Exception.require<Exceptions.ParserException>(
+					(!corresponding.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref) ||
 					(expr is RefExpression)),
 					"ref parameter requires ref expression");
-				boh.Exception.require<exceptions.ParserException>(
-					(corresponding.modifiers.HasFlag(typesys.Modifiers.REF) ||
+				Boh.Exception.require<Exceptions.ParserException>(
+					(corresponding.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref) ||
 					!(expr is RefExpression)),
 					"ref expression requires ref parameter");
 			}
@@ -40,14 +42,15 @@ namespace bohc.parsing
 			this.parameters = parameters.ToArray();
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
-			return refersto.returnType;
+			return refersto.ReturnType;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
-			return false;
+			TypeSystem.Indexer idx = refersto as TypeSystem.Indexer;
+			return idx == null ? false : idx.IsAssignment();
 		}
 
 		public override bool isStatement()

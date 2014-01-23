@@ -1,8 +1,8 @@
 using System;
 
-using bohc.typesys;
+using Bohc.TypeSystem;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class NativeFunctionCall : Expression
 	{
@@ -14,22 +14,22 @@ namespace bohc.parsing
 			this.function = function;
 			this.parameters = parameters;
 
-			boh.Exception.require<exceptions.ParserException>(function.paramCount == parameters.Length, "Native function requires " + function.paramCount + " parameters");
+			Boh.Exception.require<Exceptions.ParserException>(function.ParamCount == parameters.Length, "Native function requires " + function.ParamCount + " parameters");
 		}
 
-		public override bohc.typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
-			if (function == NativeFunction.NATIVE_DEREF)
+			if (function == NativeFunction.NativeDeref)
 			{
 				return ((ExprType)parameters [0]).type;
 			}
-			else if (function == NativeFunction.NATIVE_REF)
+			else if (function == NativeFunction.NativeRef)
 			{
-				return Primitive.INT;
+				return Primitive.Int;
 			}
-			else if (function == NativeFunction.NATIVE_SIZEOF)
+			else if (function == NativeFunction.NativeSizeof)
 			{
-				return Primitive.INT;
+				return Primitive.Int;
 			}
 
 			throw new NotImplementedException();
@@ -37,12 +37,12 @@ namespace bohc.parsing
 
 		public override bool isLvalue(Function ctx)
 		{
-			return function == NativeFunction.NATIVE_DEREF;
+			return function == NativeFunction.NativeDeref;
 		}
 
 		public override bool isStatement()
 		{
-			return function != NativeFunction.NATIVE_DEREF;
+			return function != NativeFunction.NativeDeref;
 		}
 	}
 }

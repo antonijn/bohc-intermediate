@@ -3,9 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.typesys;
+using Bohc.TypeSystem;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public interface IStatementParser
 	{

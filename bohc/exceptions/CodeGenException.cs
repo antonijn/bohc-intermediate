@@ -10,9 +10,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.exceptions
+namespace Bohc.Exceptions
 {
-	public class CodeGenException : boh.Exception
+	public class CodeGenException : Boh.Exception
 	{
 	}
 }

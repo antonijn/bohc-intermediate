@@ -10,12 +10,16 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public abstract class Expression
 	{
-		public abstract typesys.Type getType();
-		public abstract bool isLvalue(typesys.Function ctx);
+		public abstract Bohc.TypeSystem.Type getType();
+		public abstract bool isLvalue(Bohc.TypeSystem.Function ctx);
 		public abstract bool isStatement();
+		public virtual Expression useAsLvalue(BinaryOperation binop)
+		{
+			return binop;
+		}
 	}
 }

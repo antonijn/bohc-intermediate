@@ -10,23 +10,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class ExprType : Expression
 	{
-		public readonly typesys.Type type;
+		public readonly Bohc.TypeSystem.Type type;
 
-		public ExprType(typesys.Type type)
+		public ExprType(Bohc.TypeSystem.Type type)
 		{
 			this.type = type;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
 			throw new NotImplementedException();
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			throw new NotImplementedException();
 		}

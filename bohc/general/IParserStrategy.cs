@@ -5,17 +5,16 @@ using System.Text;
 using System.Diagnostics;
 using System.Xml.Linq;
 
-using bohc.generation;
-using bohc.generation.c;
-using bohc.generation.mangling;
+using Bohc.Generation;
+using Bohc.Generation.C;
+using Bohc.Generation.Mangling;
 
-using bohc.parsing;
-using bohc.parsing.statements;
-using bohc.parsing.expressions;
+using Bohc.Parsing;
+using Bohc.Parsing.Statements;
 
-using bohc.typesys;
+using Bohc.TypeSystem;
 
-namespace bohc.general
+namespace Bohc.General
 {
 	public interface IParserStrategy
 	{

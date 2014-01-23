@@ -3,37 +3,37 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class Lambda : Expression
 	{
-		public typesys.FunctionRefType type;
-		public parsing.statements.Body body;
+		public Bohc.TypeSystem.FunctionRefType type;
+		public Bohc.Parsing.Statements.Body body;
 		public Expression expression;
-		public List<typesys.Variable> enclosed;
-		public IEnumerable<typesys.LambdaParam> lambdaParams;
+		public List<Bohc.TypeSystem.Variable> enclosed;
+		public IEnumerable<Bohc.TypeSystem.LambdaParam> lambdaParams;
 
 		public int lambdaLevel = 0;
 
 		public static readonly List<Lambda> lambdas = new List<Lambda>();
 
-		public Lambda(typesys.FunctionRefType type, parsing.statements.Body body, Expression expression, IEnumerable<typesys.LambdaParam> lambdaParams)
+		public Lambda(Bohc.TypeSystem.FunctionRefType type, Bohc.Parsing.Statements.Body body, Expression expression, IEnumerable<Bohc.TypeSystem.LambdaParam> lambdaParams)
 		{
 			this.type = type;
 			this.body = body;
 			this.expression = expression;
-			this.enclosed = new List<typesys.Variable>();
+			this.enclosed = new List<Bohc.TypeSystem.Variable>();
 			this.lambdaParams = lambdaParams;
 
 			lambdas.Add(this);
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
 			return type;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

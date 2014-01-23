@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class UnaryOperation : Expression
 	{
@@ -36,11 +36,11 @@ namespace bohc.parsing
 			this.operation = operation;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
 			if (operation == TYPEOF)
 			{
-				return typesys.StdType.type;
+				return Bohc.TypeSystem.StdType.Type;
 			}
 			else if (operation == DEFAULT)
 			{
@@ -49,7 +49,7 @@ namespace bohc.parsing
 			return onwhat.getType();
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

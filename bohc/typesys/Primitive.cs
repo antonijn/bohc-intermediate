@@ -10,124 +10,124 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
-	public class Primitive : typesys.Type
+	public class Primitive : Bohc.TypeSystem.Type
 	{
-		public Function toString;
-		public Function getType;
-		public Function equals;
-		public Function hash;
+		public Function ToStringM;
+		public Function GetTypeM;
+		public Function EqualsM;
+		public Function HashM;
 
-		public static void figureOutFunctionsForAll()
+		public static void FigureOutFunctionsForAll()
 		{
-			BYTE.figureOutFunctions();
-			SHORT.figureOutFunctions();
-			INT.figureOutFunctions();
-			LONG.figureOutFunctions();
-			CHAR.figureOutFunctions();
-			DECIMAL.figureOutFunctions();
-			FLOAT.figureOutFunctions();
-			DOUBLE.figureOutFunctions();
-			BOOLEAN.figureOutFunctions();
+			Byte.FigureOutFunctions();
+			Short.FigureOutFunctions();
+			Int.FigureOutFunctions();
+			Long.FigureOutFunctions();
+			Char.FigureOutFunctions();
+			Decimal.FigureOutFunctions();
+			Float.FigureOutFunctions();
+			Double.FigureOutFunctions();
+			Boolean.FigureOutFunctions();
 		}
 
-		private void figureOutFunctions()
+		private void FigureOutFunctions()
 		{
-			toString = new Function(this, Modifiers.PUBLIC, StdType.type, "toString", new List<Parameter>(), default(parsing.statements.Body));
-			getType = new Function(this, Modifiers.PUBLIC, StdType.type, "getType", new List<Parameter>(), default(parsing.statements.Body));
-			equals = new Function(this, Modifiers.PUBLIC, Primitive.BOOLEAN, "equals", new List<Parameter>(), default(parsing.statements.Body));
-			equals.parameters.Add(new Parameter(equals, Modifiers.FINAL, "other", StdType.obj));
-			hash = new Function(this, Modifiers.PUBLIC, Primitive.LONG, "hash", new List<Parameter>(), default(parsing.statements.Body));
+			ToStringM = new Function(this, Modifiers.Public, StdType.Type, "toString", new List<Parameter>(), default(Parsing.Statements.Body));
+			GetTypeM = new Function(this, Modifiers.Public, StdType.Type, "getType", new List<Parameter>(), default(Parsing.Statements.Body));
+			EqualsM = new Function(this, Modifiers.Public, Primitive.Boolean, "equals", new List<Parameter>(), default(Parsing.Statements.Body));
+			EqualsM.Parameters.Add(new Parameter(EqualsM, Modifiers.Final, "other", StdType.Obj));
+			HashM = new Function(this, Modifiers.Public, Primitive.Long, "hash", new List<Parameter>(), default(Parsing.Statements.Body));
 		}
 
-		public readonly int size;
-		public readonly string cname;
-		public parsing.Literal initval;
+		public readonly int Size;
+		public readonly string CName;
+		public Parsing.Literal InitVal;
 
 		public Primitive(string name, string cname, int size)
-			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, name)
+			: base(Package.Global, Modifiers.Public | Modifiers.Final, name)
 		{
-			this.size = size;
-			this.cname = cname;
+			this.Size = size;
+			this.CName = cname;
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			return initval;
+			return InitVal;
 		}
 
-		public static bool isPrimitiveTypeName(string what)
+		public static bool IsPrimitiveTypeName(string what)
 		{
-			return get(what) != null;
+			return Get(what) != null;
 		}
 
-		public static Primitive get(string name)
+		public static Primitive Get(string name)
 		{
 			switch (name)
 			{
 				case "byte":
-					return BYTE;
+					return Byte;
 				case "short":
-					return SHORT;
+					return Short;
 				case "int":
-					return INT;
+					return Int;
 				case "long":
-					return LONG;
+					return Long;
 				case "boolean":
-					return BOOLEAN;
+					return Boolean;
 				case "float":
-					return FLOAT;
+					return Float;
 				case "double":
-					return DOUBLE;
+					return Double;
 				case "decimal":
-					return DECIMAL;
+					return Decimal;
 				case "char":
-					return CHAR;
+					return Char;
 				default:
 					return null;
 			}
 		}
 
-		public static readonly Primitive BYTE = new Primitive("byte", "uint8_t", 1);
-		public static readonly Primitive SHORT = new Primitive("short", "int16_t", 2);
-		public static readonly Primitive INT = new Primitive("int", "int32_t", 4);
-		public static readonly Primitive LONG = new Primitive("long", "int64_t", 8);
-		public static readonly Primitive BOOLEAN = new Primitive("boolean", "uint8_t", 1);
-		public static readonly Primitive FLOAT = new Primitive("float", "float", 4);
-		public static readonly Primitive DOUBLE = new Primitive("double", "double", 8);
-		public static readonly Primitive DECIMAL = new Primitive("decimal", "_Decimal64", 8);
-		public static readonly Primitive CHAR = new Primitive("char", "unsigned char", 2);
-		public static readonly Primitive VOID = new Primitive("void", "void", 0);
+		public static readonly Primitive Byte = new Primitive("byte", "uint8_t", 1);
+		public static readonly Primitive Short = new Primitive("short", "int16_t", 2);
+		public static readonly Primitive Int = new Primitive("int", "int32_t", 4);
+		public static readonly Primitive Long = new Primitive("long", "int64_t", 8);
+		public static readonly Primitive Boolean = new Primitive("boolean", "uint8_t", 1);
+		public static readonly Primitive Float = new Primitive("float", "float", 4);
+		public static readonly Primitive Double = new Primitive("double", "double", 8);
+		public static readonly Primitive Decimal = new Primitive("decimal", "_Decimal64", 8);
+		public static readonly Primitive Char = new Primitive("char", "unsigned char", 2);
+		public static readonly Primitive Void = new Primitive("void", "void", 0);
 
 		static Primitive()
 		{
-			BYTE.initval = new parsing.Literal(BYTE, "0");
-			SHORT.initval = new parsing.Literal(SHORT, "0");
-			INT.initval = new parsing.Literal(INT, "0");
-			LONG.initval = new parsing.Literal(LONG, "0L");
-			BOOLEAN.initval = new parsing.Literal(BOOLEAN, "0");
-			FLOAT.initval = new parsing.Literal(FLOAT, "0.0f");
-			DOUBLE.initval = new parsing.Literal(DOUBLE, "0.0");
-			DECIMAL.initval = new parsing.Literal(DECIMAL, "0.0DD");
-			CHAR.initval = new parsing.Literal(CHAR, "'\\0'");
+			Byte.InitVal = new Parsing.Literal(Byte, "0");
+			Short.InitVal = new Parsing.Literal(Short, "0");
+			Int.InitVal = new Parsing.Literal(Int, "0");
+			Long.InitVal = new Parsing.Literal(Long, "0L");
+			Boolean.InitVal = new Parsing.Literal(Boolean, "0");
+			Float.InitVal = new Parsing.Literal(Float, "0.0f");
+			Double.InitVal = new Parsing.Literal(Double, "0.0");
+			Decimal.InitVal = new Parsing.Literal(Decimal, "0.0DD");
+			Char.InitVal = new Parsing.Literal(Char, "'\\0'");
 		}
 
-		public bool isInt()
+		public bool IsInt()
 		{
-			return (this == BYTE || this == SHORT || this == INT || this == LONG || this == CHAR);
+			return (this == Byte || this == Short || this == Int || this == Long || this == Char);
 		}
 
-		public bool isFloat()
+		public bool IsFloat()
 		{
-			return (this == FLOAT || this == DOUBLE);
+			return (this == Float || this == Double);
 		}
 
-		public override int extends(Type other)
+		public override int Extends(Type other)
 		{
-			if (this == VOID)
+			if (this == Void)
 			{
-				if (other == VOID)
+				if (other == Void)
 				{
 					return 1;
 				}
@@ -139,7 +139,7 @@ namespace bohc.typesys
 				return 1;
 			}
 
-			if (isInt() && (other is typesys.Enum))
+			if (IsInt() && (other is Bohc.TypeSystem.Enum))
 			{
 				return 3;
 			}
@@ -150,17 +150,17 @@ namespace bohc.typesys
 				return 0;
 			}
 
-			if (isInt() && oPrim.isInt())
+			if (IsInt() && oPrim.IsInt())
 			{
 				return 2;
 			}
 
-			if (isFloat() && oPrim.isFloat())
+			if (IsFloat() && oPrim.IsFloat())
 			{
 				return 2;
 			}
 
-			if (isInt() && oPrim.isFloat())
+			if (IsInt() && oPrim.IsFloat())
 			{
 				return 3;
 			}

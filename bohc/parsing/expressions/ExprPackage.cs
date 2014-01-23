@@ -3,23 +3,23 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class ExprPackage : Expression
 	{
-		public readonly typesys.Package refersto;
+		public readonly Bohc.TypeSystem.Package refersto;
 
-		public ExprPackage(typesys.Package refersto)
+		public ExprPackage(Bohc.TypeSystem.Package refersto)
 		{
 			this.refersto = refersto;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
 			throw new NotImplementedException();
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			throw new NotImplementedException();
 		}

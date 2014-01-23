@@ -1,4 +1,4 @@
-PARSING
+Parsing
 =======
 
 Passes:
@@ -39,7 +39,7 @@ The codenames for these steps shall be:
 	5. Code Parsing (CP)
 
 Note that each pass can be done in parallel for each file, since the passes never depends on the same pass from a different file while still doing the pass.
-For example: the TS step for file1.boh and file2.boh can be performed in parallel, they don't depend on eachother.
+For example: the TS step for file1.Boh and file2.Boh can be performed in parallel, they don't depend on eachother.
 The same holds for every other step.
 
 Difficulties for each step:

@@ -3,21 +3,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.typesys;
-using bohc.parsing;
+using Bohc.TypeSystem;
+using Bohc.Parsing;
 
-namespace bohc.generation.mangling
+namespace Bohc.Generation.Mangling
 {
 	public interface IMangler
 	{
 		string getFieldInitName(Class c);
-		string getIncludeGuardName(typesys.Type type);
-		string getHeaderName(typesys.Type type);
-		string getCodeFileName(typesys.Type type);
-		string getThisParamTypeName(typesys.Type type);
-		string getCTypeName(typesys.Type type);
-		string getCStructName(typesys.Type type);
-		string getCName(typesys.Type type);
+		string getIncludeGuardName(Bohc.TypeSystem.Type type);
+		string getHeaderName(Bohc.TypeSystem.Type type);
+		string getCodeFileName(Bohc.TypeSystem.Type type);
+		string getThisParamTypeName(Bohc.TypeSystem.Type type);
+		string getCTypeName(Bohc.TypeSystem.Type type);
+		string getCStructName(Bohc.TypeSystem.Type type);
+		string getCName(Bohc.TypeSystem.Type type);
 		string getNewName(Constructor constr);
 		string getVarName(Variable variable);
 		string getHeapVarDeclName(Variable variable);

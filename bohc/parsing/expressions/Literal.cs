@@ -10,25 +10,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class Literal : Expression
 	{
-		public readonly typesys.Type type;
+		public readonly Bohc.TypeSystem.Type type;
 		public readonly string representation;
 
-		public Literal(typesys.Type type, string representation)
+		public Literal(Bohc.TypeSystem.Type type, string representation)
 		{
 			this.type = type;
 			this.representation = representation;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
 			return type;
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

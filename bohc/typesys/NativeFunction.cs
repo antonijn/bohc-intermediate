@@ -1,24 +1,24 @@
 using System;
 using System.Collections.Generic;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class NativeFunction
 	{
-		public readonly int paramCount;
+		public readonly int ParamCount;
 
 		public NativeFunction(int paramCount, string name)
 		{
-			this.paramCount = paramCount;
+			this.ParamCount = paramCount;
 
-			funcs[name] = this;
+			Funcs[name] = this;
 		}
 
-		public static readonly Dictionary<string, NativeFunction> funcs = new Dictionary<string, NativeFunction>();
+		public static readonly Dictionary<string, NativeFunction> Funcs = new Dictionary<string, NativeFunction>();
 
-		public static readonly NativeFunction NATIVE_REF = new NativeFunction(1, "native_ref");
-		public static readonly NativeFunction NATIVE_DEREF = new NativeFunction(2, "native_deref");
-		public static readonly NativeFunction NATIVE_SIZEOF = new NativeFunction(1, "native_sizeof");
+		public static readonly NativeFunction NativeRef = new NativeFunction(1, "native_ref");
+		public static readonly NativeFunction NativeDeref = new NativeFunction(2, "native_deref");
+		public static readonly NativeFunction NativeSizeof = new NativeFunction(1, "native_sizeof");
 	}
 }
 

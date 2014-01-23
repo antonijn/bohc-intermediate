@@ -10,44 +10,44 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class Package
 	{
-		private static readonly List<Package> instances = new List<Package>();
+		private static readonly List<Package> Instances = new List<Package>();
 
-		public static readonly Package GLOBAL = new Package(null, string.Empty);
+		public static readonly Package Global = new Package(null, string.Empty);
 
-		public readonly Package parent;
-		public readonly string name;
+		public readonly Package Parent;
+		public readonly string Name;
 
 		private Package(Package parent, string name)
 		{
-			boh.Exception.require<exceptions.ParserException>(parent == null || typesys.Type.isValidName(name, false), name + " invalid package name");
+			Boh.Exception.require<Exceptions.ParserException>(parent == null || Bohc.TypeSystem.Type.isValidName(name, false), name + " invalid package name");
 
-			this.parent = parent;
-			this.name = name;
+			this.Parent = parent;
+			this.Name = name;
 		}
 
 		public override string ToString()
 		{
-			if (parent != GLOBAL && parent != null)
+			if (Parent != Global && Parent != null)
 			{
-				return parent.ToString() + "." + name;
+				return Parent.ToString() + "." + Name;
 			}
 
-			return name;
+			return Name;
 		}
 
-		public static Package get(Package parent, string name)
+		public static Package Get(Package parent, string name)
 		{
-			lock (instances)
+			lock (Instances)
 			{
-				Package p = instances.SingleOrDefault(x => (x.parent == parent && x.name == name));
+				Package p = Instances.SingleOrDefault(x => (x.Parent == parent && x.Name == name));
 				if (p == default(Package))
 				{
 					Package newp = new Package(parent, name);
-					instances.Add(newp);
+					Instances.Add(newp);
 					return newp;
 				}
 
@@ -55,35 +55,35 @@ namespace bohc.typesys
 			}
 		}
 
-		public static Package getFromStringExisting(string str)
+		public static Package GetFromStringExisting(string str)
 		{
 			if (str == "")
 			{
-				return GLOBAL;
+				return Global;
 			}
 			string[] parts = str.Split('.');
-			Package last = GLOBAL;
+			Package last = Global;
 
 			foreach (string part in parts)
 			{
-				last = instances.SingleOrDefault(x => (x.parent == last && x.name == part));
+				last = Instances.SingleOrDefault(x => (x.Parent == last && x.Name == part));
 			}
 
 			return last;
 		}
 
-		public static Package getFromString(string str)
+		public static Package GetFromString(string str)
 		{
 			if (str == "")
 			{
-				return GLOBAL;
+				return Global;
 			}
 			string[] parts = str.Split('.');
-			Package last = GLOBAL;
+			Package last = Global;
 
 			foreach (string part in parts)
 			{
-				last = get(last, part);
+				last = Get(last, part);
 			}
 
 			return last;

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public class SwitchLabel
 	{

@@ -10,14 +10,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public class VarDeclaration : Statement
 	{
-		public readonly typesys.Local refersto;
+		public readonly Bohc.TypeSystem.Local refersto;
 		public readonly Expression initial;
 
-		public VarDeclaration(typesys.Local refersto, Expression initial)
+		public VarDeclaration(Bohc.TypeSystem.Local refersto, Expression initial)
 		{
 			this.refersto = refersto;
 			this.initial = initial;

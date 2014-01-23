@@ -10,11 +10,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public interface IMember
 	{
-		Modifiers getModifiers();
-		string getName();
+		Modifiers GetModifiers();
+		string GetName();
 	}
 }

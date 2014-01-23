@@ -10,15 +10,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing.statements
+namespace Bohc.Parsing.Statements
 {
 	public class Body
 	{
-		public readonly List<Statement> statements = new List<Statement>();
+		public readonly List<Statement> Statements = new List<Statement>();
 
 		public bool hasSuperBeenCalled()
 		{
-			foreach (Statement s in statements)
+			foreach (Statement s in Statements)
 			{
 				ExpressionStatement expr = s as ExpressionStatement;
 				if (expr != null)
@@ -26,7 +26,7 @@ namespace bohc.parsing.statements
 					FunctionCall f = expr.expression as FunctionCall;
 					if (f != null)
 					{
-						if (f.refersto.identifier == "this")
+						if (f.refersto.Identifier == "this")
 						{
 							return true;
 						}
@@ -66,7 +66,7 @@ namespace bohc.parsing.statements
 
 		public bool hasReturned()
 		{
-			foreach (Statement s in statements)
+			foreach (Statement s in Statements)
 			{
 				if (s is ReturnStatement || s is ThrowStatement)
 				{

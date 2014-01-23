@@ -10,32 +10,32 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class Field : Variable, IMember
 	{
-		public parsing.Expression initial = null;
+		public Parsing.Expression Initial = null;
 
-		public readonly Modifiers modifiers;
-		public readonly Class owner;
-		public readonly string initvalstr;
+		public readonly Modifiers Modifiers;
+		public readonly Class Owner;
+		public readonly string InitValStr;
 
-		Modifiers IMember.getModifiers()
+		Modifiers IMember.GetModifiers()
 		{
-			return modifiers;
+			return Modifiers;
 		}
 
-		string IMember.getName()
+		string IMember.GetName()
 		{
-			return identifier;
+			return Identifier;
 		}
 
-		public Field(Modifiers modifiers, string identifier, typesys.Type type, Class owner, string initvalstr)
+		public Field(Modifiers modifiers, string identifier, Bohc.TypeSystem.Type type, Class owner, string initvalstr)
 			: base(identifier, type)
 		{
-			this.modifiers = modifiers;
-			this.owner = owner;
-			this.initvalstr = initvalstr;
+			this.Modifiers = modifiers;
+			this.Owner = owner;
+			this.InitValStr = initvalstr;
 		}
 	}
 }

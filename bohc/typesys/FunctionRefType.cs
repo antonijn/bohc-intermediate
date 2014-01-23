@@ -3,33 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class FunctionRefType : Type
 	{
-		public readonly Type retType;
-		public readonly Type[] paramTypes;
+		public readonly Type RetType;
+		public readonly Type[] ParamTypes;
 
 		private FunctionRefType(Type retType, Type[] paramTypes)
-			: base(Package.GLOBAL, Modifiers.PUBLIC | Modifiers.FINAL, string.Empty)
+			: base(Package.Global, Modifiers.Public | Modifiers.Final, string.Empty)
 		{
-			this.retType = retType;
-			this.paramTypes = paramTypes;
+			this.RetType = retType;
+			this.ParamTypes = paramTypes;
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
-			return new parsing.Literal(this, "BOH_FP_NULL");
+			return new Parsing.Literal(this, "BOH_FP_NULL");
 		}
 
-		public override int extends(Type other)
+		public override int Extends(Type other)
 		{
-			return other == this ? 1 : (other == StdType.obj ? 2 : 0);
+			return other == this ? 1 : (other == StdType.Obj ? 2 : 0);
 		}
 
 		public override int GetHashCode()
 		{
-			return retType.GetHashCode() + paramTypes.Sum(x => x.GetHashCode());
+			return RetType.GetHashCode() + ParamTypes.Sum(x => x.GetHashCode());
 		}
 
 		public override bool Equals(object obj)
@@ -40,32 +40,32 @@ namespace bohc.typesys
 				return false;
 			}
 
-			if (fRefType.paramTypes.Length != paramTypes.Length)
+			if (fRefType.ParamTypes.Length != ParamTypes.Length)
 			{
 				return false;
 			}
 
-			for (int i = 0; i < paramTypes.Length; ++i)
+			for (int i = 0; i < ParamTypes.Length; ++i)
 			{
-				if (paramTypes[i].extends(fRefType.paramTypes[i]) != 1)
+				if (ParamTypes[i].Extends(fRefType.ParamTypes[i]) != 1)
 				{
 					return false;
 				}
 			}
 
-			return retType.extends(fRefType.retType) == 1;
+			return RetType.Extends(fRefType.RetType) == 1;
 		}
 
-		public static readonly List<FunctionRefType> instances = new List<FunctionRefType>();
-		public static FunctionRefType get(Type retType, Type[] paramTypes)
+		public static readonly List<FunctionRefType> Instances = new List<FunctionRefType>();
+		public static FunctionRefType Get(Type retType, Type[] paramTypes)
 		{
-			lock (instances)
+			lock (Instances)
 			{
-				FunctionRefType c = instances.SingleOrDefault(x => x.Equals(new FunctionRefType(retType, paramTypes)));
+				FunctionRefType c = Instances.SingleOrDefault(x => x.Equals(new FunctionRefType(retType, paramTypes)));
 				if (c == null)
 				{
 					FunctionRefType newc = new FunctionRefType(retType, paramTypes);
-					instances.Add(newc);
+					Instances.Add(newc);
 					return newc;
 				}
 
@@ -73,17 +73,17 @@ namespace bohc.typesys
 			}
 		}
 
-		public override string externName()
+		public override string ExternName()
 		{
 			StringBuilder b = new StringBuilder();
-			b.Append(retType.externName());
+			b.Append(RetType.ExternName());
 			b.Append("(");
-			foreach (Type t in paramTypes)
+			foreach (Type t in ParamTypes)
 			{
-				b.Append(t.externName());
+				b.Append(t.ExternName());
 				b.Append(", ");
 			}
-			if (paramTypes.Length > 0)
+			if (ParamTypes.Length > 0)
 			{
 				b.Remove(b.Length - 2, 2);
 			}

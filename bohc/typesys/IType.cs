@@ -10,13 +10,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-using bohc.parsing;
+using Bohc.Parsing;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public interface IType
 	{
-		File getFile();
-		void setFile(File f);
+		File GetFile();
+		void SetFile(File f);
 	}
 }

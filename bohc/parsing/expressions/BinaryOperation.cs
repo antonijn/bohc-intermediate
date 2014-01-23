@@ -10,7 +10,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.parsing
+namespace Bohc.Parsing
 {
 	public class BinaryOperation : Expression
 	{
@@ -75,14 +75,14 @@ namespace bohc.parsing
 		public readonly Expression right;
 		public readonly Operator operation;
 
-		public readonly typesys.OverloadedOperator overloaded;
+		public readonly Bohc.TypeSystem.OverloadedOperator overloaded;
 
 		public BinaryOperation(Expression left, Expression right, string rep)
 			: this(left, right, rep, null)
 		{
 		}
 
-		public BinaryOperation(Expression left, Expression right, string rep, typesys.Function ctx)
+		public BinaryOperation(Expression left, Expression right, string rep, Bohc.TypeSystem.Function ctx)
 			: this(left, right, Operator.getExisting(rep, OperationType.BINARY), ctx)
 		{
 		}
@@ -92,31 +92,35 @@ namespace bohc.parsing
 		{
 		}
 
-		public BinaryOperation(Expression left, Expression right, Operator operation, typesys.Function ctx)
+		public BinaryOperation(Expression left, Expression right, Operator operation, Bohc.TypeSystem.Function ctx)
 		{
 			this.left = left;
 			this.right = right;
 			this.operation = operation;
 
-			boh.Exception.require<exceptions.ParserException>(!isAssignment() || left.isLvalue(ctx), "Not a modifiable lvalue");
+			Boh.Exception.require<Exceptions.ParserException>(!isAssignment() || left.isLvalue(ctx), left.ToString() + ": not a modifiable lvalue");
 
 			if (operation == ASSIGN_ADD)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, ADD);
-			} else if (operation == ASSIGN_DIV)
+			}
+			else if (operation == ASSIGN_DIV)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, DIV);
-			} else if (operation == ASSIGN_MUL)
+			}
+			else if (operation == ASSIGN_MUL)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, MUL);
-			} else if (operation == ASSIGN_REM)
+			}
+			else if (operation == ASSIGN_REM)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, REM);
-			} else if (operation == ASSIGN_SUB)
+			}
+			else if (operation == ASSIGN_SUB)
 			{
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, SUB);
@@ -128,16 +132,16 @@ namespace bohc.parsing
 			}
 		}
 
-		private typesys.OverloadedOperator figureOutOverload()
+		private Bohc.TypeSystem.OverloadedOperator figureOutOverload()
 		{
-			typesys.Class cleft = left.getType() as typesys.Class;
-			typesys.Class cright = right.getType() as typesys.Class;
+			Bohc.TypeSystem.Class cleft = left.getType() as Bohc.TypeSystem.Class;
+			Bohc.TypeSystem.Class cright = right.getType() as Bohc.TypeSystem.Class;
 
 			if (cleft != null)
 			{
 				try
 				{
-					typesys.OverloadedOperator type = getOtherTypeOlF(operation.representation, cleft, right.getType(), false);
+					Bohc.TypeSystem.OverloadedOperator type = getOtherTypeOlF(operation.representation, cleft, right.getType(), false);
 					if (type != null)
 					{
 						return type;
@@ -151,7 +155,7 @@ namespace bohc.parsing
 			{
 				try
 				{
-					typesys.OverloadedOperator type = getOtherTypeOlF(operation.representation, left.getType(), cright, false);
+					Bohc.TypeSystem.OverloadedOperator type = getOtherTypeOlF(operation.representation, left.getType(), cright, false);
 					if (type != null)
 					{
 						return type;
@@ -165,36 +169,36 @@ namespace bohc.parsing
 			return null;
 		}
 
-		private typesys.Type getTypeArith()
+		private Bohc.TypeSystem.Type getTypeArith()
 		{
-			typesys.Primitive priml = left.getType() as typesys.Primitive;
-			typesys.Primitive primr = right.getType() as typesys.Primitive;
+			Bohc.TypeSystem.Primitive priml = left.getType() as Bohc.TypeSystem.Primitive;
+			Bohc.TypeSystem.Primitive primr = right.getType() as Bohc.TypeSystem.Primitive;
 
 			if (priml != null && primr != null)
 			{
-				if ((priml == typesys.Primitive.DOUBLE &&
-					primr != typesys.Primitive.DOUBLE) ||
-					(primr == typesys.Primitive.DOUBLE &&
-					priml != typesys.Primitive.DOUBLE))
+				if ((priml == Bohc.TypeSystem.Primitive.Double &&
+					primr != Bohc.TypeSystem.Primitive.Double) ||
+					(primr == Bohc.TypeSystem.Primitive.Double &&
+					priml != Bohc.TypeSystem.Primitive.Double))
 				{
-					return typesys.Primitive.DOUBLE;
+					return Bohc.TypeSystem.Primitive.Double;
 				}
 
-				if ((priml == typesys.Primitive.FLOAT) ||
-					(primr == typesys.Primitive.FLOAT))
+				if ((priml == Bohc.TypeSystem.Primitive.Float) ||
+					(primr == Bohc.TypeSystem.Primitive.Float))
 				{
-					return typesys.Primitive.FLOAT;
+					return Bohc.TypeSystem.Primitive.Float;
 				}
 
-				return priml.size > primr.size ? priml : primr;
+				return priml.Size > primr.Size ? priml : primr;
 			}
 
-			typesys.Class cleft = left.getType() as typesys.Class;
-			typesys.Class cright = right.getType() as typesys.Class;
+			Bohc.TypeSystem.Class cleft = left.getType() as Bohc.TypeSystem.Class;
+			Bohc.TypeSystem.Class cright = right.getType() as Bohc.TypeSystem.Class;
 
 			if (cleft != null)
 			{
-				typesys.Type type = getOtherTypeArith(operation.representation, cleft, right.getType(), false);
+				Bohc.TypeSystem.Type type = getOtherTypeArith(operation.representation, cleft, right.getType(), false);
 				if (type != null)
 				{
 					return type;
@@ -202,62 +206,62 @@ namespace bohc.parsing
 			}
 			if (cright != null)
 			{
-				typesys.Type type = getOtherTypeArith(operation.representation, left.getType(), cright, false);
+				Bohc.TypeSystem.Type type = getOtherTypeArith(operation.representation, left.getType(), cright, false);
 				if (type != null)
 				{
 					return type;
 				}
 			}
 
-			boh.Exception._throw<exceptions.ParserException>(operation.representation + " isn't defined for " + left.getType().name + " and " + right.getType().name);
+			Boh.Exception._throw<Exceptions.ParserException>(operation.representation + " isn't defined for " + left.getType().Name + " and " + right.getType().Name);
 			return null;
 		}
 
-		private static typesys.OverloadedOperator getOtherTypeOlF(string op, typesys.Class c, typesys.Type other, bool shouldThrow)
+		private static Bohc.TypeSystem.OverloadedOperator getOtherTypeOlF(string op, Bohc.TypeSystem.Class c, Bohc.TypeSystem.Type other, bool shouldThrow)
 		{
-			Tuple<typesys.Function, int>[] funcs = c.getFunctions(op, c)
-					.Where(x => c.extends(x.parameters.First().type) != 0)
-					.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.Last().type)))
+			Tuple<Bohc.TypeSystem.Function, int>[] funcs = c.GetFunctions(op, c)
+					.Where(x => c.Extends(x.Parameters.First().Type) != 0)
+					.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x, other.Extends(x.Parameters.Last().Type)))
 					.OrderBy(x => x.Item2)
-					.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0).ToArray();
+					.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0).ToArray();
 			//int i = other.extends(typesys.Primitive.CHAR);
-			return funcs.Select(x => x.Item1).First() as typesys.OverloadedOperator;
+			return funcs.Select(x => x.Item1).First() as Bohc.TypeSystem.OverloadedOperator;
 		}
 
-		private static typesys.OverloadedOperator getOtherTypeOlF(string op, typesys.Type other, typesys.Class c, bool shouldThrow)
+		private static Bohc.TypeSystem.OverloadedOperator getOtherTypeOlF(string op, Bohc.TypeSystem.Type other, Bohc.TypeSystem.Class c, bool shouldThrow)
 		{
-			return c.getFunctions(op, c)
-				.Where(x => c.extends(x.parameters.Last().type) != 0)
-				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.First().type)))
+			return c.GetFunctions(op, c)
+				.Where(x => c.Extends(x.Parameters.Last().Type) != 0)
+				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x, other.Extends(x.Parameters.First().Type)))
 				.OrderBy(x => x.Item2)
-				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
+				.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0)
 				.Select(x => x.Item1)
-				.First() as typesys.OverloadedOperator;
+				.First() as Bohc.TypeSystem.OverloadedOperator;
 		}
 
-		private static typesys.Type getOtherTypeArith(string op, typesys.Class c, typesys.Type other, bool shouldThrow)
+		private static Bohc.TypeSystem.Type getOtherTypeArith(string op, Bohc.TypeSystem.Class c, Bohc.TypeSystem.Type other, bool shouldThrow)
 		{
-			return c.getFunctions(op, c)
-				.Where(x => c.extends(x.parameters.First().type) != 0)
-				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.Last().type)))
+			return c.GetFunctions(op, c)
+				.Where(x => c.Extends(x.Parameters.First().Type) != 0)
+				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x, other.Extends(x.Parameters.Last().Type)))
 				.OrderBy(x => x.Item2)
-				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
+				.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0)
 				.Select(x => x.Item1)
-				.First().returnType;
+				.First().ReturnType;
 		}
 
-		private static typesys.Type getOtherTypeArith(string op, typesys.Type other, typesys.Class c, bool shouldThrow)
+		private static Bohc.TypeSystem.Type getOtherTypeArith(string op, Bohc.TypeSystem.Type other, Bohc.TypeSystem.Class c, bool shouldThrow)
 		{
-			return c.getFunctions(op, c)
-				.Where(x => c.extends(x.parameters.Last().type) != 0)
-				.Select(x => new Tuple<typesys.Function, int>(x, other.extends(x.parameters.First().type)))
+			return c.GetFunctions(op, c)
+				.Where(x => c.Extends(x.Parameters.Last().Type) != 0)
+				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x, other.Extends(x.Parameters.First().Type)))
 				.OrderBy(x => x.Item2)
-				.Where(x => x.Item1.parameters.Count == 0 || x.Item2 != 0)
+				.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0)
 				.Select(x => x.Item1)
-				.First().returnType;
+				.First().ReturnType;
 		}
 
-		public override typesys.Type getType()
+		public override Bohc.TypeSystem.Type getType()
 		{
 			if (operation == ASSIGN || operation == ASSIGN_ADD ||
 				operation == ASSIGN_AND || operation == ASSIGN_DIV ||
@@ -279,13 +283,13 @@ namespace bohc.parsing
 			if (operation == RELAT_GE || operation == RELAT_L || operation == RELAT_G || operation == R_EQ ||
 				operation == RELAT_LE || operation == EQUAL || operation == NOT_EQUAL)
 			{
-				return typesys.Primitive.BOOLEAN;
+				return Bohc.TypeSystem.Primitive.Boolean;
 			}
 
 			return getTypeArith();
 		}
 
-		public override bool isLvalue(typesys.Function ctx)
+		public override bool isLvalue(Bohc.TypeSystem.Function ctx)
 		{
 			return false;
 		}

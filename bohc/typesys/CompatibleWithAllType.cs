@@ -10,21 +10,21 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace bohc.typesys
+namespace Bohc.TypeSystem
 {
 	public class CompatibleWithAllType : Type
 	{
 		public CompatibleWithAllType()
-			: base(Package.GLOBAL, Modifiers.FINAL | Modifiers.PUBLIC, "\0")
+			: base(Package.Global, Modifiers.Final | Modifiers.Public, "\0")
 		{
 		}
 
-		public override parsing.Expression defaultVal()
+		public override Parsing.Expression DefaultVal()
 		{
 			throw new NotImplementedException();
 		}
 
-		public override int extends(Type other)
+		public override int Extends(Type other)
 		{
 			return 1;
 		}
