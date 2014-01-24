@@ -256,6 +256,10 @@ namespace Bohc.General
 				{
 					script.Append(" -fPIC -shared");
 				}
+				if (noStd)
+				{
+					script.Append(" .c/boh_internal.c ");
+				}
 				script.Append(" .c/function_types.c ");
 				foreach (string s in cfiles)
 				{
@@ -311,12 +315,14 @@ namespace Bohc.General
 					{
 						script.Append(".so");
 					}
-				}
-				if (library)
-				{
+
 					script.Append(" -fPIC -shared");
 				}
-				script.Append(" .c/boh_internal.c .c/function_types.c ");
+				if (noStd)
+				{
+					script.Append(" .c/boh_internal.c ");
+				}
+				script.Append(" .c/function_types.c ");
 				foreach (string s in cfiles)
 				{
 					script.Append(s);
@@ -534,6 +540,19 @@ namespace Bohc.General
 			}
 		}
 
+		private Parameter getParam(IFileParser parser, XElement p, Function f)
+		{
+			string pid = p.Attribute("id").Value;
+			string pt = p.Attribute("type").Value;
+			var pmodsattr = p.Attribute("modifiers");
+			string pmods = "";
+			if (pmodsattr != null)
+			{
+				pmods = pmodsattr.Value;
+			}
+			return new Bohc.TypeSystem.Parameter(f, Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(pmods), pid, Bohc.TypeSystem.Type.GetExisting(extname(pt), parser));
+		}
+
 		private void addFunctions(Bohc.TypeSystem.Type t, IFileParser parser, Bohc.TypeSystem.Class c)
 		{
 			foreach (XElement met in t.XElement.Elements("method"))
@@ -567,16 +586,13 @@ namespace Bohc.General
 				}
 				foreach (XElement p in met.Elements("param"))
 				{
-					string pid = p.Attribute("id").Value;
-					string pt = p.Attribute("type").Value;
-					var pmodsattr = p.Attribute("modifiers");
-					string pmods = "";
-					if (pmodsattr != null)
-					{
-						pmods = pmodsattr.Value;
-					}
-					Bohc.TypeSystem.Parameter param = new Bohc.TypeSystem.Parameter(f, Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(pmods), pid, Bohc.TypeSystem.Type.GetExisting(extname(pt), parser));
+					Parameter param = getParam(parser, p, f);
 					f.Parameters.Add(param);
+				}
+
+				if (name == "indexer" && met.Elements("assignment").Count() == 1)
+				{
+					((TypeSystem.Indexer)f).Assignment = getParam(parser, met.Element("assignent"), f);
 				}
 				c.AddMember(f);
 			}
