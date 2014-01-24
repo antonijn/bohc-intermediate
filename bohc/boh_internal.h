@@ -22,7 +22,8 @@
 
 bohcall noreturn void * boh_throw_null_ptr_ex(const char * const var);
 
-#define boh_check_null(X, T) (X == NULL ? *(T*)boh_throw_null_ptr_ex(#X) : X)
+#define boh_check_null(X, T)    (X == NULL          ? *(T*)boh_throw_null_ptr_ex(#X) : X)
+#define boh_fp_check_null(X, T) (X.function == NULL ? *(T*)boh_throw_null_ptr_ex(#X) : X)
 
 bohcall void * boh_gc_alloc(size_t size);
 bohcall void * boh_gc_realloc(void * ptr, size_t size);

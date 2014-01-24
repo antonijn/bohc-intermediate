@@ -1560,7 +1560,7 @@ namespace Bohc.Generation.C
 			string tmp = addTemp(fvCall.belongsto);
 			StringBuilder tempBuild = new StringBuilder();
 			tempBuild.Append(tmp + " = ");
-			addExpression(tempBuild, fvCall.belongsto);
+			addNullCheck(tempBuild, fvCall.belongsto);
 			tempBuild.Append(";");
 			addPreStatStatement(tempBuild.ToString());
 			builder.Append(tmp + ".function(" + tmp + ".context, ");
@@ -1817,75 +1817,103 @@ namespace Bohc.Generation.C
 
 		private void addNullCheck(StringBuilder builder, Expression expr)
 		{
+			ExprVariable evar = expr as ExprVariable;
+
 			// TODO: check if null check is required
 			// not required for thisvars
-			if (!proj.unsafeNullPtr)
+			if (!proj.unsafeNullPtr && (evar == null || !evar.refersto.NullChecked))
 			{
-				builder.Append("boh_check_null(");
+				if (expr.getType() is FunctionRefType)
+				{
+					builder.Append("boh_fp_check_null(");
+				}
+				else
+				{
+					builder.Append("boh_check_null(");
+				}
+
+				string tmp = addTemp(expr);
+				StringBuilder b = new StringBuilder();
+				b.Append(tmp);
+				b.Append(" = ");
+				addExpression(b, expr);
+				b.Append(";");
+				addPreStatStatement(b.ToString());
+
+				builder.Append(tmp);
 			}
-			addExpression(builder, expr);
-			if (!proj.unsafeNullPtr)
+			else
+			{
+				addExpression(builder, expr);
+			}
+
+			if (!proj.unsafeNullPtr && (evar == null || !evar.refersto.NullChecked))
 			{
 				builder.Append(", ");
 				builder.Append(mangler.getCTypeName(expr.getType()));
 				builder.Append(")");
 			}
-		}
-		private void addFCall(StringBuilder builder, FunctionCall fcall)
-		{
-			if ((fcall.refersto.Modifiers.HasFlag(Modifiers.Virtual) ||
-				fcall.refersto.Modifiers.HasFlag(Modifiers.Abstract) ||
-				fcall.refersto.Modifiers.HasFlag(Modifiers.Override)) &&
-				!(fcall.refersto.Owner is Struct))
+
+			if (evar != null)
 			{
-				ExprVariable svar = fcall.belongsto as ExprVariable;
-				if (svar != null && svar.refersto.Identifier == "super")
-				{
-					builder.Append("instance_");
-					builder.Append(mangler.getVtableName((Class)fcall.belongsto.getType()));
-					builder.Append(".");
-					builder.Append(mangler.getVFuncName(fcall.refersto));
-					builder.Append("(");
-					builder.Append("self, ");
-				}
-				else
-				{
-					string temp = addTemp(fcall.belongsto);
-
-					builder.Append("(");
-					builder.Append(temp);
-					builder.Append(" = ");
-					addNullCheck(builder, fcall.belongsto);
-					builder.Append(")->vtable->");
-
-					builder.Append(mangler.getVFuncName(fcall.refersto));
-					builder.Append("(");
-					builder.Append(temp);
-					builder.Append(", ");
-				}
+				evar.refersto.NullChecked = true;
 			}
-			else if (!fcall.refersto.Modifiers.HasFlag(Modifiers.Static))
-			{
-				if (fcall.refersto.Owner is Struct)
-				{
-					string tempname = addTemp(mangler.getCTypeName(fcall.refersto.Owner) + " ", ";");
+		}
 
-					builder.Append(mangler.getCFuncName(fcall.refersto));
-					builder.Append("((");
-					builder.Append(tempname);
-					builder.Append(" = ");
-					addExpression(builder, fcall.belongsto);
-					builder.Append(", &");
-					builder.Append(tempname);
-					builder.Append("), ");
-				}
-				else if (fcall.refersto.Owner is Class
-					|| fcall.refersto.Owner is Bohc.TypeSystem.Enum
-					|| fcall.refersto.Owner is Bohc.TypeSystem.Primitive)
+		private void addVirtCallStart(StringBuilder builder, FunctionCall fcall)
+		{
+			ExprVariable svar = fcall.belongsto as ExprVariable;
+			if (svar != null && svar.refersto.Identifier == "super")
+			{
+				builder.Append("instance_");
+				builder.Append(mangler.getVtableName((Class)fcall.belongsto.getType()));
+				builder.Append(".");
+				builder.Append(mangler.getVFuncName(fcall.refersto));
+				builder.Append("(");
+				builder.Append("self, ");
+			}
+			else
+			{
+				string temp = addTemp(fcall.belongsto);
+				builder.Append("(");
+				builder.Append(temp);
+				builder.Append(" = ");
+				addNullCheck(builder, fcall.belongsto);
+				builder.Append(")->vtable->");
+				builder.Append(mangler.getVFuncName(fcall.refersto));
+				builder.Append("(");
+				builder.Append(temp);
+				builder.Append(", ");
+			}
+		}
+
+		private void addInstanceCallStart(StringBuilder builder, FunctionCall fcall)
+		{
+			if (fcall.refersto.Owner is Struct)
+			{
+				string tempname = addTemp(mangler.getCTypeName(fcall.refersto.Owner) + " ", ";");
+				builder.Append(mangler.getCFuncName(fcall.refersto));
+				builder.Append("((");
+				builder.Append(tempname);
+				builder.Append(" = ");
+				addExpression(builder, fcall.belongsto);
+				builder.Append(", &");
+				builder.Append(tempname);
+				builder.Append("), ");
+			}
+			else
+				if (fcall.refersto.Owner is Class || fcall.refersto.Owner is Bohc.TypeSystem.Enum || fcall.refersto.Owner is Bohc.TypeSystem.Primitive)
 				{
 					builder.Append(mangler.getCFuncName(fcall.refersto));
 					builder.Append("(");
-					addNullCheck(builder, fcall.belongsto);
+					if (fcall.refersto.Owner.IsReferenceType())
+					{
+						addNullCheck(builder, fcall.belongsto);
+					}
+					else
+					{
+						addExpression(builder, fcall.belongsto);
+					}
 					builder.Append(", ");
 				}
 				else
@@ -1894,25 +1922,55 @@ namespace Bohc.Generation.C
 					builder.Append("(");
 					builder.Append(temp);
 					builder.Append(" = ");
-					addNullCheck(builder, fcall.belongsto);
+					if (fcall.refersto.Owner.IsReferenceType())
+					{
+						addNullCheck(builder, fcall.belongsto);
+					}
+					else
+					{
+						addExpression(builder, fcall.belongsto);
+					}
 					builder.Append(")->");
 					builder.Append(mangler.getVFuncName(fcall.refersto));
 					builder.Append("(");
 					builder.Append(temp);
 					builder.Append("->object, ");
 				}
+		}
+
+		void addStaticCallStart(StringBuilder builder, FunctionCall fcall)
+		{
+			builder.Append(mangler.getCFuncName(fcall.refersto));
+			if (fcall.refersto.Modifiers.HasFlag(Modifiers.Native))
+			{
+				builder.Append("(");
 			}
 			else
 			{
-				builder.Append(mangler.getCFuncName(fcall.refersto));
-				if (fcall.refersto.Modifiers.HasFlag(Modifiers.Native))
-				{
-					builder.Append("(");
-				}
-				else
-				{
-					builder.Append("(NULL, ");
-				}
+				builder.Append("(NULL, ");
+			}
+		}
+
+		private void addFCall(StringBuilder builder, FunctionCall fcall)
+		{
+			if (((fcall.refersto.Modifiers.HasFlag(Modifiers.Virtual) ||
+				fcall.refersto.Modifiers.HasFlag(Modifiers.Abstract) ||
+				(fcall.refersto.Modifiers.HasFlag(Modifiers.Override) &&
+			 	!fcall.refersto.Modifiers.HasFlag(Modifiers.Final))) &&
+			 	
+				!fcall.belongsto.getType().Modifiers.HasFlag(Modifiers.Final)) &&
+				
+			    !(fcall.refersto.Owner is Struct))
+			{
+				addVirtCallStart(builder, fcall);
+			}
+			else if (!fcall.refersto.Modifiers.HasFlag(Modifiers.Static))
+			{
+				addInstanceCallStart(builder, fcall);
+			}
+			else
+			{
+				addStaticCallStart(builder, fcall);
 			}
 
 			IEnumerator<Parameter> fparams = fcall.refersto.Parameters.GetEnumerator();
@@ -2002,6 +2060,15 @@ namespace Bohc.Generation.C
 				else
 				{
 					addExpression(builder, binop.right);
+				}
+
+				if (binop.operation == BinaryOperation.ASSIGN)
+				{
+					ExprVariable evar = binop.left as ExprVariable;
+					if (evar != null)
+					{
+						evar.refersto.NullChecked = false;
+					}
 				}
 			}
 		}

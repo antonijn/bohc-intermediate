@@ -21,5 +21,6 @@ namespace Bohc.Parsing
 		{
 			return binop;
 		}
+		public virtual void useAsRvalue() { }
 	}
 }

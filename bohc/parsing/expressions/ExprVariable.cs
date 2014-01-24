@@ -59,6 +59,26 @@ namespace Bohc.Parsing
 			return true;
 		}
 
+		public override Expression useAsLvalue(BinaryOperation binop)
+		{
+			TypeSystem.Local l = refersto as TypeSystem.Local;
+			if (l != null && binop.operation == BinaryOperation.ASSIGN)
+			{
+				l.assignedTo = true;
+			}
+
+			return binop;
+		}
+
+		public override void useAsRvalue()
+		{
+			TypeSystem.Local l = refersto as TypeSystem.Local;
+			if (l != null)
+			{
+				Boh.Exception.require<Exceptions.ParserException>(l.assignedTo, l.Identifier + " was not yet assigned to");
+			}
+		}
+
 		public override bool isStatement()
 		{
 			return false;

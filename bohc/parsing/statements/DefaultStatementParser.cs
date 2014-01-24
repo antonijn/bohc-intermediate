@@ -169,6 +169,7 @@ namespace Bohc.Parsing.Statements
 			string after = betw.Substring(idxSemi + 1);
 
 			VarDeclaration vardec = parseVarDec(b4semi, vars, f, b4semi.LastIndexOf(' '), b4semi.Substring(0, b4semi.LastIndexOf(' ')), Modifiers.None);
+			vardec.refersto.assignedTo = true;
 			Expression expr = expressions.analyze(after, vars.SelectMany(x => x), f, func);
 
 			Boh.Exception.require<ParserException>(

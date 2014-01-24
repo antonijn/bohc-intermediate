@@ -21,10 +21,17 @@ namespace Bohc.TypeSystem
 		public int LamdaLevel = 0;
 		public bool Enclosed = false;
 
+		public bool NullChecked = false;
+
 		public Variable(string identifier, Bohc.TypeSystem.Type type)
 		{
 			this.Identifier = identifier;
 			this.Type = type;
+
+			if (identifier == "this" || identifier == "super")
+			{
+				NullChecked = true;
+			}
 		}
 	}
 }

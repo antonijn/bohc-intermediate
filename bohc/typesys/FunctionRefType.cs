@@ -90,5 +90,10 @@ namespace Bohc.TypeSystem
 			b.Append(")");
 			return b.ToString();
 		}
+
+		public override bool IsReferenceType()
+		{
+			return true;
+		}
 	}
 }

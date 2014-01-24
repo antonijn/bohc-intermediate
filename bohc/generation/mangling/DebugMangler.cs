@@ -50,26 +50,6 @@ namespace Bohc.Generation.Mangling
 
 		public string getCTypeName(Bohc.TypeSystem.Type type)
 		{
-			NativeType nt = type as NativeType;
-			if (nt != null)
-			{
-				int idxPtr = nt.CRep.IndexOf('*');
-				if (idxPtr != -1)
-				{
-					string prePtr = nt.CRep.Substring(0, idxPtr != -1 ? idxPtr : nt.CRep.Length);
-
-					int lidxDot = prePtr.LastIndexOf('.');
-					string pkg = prePtr.Substring(0, lidxDot != -1 ? lidxDot : 0);
-					string cname = prePtr.Substring(lidxDot != -1 ? lidxDot + 1 : 0);
-					// TODO: fix that null
-					Bohc.TypeSystem.Type t = Bohc.TypeSystem.Type.GetExisting(Package.GetFromStringExisting(pkg), cname, null);
-					string ptrs = nt.CRep.Substring(idxPtr);
-					return (t != null ? getCTypeName(t) : prePtr) + ptrs;
-				}
-
-				return nt.CRep;
-			}
-
 			if (type is Struct || type is FunctionRefType || type is Bohc.TypeSystem.Enum)
 			{
 				return getCStructName(type);

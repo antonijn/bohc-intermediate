@@ -603,8 +603,6 @@ namespace Bohc.Parsing
 
 		public void parseFileTCP(File f)
 		{
-			string file = f.content;
-
 			if (f.state >= ParserState.TCP)
 			{
 				return;
@@ -635,8 +633,6 @@ namespace Bohc.Parsing
 
 		public void parseFileCP(File f)
 		{
-			string file = f.content;
-
 			if (f.state >= ParserState.CP)
 			{
 				return;

@@ -16,6 +16,8 @@ namespace Bohc.TypeSystem
 	{
 		public Modifiers Modifiers;
 
+		public bool assignedTo = false;
+
 		public Local(string identifier, Type type, Modifiers modifiers)
 			: base(identifier, type)
 		{

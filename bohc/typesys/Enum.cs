@@ -125,5 +125,10 @@ namespace Bohc.TypeSystem
 			}
 			return base.Extends(other);
 		}
+
+		public override bool IsReferenceType()
+		{
+			return false;
+		}
 	}
 }

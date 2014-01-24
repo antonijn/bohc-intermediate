@@ -82,7 +82,7 @@ namespace Bohc.Parsing
 						char prev = str[pos - 1];
 						if ((((char.IsLetterOrDigit(prev) || prev == '_') && !(char.IsLetterOrDigit(ch) || ch == '_')) ||
 							((char.IsLetterOrDigit(ch) || ch == '_') && !(char.IsLetterOrDigit(prev) || prev == '_')) ||
-							prev == '(' || prev == ')' || (prev == '[' && ch != ']') || (prev == ']'))
+							prev == '(' || prev == ')' || prev == '[' || (prev == ']'))
 							&& ch != '.' && prev != '.')
 						{
 							if (ch == '*' && sb.ToString().StartsWith("native."))
@@ -156,6 +156,11 @@ namespace Bohc.Parsing
 				if (analyzeRef(ref last, vars, ref i, ref next, str, file, ctx)) { continue; }
 				if (analyzeIndexer(ref last, vars, ref i, ref next, str, file, ctx)) { continue; }
 				if (analyzeName(ref last, vars, ref i, ref next, str, file, ctx)) { continue; }
+			}
+
+			if (last != null)
+			{
+				last.useAsRvalue();
 			}
 		}
 
@@ -602,7 +607,7 @@ namespace Bohc.Parsing
 		private Expression analyzeLocal(Expression last, IEnumerable<Bohc.TypeSystem.Variable> vars, string next)
 		{
 			Bohc.TypeSystem.Variable v = vars.Single(x => x.Identifier == next);
-			if (v.LamdaLevel < lambdaStack && !v.Enclosed/* && !(v is typesys.LambdaParam)*/)
+			if (v.LamdaLevel < lambdaStack/* && !(v is typesys.LambdaParam)*/)
 			{
 				Bohc.TypeSystem.Parameter param = v as Bohc.TypeSystem.Parameter;
 				Boh.Exception.require<Exceptions.ParserException>(param == null || !param.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref),

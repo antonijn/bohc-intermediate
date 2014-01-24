@@ -277,5 +277,10 @@ namespace Bohc.TypeSystem
 
 			return Super.GetAllFields().Concat(Fields);
 		}
+
+		public override bool IsReferenceType()
+		{
+			return true;
+		}
 	}
 }

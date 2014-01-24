@@ -167,5 +167,10 @@ namespace Bohc.TypeSystem
 
 			return 0;
 		}
+
+		public override bool IsReferenceType()
+		{
+			return false;
+		}
 	}
 }

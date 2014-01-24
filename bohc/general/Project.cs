@@ -429,6 +429,20 @@ namespace Bohc.General
 				XElement xe = new XElement("method", getParamXElements(x));
 				xe.SetAttributeValue("id", x.Identifier);
 				xe.SetAttributeValue("type", x.ReturnType.ExternName());
+
+				Indexer idxer = x as Indexer;
+				if (idxer != null && idxer.IsAssignment())
+				{
+					XElement xea = new XElement("assignment");
+					xea.SetAttributeValue("id", idxer.Assignment.Identifier);
+					xea.SetAttributeValue("type", idxer.Assignment.Type.ExternName());
+					if (idxer.Assignment.Modifiers != Bohc.TypeSystem.Modifiers.None)
+					{
+						xea.SetAttributeValue("modifiers", idxer.Assignment.Modifiers.ToString().Replace('|', ' '));
+					}
+					xe.Add(xea);
+				}
+
 				if (x.Modifiers != Bohc.TypeSystem.Modifiers.None)
 				{
 					xe.SetAttributeValue("modifiers", x.Modifiers.ToString().ToLowerInvariant().Replace(",", ""));
@@ -531,6 +545,10 @@ namespace Bohc.General
 				if (name == "this")
 				{
 					f = new Bohc.TypeSystem.Constructor(Bohc.TypeSystem.ModifierHelper.GetModifiersFromString(mods), c, new List<Bohc.TypeSystem.Parameter>(), string.Empty);
+				}
+				else if (name == "indexer")
+				{
+					f = new TypeSystem.Indexer(c, TypeSystem.ModifierHelper.GetModifiersFromString(mods), Bohc.TypeSystem.Type.GetExisting(rettype, parser), new List<Parameter>(), string.Empty);
 				}
 				else if (name == "static")
 				{

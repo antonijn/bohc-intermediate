@@ -19,6 +19,11 @@ namespace Bohc.Parsing.Statements
 
 		public VarDeclaration(Bohc.TypeSystem.Local refersto, Expression initial)
 		{
+			if (initial != null)
+			{
+				refersto.assignedTo = true;
+			}
+
 			this.refersto = refersto;
 			this.initial = initial;
 		}

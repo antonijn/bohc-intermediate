@@ -93,7 +93,6 @@ namespace Bohc.TypeSystem
 			Boh.Exception.require<Exceptions.ParserException>(
 				this is NullType ||
 				this is CompatibleWithAllType ||
-				this is NativeType ||
 				this is FunctionRefType ||
 				isValidName(name, this is Primitive), name + " is not a valid typename");
 
@@ -259,6 +258,7 @@ namespace Bohc.TypeSystem
 		}
 
 		public abstract Parsing.Expression DefaultVal();
+		public abstract bool IsReferenceType();
 
 		public XElement XElement;
 		public bool IsExtern()

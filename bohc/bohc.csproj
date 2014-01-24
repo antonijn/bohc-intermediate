@@ -71,7 +71,9 @@
     <Compile Include="parsing\statements\ReturnStatement.cs" />
     <Compile Include="parsing\statements\Scope.cs" />
     <Compile Include="parsing\statements\Statement.cs" />
-    <Compile Include="parsing\statements\SwitchLabel.cs" />
+    <Compile Include="parsing\statements\SwitchLabel.cs">
+      <DependentUpon>SwitchStatement.cs</DependentUpon>
+    </Compile>
     <Compile Include="parsing\statements\SwitchStatement.cs" />
     <Compile Include="parsing\statements\ThrowStatement.cs" />
     <Compile Include="parsing\statements\TryStatement.cs" />
@@ -98,7 +100,6 @@
     <Compile Include="typesys\Local.cs" />
     <Compile Include="typesys\Modifiers.cs" />
     <Compile Include="typesys\ModifierHelper.cs" />
-    <Compile Include="typesys\NativeType.cs" />
     <Compile Include="typesys\NullType.cs" />
     <Compile Include="typesys\OverloadedOperator.cs" />
     <Compile Include="typesys\Package.cs" />

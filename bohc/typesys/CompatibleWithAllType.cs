@@ -28,5 +28,10 @@ namespace Bohc.TypeSystem
 		{
 			return 1;
 		}
+
+		public override bool IsReferenceType()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
