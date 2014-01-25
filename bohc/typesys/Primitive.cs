@@ -19,6 +19,11 @@ namespace Bohc.TypeSystem
 		public Function EqualsM;
 		public Function HashM;
 
+		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type context)
+		{
+			return new [] { ToStringM, GetTypeM, EqualsM, HashM }.Where(x => x.Identifier == id);
+		}
+
 		public static void FigureOutFunctionsForAll()
 		{
 			Byte.FigureOutFunctions();

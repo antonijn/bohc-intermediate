@@ -257,6 +257,12 @@ namespace Bohc.TypeSystem
 			return (string.IsNullOrEmpty(pckg) ? string.Empty : pckg + '.') + Name;
 		}
 
+		public abstract IEnumerable<Function> GetFunctions(string id, Type context);
+		public virtual Field GetField(string id, Type context)
+		{
+			return null;
+		}
+
 		public abstract Parsing.Expression DefaultVal();
 		public abstract bool IsReferenceType();
 

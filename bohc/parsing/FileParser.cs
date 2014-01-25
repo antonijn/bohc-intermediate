@@ -508,14 +508,28 @@ namespace Bohc.Parsing
 				parts[i] = parts[i].Trim();
 			}
 
-			foreach (string part in parts)
+			for (int i = 0; i < parts.Length; ++i)
 			{
+				string part = parts[i];
+
 				string identifier;
 				Modifiers mods;
 				Bohc.TypeSystem.Type type;
 				parseParam(f, part, out identifier, out mods, out type);
 
+				bool variadic = false;
+				if (identifier.EndsWith("..."))
+				{
+					variadic = true;
+					identifier = identifier.Substring(0, identifier.Length - 3);
+				}
+
 				Parameter param = new Parameter(func, mods, identifier, type);
+				if (i == parts.Length - 1 && variadic)
+				{
+					Boh.Exception.require<ParserException>(type.OriginalGenType == StdType.ICollection, "variadic parameter type must be ICollection");
+					param.Variadic = true;
+				}
 				func.Parameters.Add(param);
 			}
 		}

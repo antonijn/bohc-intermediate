@@ -216,8 +216,10 @@ namespace Bohc.TypeSystem
 			return ctx.OriginalGenType == OriginalGenType && OriginalGenType != null;
 		}
 
-		public IEnumerable<Function> GetFunctions(string id, Class context)
+		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type ctx)
 		{
+			Class context = ctx as Class;
+
 			bool _private = false;
 			bool _protected = false;
 			bool _public = true;
@@ -238,8 +240,10 @@ namespace Bohc.TypeSystem
 				(_private && x.Modifiers.HasFlag(Modifiers.Private))));
 		}
 
-		public Field GetField(string id, Class context)
+		public override Field GetField(string id, TypeSystem.Type ctx)
 		{
+			Class context = ctx as Class;
+
 			bool _private = false;
 			bool _protected = false;
 			bool _public = true;

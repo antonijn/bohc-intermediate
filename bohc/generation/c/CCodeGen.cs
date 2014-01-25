@@ -629,6 +629,64 @@ namespace Bohc.Generation.C
 			}
 		}
 
+		private void addArrayInitSig(Class c, StringBuilder builder)
+		{
+			builder.Append("extern ");
+			builder.Append(mangler.getCTypeName(c));
+			builder.Append(" init_");
+			builder.Append(mangler.getCName(c));
+			builder.AppendLine("(int32_t count, ...);");
+		}
+
+		private void addArrayInitDef(Class c, StringBuilder builder)
+		{
+			builder.Append(mangler.getCTypeName(c));
+			builder.Append(" init_");
+			builder.Append(mangler.getCName(c));
+			builder.AppendLine("(int32_t count, ...)");
+			builder.AppendLine("{");
+			++indentation;
+
+			addIndent(builder);
+			builder.AppendLine("int32_t i;");
+			addIndent(builder);
+			builder.AppendLine("va_list ap;");
+			addIndent(builder);
+			builder.Append(mangler.getCTypeName(c));
+			builder.Append(" a = ");
+			builder.Append(mangler.getNewName(c.Constructors.Single(x => x.Parameters.Count == 1 && x.Parameters.Single().Type == Primitive.Int)));
+			builder.AppendLine("(count);");
+			addIndent(builder);
+			builder.AppendLine("va_start(ap, count);");
+			addIndent(builder);
+			builder.AppendLine("for (i = 0; i < count; ++i)");
+
+			addIndent(builder);
+
+			builder.AppendLine("{");
+			++indentation;
+			addIndent(builder);
+
+			Indexer idx = c.Functions.OfType<Indexer>().Single(x => x.IsAssignment());
+
+			builder.Append(mangler.getCFuncName(idx));
+			builder.Append("(a, i, va_arg(ap, ");
+			builder.Append(mangler.getCTypeName(idx.ReturnType));
+			builder.AppendLine("));");
+
+			--indentation;
+			addIndent(builder);
+
+			builder.AppendLine("}");
+			addIndent(builder);
+			builder.AppendLine("va_end(ap);");
+			addIndent(builder);
+			builder.AppendLine("return a;");
+
+			--indentation;
+			builder.AppendLine("}");
+		}
+
 		private void addTypeOfSig(StringBuilder builder, Bohc.TypeSystem.Type type)
 		{
 			string cname = mangler.getCName(type);
@@ -1026,6 +1084,12 @@ namespace Bohc.Generation.C
 
 			addFieldInitSig(builder, c);
 			builder.AppendLine();
+
+			if (c.OriginalGenType == StdType.Array)
+			{
+				addArrayInitSig(c, builder);
+				builder.AppendLine();
+			}
 	
 			addFunctionSigs(builder, c.Functions.Where(x => !x.Modifiers.HasFlag(Modifiers.Private) && !x.Modifiers.HasFlag(Modifiers.Abstract)), "extern ");
 			builder.AppendLine();
@@ -1860,6 +1924,26 @@ namespace Bohc.Generation.C
 			}
 		}
 
+		private void addArrayInit(StringBuilder builder, Expression[] exprs, TypeSystem.Type itemtype)
+		{
+			TypeSystem.Class array = (TypeSystem.Class)StdType.Array.GetTypeFor(new [] { itemtype }, null);
+			builder.Append("init_");
+			builder.Append(mangler.getCName(array));
+			builder.Append("(");
+			builder.Append(exprs.Count());
+			builder.Append(", ");
+			foreach (Expression expr in exprs)
+			{
+				addExpressionImplCon(builder, expr, itemtype);
+				builder.Append(", ");
+			}
+			if (exprs.Length > 0)
+			{
+				builder.Remove(builder.Length - 2, 2);
+			}
+			builder.Append(")");
+		}
+
 		private void addVirtCallStart(StringBuilder builder, FunctionCall fcall)
 		{
 			ExprVariable svar = fcall.belongsto as ExprVariable;
@@ -1901,41 +1985,40 @@ namespace Bohc.Generation.C
 				builder.Append(tempname);
 				builder.Append("), ");
 			}
-			else
-				if (fcall.refersto.Owner is Class || fcall.refersto.Owner is Bohc.TypeSystem.Enum || fcall.refersto.Owner is Bohc.TypeSystem.Primitive)
+			else if (fcall.refersto.Owner is Class || fcall.refersto.Owner is Bohc.TypeSystem.Enum || fcall.refersto.Owner is Bohc.TypeSystem.Primitive)
+			{
+				builder.Append(mangler.getCFuncName(fcall.refersto));
+				builder.Append("(");
+				if (fcall.refersto.Owner.IsReferenceType())
 				{
-					builder.Append(mangler.getCFuncName(fcall.refersto));
-					builder.Append("(");
-					if (fcall.refersto.Owner.IsReferenceType())
-					{
-						addNullCheck(builder, fcall.belongsto);
-					}
-					else
-					{
-						addExpression(builder, fcall.belongsto);
-					}
-					builder.Append(", ");
+					addNullCheck(builder, fcall.belongsto);
 				}
 				else
 				{
-					string temp = addTemp(fcall.belongsto);
-					builder.Append("(");
-					builder.Append(temp);
-					builder.Append(" = ");
-					if (fcall.refersto.Owner.IsReferenceType())
-					{
-						addNullCheck(builder, fcall.belongsto);
-					}
-					else
-					{
-						addExpression(builder, fcall.belongsto);
-					}
-					builder.Append(")->");
-					builder.Append(mangler.getVFuncName(fcall.refersto));
-					builder.Append("(");
-					builder.Append(temp);
-					builder.Append("->object, ");
+					addExpression(builder, fcall.belongsto);
 				}
+				builder.Append(", ");
+			}
+			else
+			{
+				string temp = addTemp(fcall.belongsto);
+				builder.Append("(");
+				builder.Append(temp);
+				builder.Append(" = ");
+				if (fcall.refersto.Owner.IsReferenceType())
+				{
+					addNullCheck(builder, fcall.belongsto);
+				}
+				else
+				{
+					addExpression(builder, fcall.belongsto);
+				}
+				builder.Append(")->");
+				builder.Append(mangler.getVFuncName(fcall.refersto));
+				builder.Append("(");
+				builder.Append(temp);
+				builder.Append("->object, ");
+			}
 		}
 
 		void addStaticCallStart(StringBuilder builder, FunctionCall fcall)
@@ -1973,8 +2056,10 @@ namespace Bohc.Generation.C
 				addStaticCallStart(builder, fcall);
 			}
 
-			IEnumerator<Parameter> fparams = fcall.refersto.Parameters.GetEnumerator();
-			foreach (Expression param in fcall.parameters)
+			int take = fcall.refersto.IsVariadic() ? fcall.refersto.Parameters.Count - 1 : fcall.refersto.Parameters.Count;
+
+			IEnumerator<Parameter> fparams = fcall.refersto.Parameters.Take(take).GetEnumerator();
+			foreach (Expression param in fcall.parameters.Take(take))
 			{
 				if (fparams.MoveNext())
 				{
@@ -1984,6 +2069,15 @@ namespace Bohc.Generation.C
 				{
 					addExpression(builder, param);
 				}
+				builder.Append(", ");
+			}
+
+			if (fcall.refersto.IsVariadic())
+			{
+				Interface icoll = (Interface)fcall.refersto.Parameters.Last().Type;
+				Interface iter = (Interface)icoll.Functions.Single(x => x.Identifier == "iterator").ReturnType;
+				TypeSystem.Type type = iter.Functions.Single(x => x.Identifier == "current").ReturnType;
+				addArrayInit(builder, fcall.parameters.Skip(take).ToArray(), type);
 				builder.Append(", ");
 			}
 
@@ -2209,7 +2303,7 @@ namespace Bohc.Generation.C
 			}
 			else
 			{
-				fcall = new FunctionCall(((Bohc.TypeSystem.Interface)fore.expr.getType()).GetFunctions("iterator").Single(x => x.Parameters.Count() == 0), fore.expr, Enumerable.Empty<Expression>());
+				fcall = new FunctionCall(((Bohc.TypeSystem.Interface)fore.expr.getType()).GetFunctions("iterator", null).Single(x => x.Parameters.Count() == 0), fore.expr, Enumerable.Empty<Expression>());
 			}
 			string tmp = addTemp(fcall);
 			builder.Append(tmp);
@@ -2704,6 +2798,12 @@ namespace Bohc.Generation.C
 
 			addFieldInit(builder, c);
 			builder.AppendLine();
+
+			if (c.OriginalGenType == StdType.Array)
+			{
+				addArrayInitDef(c, builder);
+				builder.AppendLine();
+			}
 			
 			addFunctionDefs(builder, c.Functions.Where(x => x.Body != null));
 

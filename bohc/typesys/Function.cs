@@ -25,6 +25,15 @@ namespace Bohc.TypeSystem
 		public readonly string BodyStr;
 		public Parsing.Statements.Body Body;
 
+		public bool IsVariadic()
+		{
+			if (Parameters.Count > 0)
+			{
+				return Parameters.Last().Variadic;
+			}
+			return false;
+		}
+
 		Modifiers IMember.GetModifiers()
 		{
 			return Modifiers;
@@ -65,10 +74,11 @@ namespace Bohc.TypeSystem
 			parameters = GetStringParams(str, i, locals, file, ctx, ep, close);
 			IEnumerable<Expression> _parameters = parameters;
 			Bohc.TypeSystem.Function compatible = functions
-				.Where(x => x.Parameters.Count == _parameters.Count())
+				.Where(x => x.Parameters.Count == _parameters.Count() || (x.IsVariadic() && _parameters.Count() >= x.Parameters.Count - 1))
 				.Select(x => new Tuple<Bohc.TypeSystem.Function, int[]>(x, GetArrayParams(_parameters, x)))
 				.Where(x => !x.Item2.Contains(0))
 				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x.Item1, x.Item2.Sum()))
+				.ToArray()
 				.OrderBy(x => x.Item2)
 				.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0)
 				.Select(x => x.Item1)
@@ -100,11 +110,16 @@ namespace Bohc.TypeSystem
 		}
 		public static int[] GetArrayParams(IEnumerable<Bohc.TypeSystem.Type> parameters, Bohc.TypeSystem.Function func)
 		{
-			int i = 0;
-			int[] result = new int[parameters.Count()];
-			using (IEnumerator<Bohc.TypeSystem.Type> exprsns = parameters.GetEnumerator())
+			// TODO: properly compare variadic params
+			/*if (func.IsVariadic())
 			{
-				using (IEnumerator<Bohc.TypeSystem.Parameter> paramsf = func.Parameters.GetEnumerator())
+				System.Diagnostics.Debugger.Break();
+			}*/
+			int i = 0;
+			int[] result = new int[func.Parameters.Count - (func.IsVariadic() ? 1 : 0)];
+			using (IEnumerator<Bohc.TypeSystem.Type> exprsns = parameters.Take(result.Length).GetEnumerator())
+			{
+				using (IEnumerator<Bohc.TypeSystem.Parameter> paramsf = func.Parameters.Take(result.Length).GetEnumerator())
 				{
 					while (exprsns.MoveNext() && paramsf.MoveNext())
 					{

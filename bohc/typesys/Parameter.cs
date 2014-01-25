@@ -17,6 +17,8 @@ namespace Bohc.TypeSystem
 		public readonly Function Function;
 		public readonly Modifiers Modifiers;
 
+		public bool Variadic = false;
+
 		public Parameter(Function function, Modifiers modifiers, string identifier, Bohc.TypeSystem.Type type)
 			: base(identifier, type)
 		{

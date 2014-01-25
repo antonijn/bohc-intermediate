@@ -50,10 +50,10 @@ namespace Bohc.TypeSystem
 			}
 		}
 
-		public IEnumerable<Function> GetFunctions(string id)
+		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type context)
 		{
 			IEnumerable<Function> inThis = Functions.Where(x => x.Identifier == id).ToList();
-			return inThis.Concat(Implements.SelectMany(x => x.GetFunctions(id)));
+			return inThis.Concat(Implements.SelectMany(x => x.GetFunctions(id, context)));
 		}
 
 		public override int Extends(Type other)

@@ -23,18 +23,24 @@ namespace Bohc.Parsing
 			// check whether the refs are alright
 			TypeSystem.Indexer idxer = refersto as TypeSystem.Indexer;
 
-			int i = 0;
-			foreach (Expression expr in idxer == null ? parameters : parameters.Take(refersto.Parameters.Count - 1))
+			int take = refersto.Parameters.Count - (refersto.IsVariadic() ? 1 : 0);
+			using (IEnumerator<Expression> expre = parameters.Take(take).GetEnumerator())
 			{
-				Bohc.TypeSystem.Parameter corresponding = refersto.Parameters[i++];
-				Boh.Exception.require<Exceptions.ParserException>(
-					(!corresponding.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref) ||
-					(expr is RefExpression)),
-					"ref parameter requires ref expression");
-				Boh.Exception.require<Exceptions.ParserException>(
-					(corresponding.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref) ||
-					!(expr is RefExpression)),
-					"ref expression requires ref parameter");
+				using (IEnumerator<TypeSystem.Parameter> parame = refersto.Parameters.Take(take).GetEnumerator())
+				{
+					while (expre.MoveNext() && parame.MoveNext())
+					{
+						Bohc.TypeSystem.Parameter corresponding = parame.Current;
+						Boh.Exception.require<Exceptions.ParserException>(
+							(!corresponding.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref) ||
+							(expre.Current is RefExpression)),
+							"ref parameter requires ref expression");
+						Boh.Exception.require<Exceptions.ParserException>(
+							(corresponding.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref) ||
+							!(expre.Current is RefExpression)),
+							"ref expression requires ref parameter");
+					}
+				}
 			}
 
 			this.refersto = refersto;

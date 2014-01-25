@@ -13,6 +13,7 @@
 #include <uchar.h>
 #include <stdint.h>
 #include <stdnoreturn.h>
+#include <stdarg.h>
 
 #ifdef __cplusplus
 #define bohcall extern "C"

@@ -717,25 +717,10 @@ namespace Bohc.Parsing
 			// check which functions/fields are compatible
 			// change expr accordingly
 
-			IEnumerable<Bohc.TypeSystem.Function> functions = null;
-			Bohc.TypeSystem.Variable field = null;
+			IEnumerable<Bohc.TypeSystem.Function> functions = type.GetFunctions(next, type);
+			Bohc.TypeSystem.Variable field = type.GetField(next, type);
 
-			if (type is Bohc.TypeSystem.Interface)
-			{
-				Bohc.TypeSystem.Interface iface = (Bohc.TypeSystem.Interface)type;
-				functions = iface.GetFunctions(next);
-			}
-			else if (type is Bohc.TypeSystem.Class)
-			{
-				Bohc.TypeSystem.Class _class = (Bohc.TypeSystem.Class)type;
-				functions = _class.GetFunctions(next, (Bohc.TypeSystem.Class)file.type);
-				field = _class.GetField(next, (Bohc.TypeSystem.Class)file.type);
-				if (field == null)
-				{
-					//field = vars.SingleOrDefault(x => x.Identifier == next);
-				}
-			}
-			else if (type is Bohc.TypeSystem.Enum)
+			if (type is Bohc.TypeSystem.Enum)
 			{
 				Bohc.TypeSystem.Enum _enum = (Bohc.TypeSystem.Enum)type;
 				Bohc.TypeSystem.Enumerator enumerator = _enum.Enumerators.SingleOrDefault(x => x.Name == next);
@@ -744,26 +729,6 @@ namespace Bohc.Parsing
 					expr = new ExprEnumerator(enumerator);
 					return i;
 				}
-
-				switch (next)
-				{
-					case "toString":
-						functions = new[] { _enum.ToStringM };
-						break;
-					case "getType":
-						functions = new[] { _enum.GetTypeM };
-						break;
-					case "equals":
-						functions = new[] { _enum.EqualsM };
-						break;
-					case "hash":
-						functions = new[] { _enum.HashM };
-						break;
-				}
-			}
-			else
-			{
-				field = ((Bohc.TypeSystem.Class)type).Fields.SingleOrDefault(x => x.Identifier == next);
 			}
 
 			if (field != null && !((TypeSystem.Field)field).Modifiers.HasFlag(TypeSystem.Modifiers.Static) && expr == null)

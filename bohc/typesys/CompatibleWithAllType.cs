@@ -33,5 +33,10 @@ namespace Bohc.TypeSystem
 		{
 			throw new NotImplementedException();
 		}
+
+		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type context)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

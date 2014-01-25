@@ -95,5 +95,11 @@ namespace Bohc.TypeSystem
 		{
 			return true;
 		}
+
+		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type context)
+		{
+			// TODO: implement functions
+			return Enumerable.Empty<Function>();
+		}
 	}
 }

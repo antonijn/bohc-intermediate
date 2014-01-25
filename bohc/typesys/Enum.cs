@@ -95,6 +95,11 @@ namespace Bohc.TypeSystem
 		
 		}
 
+		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type context)
+		{
+			return new [] { ToStringM, HashM, EqualsM, GetTypeM, Parse, TryParse, GetEnumerators }.Where(x => x.Identifier == id);
+		}
+
 		public override Parsing.Expression DefaultVal()
 		{
 			return new Parsing.Literal(Primitive.Int, "0");
