@@ -30,5 +30,6 @@ namespace Bohc.Generation.Mangling
 		string getCFuncName(Function func);
 		string getVtableName(Class c);
 		string getEnumeratorName(Enumerator e);
+		string getGetInterfaceName(Class c);
 	}
 }

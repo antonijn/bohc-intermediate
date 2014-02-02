@@ -80,7 +80,7 @@ namespace Bohc.TypeSystem
 				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x.Item1, x.Item2.Sum()))
 				.ToArray()
 				.OrderBy(x => x.Item2)
-				.Where(x => x.Item1.Parameters.Count == 0 || x.Item2 != 0)
+				.Where(x => (x.Item1.Parameters.Count - (x.Item1.IsVariadic() ? 1 : 0) == 0) || x.Item2 != 0)
 				.Select(x => x.Item1)
 				.FirstOrDefault();
 
@@ -123,8 +123,7 @@ namespace Bohc.TypeSystem
 				{
 					while (exprsns.MoveNext() && paramsf.MoveNext())
 					{
-						result[i] = exprsns.Current.Extends(paramsf.Current.Type);
-						++i;
+						result[i++] = exprsns.Current.Extends(paramsf.Current.Type);
 					}
 				}
 			}

@@ -15,6 +15,7 @@ using System.Xml.Linq;
 using Bohc.Generation;
 using Bohc.Generation.C;
 using Bohc.Generation.Mangling;
+using Bohc.Generation.Llvm;
 
 using Bohc.Parsing;
 using Bohc.Parsing.Statements;
@@ -38,15 +39,21 @@ namespace Bohc
 		public static void Main(string[] args)
 		{
 #if DEBUG
+
 			args = new string[]
 			{
 				"TestClass.boh",
-				"-n",
+				"-N",
 			};
 #endif
 
 			Project p = new Project(args);
+
+			Stopwatch sw = new Stopwatch();
+			sw.Start();
 			p.Parse();
+			sw.Stop();
+			Console.WriteLine(TimeSpan.TicksPerSecond);
 			p.Build();
 		}
 	}

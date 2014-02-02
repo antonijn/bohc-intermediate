@@ -48,13 +48,15 @@ namespace Bohc.TypeSystem
 
 		public readonly int Size;
 		public readonly string CName;
+		public readonly string LlvmName;
 		public Parsing.Literal InitVal;
 
-		public Primitive(string name, string cname, int size)
+		public Primitive(string name, string cname, string llvmname, int size)
 			: base(Package.Global, Modifiers.Public | Modifiers.Final, name)
 		{
 			this.Size = size;
 			this.CName = cname;
+			this.LlvmName = llvmname;
 		}
 
 		public override Parsing.Expression DefaultVal()
@@ -94,16 +96,16 @@ namespace Bohc.TypeSystem
 			}
 		}
 
-		public static readonly Primitive Byte = new Primitive("byte", "uint8_t", 1);
-		public static readonly Primitive Short = new Primitive("short", "int16_t", 2);
-		public static readonly Primitive Int = new Primitive("int", "int32_t", 4);
-		public static readonly Primitive Long = new Primitive("long", "int64_t", 8);
-		public static readonly Primitive Boolean = new Primitive("boolean", "uint8_t", 1);
-		public static readonly Primitive Float = new Primitive("float", "float", 4);
-		public static readonly Primitive Double = new Primitive("double", "double", 8);
-		public static readonly Primitive Decimal = new Primitive("decimal", "_Decimal64", 8);
-		public static readonly Primitive Char = new Primitive("char", "unsigned char", 2);
-		public static readonly Primitive Void = new Primitive("void", "void", 0);
+		public static readonly Primitive Byte = new Primitive("byte", "uint8_t", "i8", 1);
+		public static readonly Primitive Short = new Primitive("short", "int16_t", "i16", 2);
+		public static readonly Primitive Int = new Primitive("int", "int32_t", "i32", 4);
+		public static readonly Primitive Long = new Primitive("long", "int64_t", "i64", 8);
+		public static readonly Primitive Boolean = new Primitive("boolean", "uint8_t", "i1", 1);
+		public static readonly Primitive Float = new Primitive("float", "float", "float", 4);
+		public static readonly Primitive Double = new Primitive("double", "double", "double", 8);
+		public static readonly Primitive Decimal = new Primitive("decimal", "_Decimal64", null, 8);
+		public static readonly Primitive Char = new Primitive("char", "unsigned char", "i8", 2);
+		public static readonly Primitive Void = new Primitive("void", "void", "void", 0);
 
 		static Primitive()
 		{

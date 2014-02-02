@@ -14,6 +14,8 @@ using Bohc.Parsing.Statements;
 
 using Bohc.TypeSystem;
 
+using Bohc.Generation.Llvm;
+
 namespace Bohc.General
 {
 	public class Project
@@ -127,7 +129,7 @@ namespace Bohc.General
 
 			if (!noStd)
 			{
-				externals.Add("/usr/lib/libbohstd");
+				externals.Add("/usr/lib/libaquastd");
 			}
 
 			IFileParser fp = new FileParser(
@@ -136,8 +138,8 @@ namespace Bohc.General
 				               this);
 			this.pstrat = new DefaultParserStrategy(fp);
 
-			mangler = new CMangler();
-			this.cstrat = new DefaultCompilerStrategy(mangler, new CCodeGen(mangler, this));
+			mangler = new LlvmMangler();
+			this.cstrat = new DefaultCompilerStrategy(mangler, new LlvmCodeGen(mangler, this));
 
 			foreach (string e in externals)
 			{
@@ -154,7 +156,7 @@ namespace Bohc.General
 		{
 			cstrat.compile(this);
 
-			buildgcc(mangler, Bohc.TypeSystem.Type.Types.Where(x => !(x is Primitive) && !x.IsExtern()));
+			//buildgcc(mangler, Bohc.TypeSystem.Type.Types.Where(x => !(x is Primitive) && !x.IsExtern()));
 
 			if (library)
 			{
@@ -210,7 +212,7 @@ namespace Bohc.General
 			{
 				builder.Append("/");
 			}
-			return builder.Append(type.Name).Append(".Boh").ToString();
+			return builder.Append(type.Name).Append(".aqua").ToString();
 		}
 
 		private void buildgcc(IMangler mangler, IEnumerable<Bohc.TypeSystem.Type> types)

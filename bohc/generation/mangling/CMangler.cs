@@ -336,5 +336,10 @@ namespace Bohc.Generation.Mangling
 		{
 			return getCName(e.EnumType) + e.Name;
 		}
+
+		public string getGetInterfaceName(Class c)
+		{
+			return getCName(c) + "_getinterface";
+		}
 	}
 }

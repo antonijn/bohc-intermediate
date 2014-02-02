@@ -14,20 +14,22 @@ namespace Bohc.TypeSystem
 {
 	public static class StdType
 	{
-		public static Package BohLang = Package.GetFromString("boh.std");
+		public static Package BohLang = Package.GetFromString("aqua.std");
 
 		public static readonly Class Obj = (Class)TypeSystem.Type.GetExisting(BohLang, "Object", null);
 		public static readonly Class Str = (Class)TypeSystem.Type.GetExisting(BohLang, "String", null);
 		public static readonly Class Type = (Class)TypeSystem.Type.GetExisting(BohLang, "Type", null);
 
 		// TODO: check that package is Boh.std
+		public static readonly GenericType Ptr = GenericType.AllGenTypes.Single(
+			x => x.Name == "Ptr" && x.File.package == Package.Get(BohLang, "interop"));
 		public static readonly GenericType Array = GenericType.AllGenTypes.Single(
 			x => x.Name == "Array" && x.File.package == BohLang);
 		public static readonly GenericType Box = GenericType.AllGenTypes.Single(
 			x => x.Name == "Box" && x.File.package == BohLang);
 		public static readonly GenericType ICollection = GenericType.AllGenTypes.Single(
-			x => x.Name == "ICollection" && x.File.package == BohLang);
+			x => x.Name == "Collection" && x.File.package == BohLang);
 		public static readonly GenericType IIterator = GenericType.AllGenTypes.Single(
-			x => x.Name == "IIterator" && x.File.package == BohLang);
+			x => x.Name == "Iterator" && x.File.package == BohLang);
 	}
 }

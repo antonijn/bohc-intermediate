@@ -57,7 +57,7 @@ namespace Bohc.TypeSystem
 		{
 			if (Super != null)
 			{
-				return Functions.Union(Super.Functions
+				return Functions.Union(Super.GetAllFuncs()
 				                        .Where(x => !x.Modifiers.HasFlag(TypeSystem.Modifiers.Private))
 				                        .Where(x => !(x is TypeSystem.Constructor))
 				                        .Where(x => !(x is TypeSystem.StaticConstructor)), new FuncComp());
@@ -234,10 +234,12 @@ namespace Bohc.TypeSystem
 				_protected = true;
 			}
 
-			return GetAllFuncs().Where(x => x.Identifier == id &&
+			IEnumerable<Function> allfuncs = GetAllFuncs();
+
+			return allfuncs.Where(x => x.Identifier == id &&
 				((_public && x.Modifiers.HasFlag(Modifiers.Public)) ||
 				(_protected && x.Modifiers.HasFlag(Modifiers.Protected)) ||
-				(_private && x.Modifiers.HasFlag(Modifiers.Private))));
+				(_private && x.Modifiers.HasFlag(Modifiers.Private)))).ToArray();
 		}
 
 		public override Field GetField(string id, TypeSystem.Type ctx)

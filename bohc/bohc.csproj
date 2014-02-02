@@ -20,9 +20,10 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <Optimize>true</Optimize>
+    <Optimize>false</Optimize>
     <OutputPath>bin\Release</OutputPath>
     <WarningLevel>4</WarningLevel>
+    <DebugSymbols>true</DebugSymbols>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="boh\Exception.cs" />
@@ -127,6 +128,37 @@
     <Compile Include="typesys\Indexer.cs" />
     <Compile Include="parsing\expressions\IndexerCall.cs" />
     <Compile Include="parsing\expressions\SetIndexerCall.cs" />
+    <Compile Include="generation\llvm\LlvmCodeGen.cs" />
+    <Compile Include="generation\llvm\Llvm.cs" />
+    <Compile Include="generation\llvm\LlvmValue.cs" />
+    <Compile Include="generation\llvm\LlvmTemp.cs" />
+    <Compile Include="generation\llvm\LlvmVar.cs" />
+    <Compile Include="generation\llvm\LlvmType.cs" />
+    <Compile Include="generation\llvm\LlvmPointer.cs" />
+    <Compile Include="generation\llvm\LlvmLiteral.cs" />
+    <Compile Include="generation\llvm\LlvmFunction.cs" />
+    <Compile Include="generation\llvm\LlvmLabel.cs" />
+    <Compile Include="generation\llvm\Icmp.cs" />
+    <Compile Include="generation\llvm\Fcmp.cs" />
+    <Compile Include="generation\llvm\LlvmParamType.cs" />
+    <Compile Include="generation\llvm\LlvmParamModifiers.cs" />
+    <Compile Include="generation\llvm\LlvmLinkage.cs" />
+    <Compile Include="generation\llvm\LlvmStackLocal.cs" />
+    <Compile Include="generation\llvm\LlvmTry.cs" />
+    <Compile Include="generation\llvm\LlvmNull.cs" />
+    <Compile Include="generation\llvm\LlvmStruct.cs" />
+    <Compile Include="generation\llvm\LlvmPrimitive.cs" />
+    <Compile Include="generation\llvm\LlvmFunctionPtrType.cs" />
+    <Compile Include="generation\llvm\LlvmModule.cs" />
+    <Compile Include="generation\llvm\LlvmGlobal.cs" />
+    <Compile Include="generation\llvm\LlvmMangler.cs" />
+    <Compile Include="generation\llvm\LlvmParam.cs" />
+    <Compile Include="generation\llvm\LlvmUndef.cs" />
+    <Compile Include="generation\llvm\LlvmInline.cs" />
+    <Compile Include="generation\llvm\LlvmStructInit.cs" />
+    <Compile Include="generation\llvm\LlvmArrayType.cs" />
+    <Compile Include="generation\llvm\LlvmStringLiteral.cs" />
+    <Compile Include="generation\llvm\LlvmGlobalFlags.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">
@@ -171,5 +203,6 @@
   <ItemGroup>
     <Folder Include="generation\asm\" />
     <Folder Include="general\" />
+    <Folder Include="generation\llvm\" />
   </ItemGroup>
 </Project>

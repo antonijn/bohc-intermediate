@@ -564,6 +564,10 @@ namespace Bohc.Parsing
 				ExprVariable exprLast = (ExprVariable)last;
 				i = solveIdentifierForType(ref last, vars, i, next, str, file, exprLast.refersto.Type, ctx);
 			}
+			else if (last is Literal)
+			{
+				i = solveIdentifierForType(ref last, vars, i, next, str, file, last.getType(), ctx);
+			}
 			else if (last is ExprType)
 			{
 				ExprType exprLast = (ExprType)last;

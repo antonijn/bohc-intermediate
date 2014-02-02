@@ -107,6 +107,11 @@ namespace Bohc.Generation.Mangling
 		{
 			return e.Name;
 		}
+
+		public string getGetInterfaceName(TypeSystem.Class c)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 

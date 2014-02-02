@@ -23,5 +23,10 @@ namespace Bohc.TypeSystem
 		{
 			return new Parsing.ConstructorCall(Constructors.Single(x => x.Parameters.Count == 0), new Parsing.Expression[] { });
 		}
+
+		public override bool IsReferenceType()
+		{
+			return false;
+		}
 	}
 }

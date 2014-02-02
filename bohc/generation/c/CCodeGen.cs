@@ -1112,7 +1112,7 @@ namespace Bohc.Generation.C
 			System.IO.File.WriteAllText(".c/" + mangler.getCName(c) + ".type.h", builder.ToString());
 		}
 
-		private class FEqualComp : IEqualityComparer<Function>
+		public class FEqualComp : IEqualityComparer<Function>
 		{
 			public bool Equals(Function f0, Function f1)
 			{
@@ -1138,7 +1138,17 @@ namespace Bohc.Generation.C
 
 			foreach (Function f in c.Functions.Where(x => x.Modifiers.HasFlag(Modifiers.Abstract) || x.Modifiers.HasFlag(Modifiers.Virtual)))
 			{
-				Function overridenf = overriden.SingleOrDefault(x => new FEqualComp().Equals(x, f));
+				// TODO: make sure this try-catch is appropriate
+				Function overridenf = null;
+				try
+				{
+					overridenf = overriden.Single(x => new FEqualComp().Equals(x, f));
+				}
+				catch
+				{
+					//Console.WriteLine(f.Identifier);
+					//throw;
+				}
 				if (overridenf != null)
 				{
 					builder.Append("&" + mangler.getCFuncName(overridenf) + ", ");
@@ -2056,7 +2066,7 @@ namespace Bohc.Generation.C
 				addStaticCallStart(builder, fcall);
 			}
 
-			int take = fcall.refersto.IsVariadic() ? fcall.refersto.Parameters.Count - 1 : fcall.refersto.Parameters.Count;
+			int take = fcall.refersto.IsVariadic() ? fcall.refersto.Parameters.Count - 1 : fcall.parameters.Length;
 
 			IEnumerator<Parameter> fparams = fcall.refersto.Parameters.Take(take).GetEnumerator();
 			foreach (Expression param in fcall.parameters.Take(take))
@@ -2074,9 +2084,9 @@ namespace Bohc.Generation.C
 
 			if (fcall.refersto.IsVariadic())
 			{
-				Interface icoll = (Interface)fcall.refersto.Parameters.Last().Type;
-				Interface iter = (Interface)icoll.Functions.Single(x => x.Identifier == "iterator").ReturnType;
-				TypeSystem.Type type = iter.Functions.Single(x => x.Identifier == "current").ReturnType;
+				Class icoll = (Class)fcall.refersto.Parameters.Last().Type;
+				Class iter = (Class)icoll.Functions.Single(x => x.Identifier == "iterator").ReturnType;
+				TypeSystem.Type type = iter.Functions.Single(x => x.Identifier == "get").ReturnType;
 				addArrayInit(builder, fcall.parameters.Skip(take).ToArray(), type);
 				builder.Append(", ");
 			}
@@ -2314,11 +2324,10 @@ namespace Bohc.Generation.C
 			addIndent(builder);
 			builder.Append("while (");
 			builder.Append(tmp);
-			builder.Append("->");
-			builder.Append(mangler.getVFuncName(((Bohc.TypeSystem.Interface)fcall.getType()).Functions.Single(x => x.Identifier == "next")));
+			builder.Append("->vtable->");
+			builder.Append(mangler.getVFuncName(((Bohc.TypeSystem.Class)fcall.getType()).Functions.Single(x => x.Identifier == "next")));
 			builder.Append("(");
 			builder.Append(tmp);
-			builder.Append("->object");
 			builder.AppendLine("))");
 
 			addIndent(builder);
@@ -2330,11 +2339,10 @@ namespace Bohc.Generation.C
 			builder.Append(mangler.getVarUsageName(fore.vardecl.refersto, lambdaStack));
 			builder.Append(" = ");
 			builder.Append(tmp);
-			builder.Append("->");
-			builder.Append(mangler.getVFuncName(((Bohc.TypeSystem.Interface)fcall.getType()).Functions.Single(x => x.Identifier == "current")));
+			builder.Append("->vtable->");
+			builder.Append(mangler.getVFuncName(((Bohc.TypeSystem.Class)fcall.getType()).Functions.Single(x => x.Identifier == "get")));
 			builder.Append("(");
 			builder.Append(tmp);
-			builder.Append("->object");
 			builder.AppendLine(");");
 
 			addBody(builder, fore.body);
