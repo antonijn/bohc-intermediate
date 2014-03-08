@@ -32,7 +32,7 @@ namespace Bohc.Generation.Llvm
 				.Append(" ").Append(f.id).Append("(");
 			foreach (LlvmParam t in f.parameters)
 			{
-				decls.Append(t.Type().ToString()).Append(", ");
+				decls.Append(new LlvmParamType(t.Type()).ToString()).Append(", ");
 			}
 			if (f.parameters.Count > 0)
 			{
@@ -67,6 +67,10 @@ namespace Bohc.Generation.Llvm
 			{
 				globvars.Append(" ").Append(g.initial.ToString());
 			}
+			else
+			{
+				globvars.Append(" undef");
+			}
 			globvars.AppendLine();
 		}
 
@@ -80,7 +84,7 @@ namespace Bohc.Generation.Llvm
 					.Append(" ").Append(llvm.func.id).Append("(");
 			foreach (var p in llvm.func.parameters)
 			{
-				impls.Append(p.Type().ToString()).Append(" ").Append(p.ToString()).Append(", ");
+				impls.Append(new LlvmParamType(p.Type()).ToString()).Append(" ").Append(p.ToString()).Append(", ");
 			}
 			if (llvm.func.parameters.Count > 0)
 			{

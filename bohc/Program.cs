@@ -43,7 +43,9 @@ namespace Bohc
 			args = new string[]
 			{
 				"TestClass.boh",
-				"-N",
+				"-n",
+				//"-N",
+				//"-S",
 			};
 #endif
 
@@ -53,8 +55,16 @@ namespace Bohc
 			sw.Start();
 			p.Parse();
 			sw.Stop();
-			Console.WriteLine(TimeSpan.TicksPerSecond);
 			p.Build();
+
+			/*System.IO.StringReader sr = new System.IO.StringReader("8 + 3 * 12 + 2 - asdf");
+			Token[] tokens = new Tokenizer(sr, "example.boh").lex().ToArray();
+			TokenStream ts = new TokenStream(tokens, 0, tokens.Length);
+
+			TokenizedExpressionParser tep = new TokenizedExpressionParser();
+			Expression result = tep.analyze(ts, new TypeSystem.Variable[0], new TypeSystem.Function(TypeSystem.Class.Get<TypeSystem.Class>(TypeSystem.Package.GetFromString("bla.bla"), TypeSystem.Modifiers.None, "hi"), TypeSystem.Modifiers.None, null, null, null, ""));
+			*/
+			//result.getType();
 		}
 	}
 }

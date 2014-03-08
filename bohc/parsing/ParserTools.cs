@@ -64,9 +64,15 @@ namespace Bohc.Parsing
 			for (i = first + step; scope != -1; i += step)
 			{
 				char ch = str[i];
-				if (ch == '"')
+				if (ch == '"' && (i == 0 || str[i - 1] != '\\'))
 				{
 					instring = !instring;
+				}
+
+				if (ch == '\\')
+				{
+					i += step;
+					continue;
 				}
 
 				if (instring)

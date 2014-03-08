@@ -14,7 +14,14 @@ namespace Bohc.Parsing.Statements
 {
 	public class Body
 	{
+		public readonly Body super;
 		public readonly List<Statement> Statements = new List<Statement>();
+		public readonly List<TypeSystem.Local> locals = new List<Bohc.TypeSystem.Local>();
+
+		public Body(Body super)
+		{
+			this.super = super;
+		}
 
 		public bool hasSuperBeenCalled()
 		{
@@ -36,9 +43,9 @@ namespace Bohc.Parsing.Statements
 				IfStatement ifstat = s as IfStatement;
 				if (ifstat != null)
 				{
-					if (ifstat.elsestat != null)
+					if (ifstat.elsestat != null && ifstat.body.hasSuperBeenCalled() && ifstat.elsestat.body.hasSuperBeenCalled())
 					{
-						return ifstat.body.hasSuperBeenCalled() && ifstat.elsestat.body.hasSuperBeenCalled();
+						return true;
 					}
 
 					continue;
@@ -76,9 +83,9 @@ namespace Bohc.Parsing.Statements
 				IfStatement ifstat = s as IfStatement;
 				if (ifstat != null)
 				{
-					if (ifstat.elsestat != null)
+					if (ifstat.elsestat != null && ifstat.body.hasReturned() && ifstat.elsestat.body.hasReturned())
 					{
-						return ifstat.body.hasReturned() && ifstat.elsestat.body.hasReturned();
+						return true;
 					}
 
 					continue;
@@ -120,6 +127,18 @@ namespace Bohc.Parsing.Statements
 			}
 
 			return true;
+		}
+
+		public void RegisterLocal(TypeSystem.Local l)
+		{
+			if (super != null)
+			{
+				super.RegisterLocal(l);
+			}
+			else
+			{
+				locals.Add(l);
+			}
 		}
 	}
 }

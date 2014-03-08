@@ -83,5 +83,14 @@ namespace Bohc.Parsing
 		{
 			return false;
 		}
+
+		public override string ToString()
+		{
+			if (belongsto != null)
+			{
+				return belongsto.ToString() + "." + refersto.Identifier;
+			}
+			return refersto.Identifier;
+		}
 	}
 }

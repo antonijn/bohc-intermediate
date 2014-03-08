@@ -5,9 +5,9 @@ namespace Bohc.Generation.Llvm
 	public class LlvmInline : LlvmValue
 	{
 		private LlvmType ty;
-		private string str;
+		private LlvmBuilder str;
 
-		public LlvmInline(LlvmType ty, string str)
+		public LlvmInline(LlvmType ty, LlvmBuilder str)
 		{
 			this.ty = ty;
 			this.str = str;
@@ -20,7 +20,7 @@ namespace Bohc.Generation.Llvm
 
 		public override string ToString()
 		{
-			return str;
+			return str.ToString();
 		}
 	}
 }

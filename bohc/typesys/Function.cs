@@ -67,28 +67,30 @@ namespace Bohc.TypeSystem
 		/// <summary>
 		/// Selects the function compatible with the given expressions.
 		/// </summary>
+		public static Bohc.TypeSystem.Function GetCompatibleFunction(Parsing.File file, IEnumerable<Bohc.TypeSystem.Variable> locals, IEnumerable<Bohc.TypeSystem.Function> functions, Bohc.TypeSystem.Function ctx, IEnumerable<Expression> _parameters)
+		{
+			Bohc.TypeSystem.Function compatible = functions
+				.Where(x => x.Parameters.Count == _parameters.Count() || (x.IsVariadic() && _parameters.Count() >= x.Parameters.Count - 1))
+					.Select(x => new Tuple<Bohc.TypeSystem.Function, int[]>(x, GetArrayParams(_parameters, x)))
+					.Where(x => !x.Item2.Contains(0))
+					.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x.Item1, x.Item2.Sum()))
+					.ToArray()
+					.OrderBy(x => x.Item2)
+					.Where(x => (x.Item1.Parameters.Count - (x.Item1.IsVariadic() ? 1 : 0) == 0) || x.Item2 != 0)
+					.Select(x => x.Item1)
+					.FirstOrDefault();
+
+			return compatible;
+		}
 		public static Bohc.TypeSystem.Function GetCompatibleFunction(ref int i, string next, string str, Parsing.File file, IEnumerable<Bohc.TypeSystem.Variable> locals, IEnumerable<Bohc.TypeSystem.Function> functions, out IEnumerable<Expression> parameters, Bohc.TypeSystem.Function ctx, IExpressionParser ep, char close)
 		{
 			//typesys.Function[] compatiblefs = functions.ToArray();
 
 			parameters = GetStringParams(str, i, locals, file, ctx, ep, close);
-			IEnumerable<Expression> _parameters = parameters;
-			Bohc.TypeSystem.Function compatible = functions
-				.Where(x => x.Parameters.Count == _parameters.Count() || (x.IsVariadic() && _parameters.Count() >= x.Parameters.Count - 1))
-				.Select(x => new Tuple<Bohc.TypeSystem.Function, int[]>(x, GetArrayParams(_parameters, x)))
-				.Where(x => !x.Item2.Contains(0))
-				.Select(x => new Tuple<Bohc.TypeSystem.Function, int>(x.Item1, x.Item2.Sum()))
-				.ToArray()
-				.OrderBy(x => x.Item2)
-				.Where(x => (x.Item1.Parameters.Count - (x.Item1.IsVariadic() ? 1 : 0) == 0) || x.Item2 != 0)
-				.Select(x => x.Item1)
-				.FirstOrDefault();
-
-			Boh.Exception.require<Exceptions.ParserException>(compatible != default(Bohc.TypeSystem.Function), "Method not found: " + next);
 
 			int closeParent = ParserTools.getMatchingBraceChar(str, i - 1, close);
 			i = closeParent + 1;
-			return compatible;
+			return GetCompatibleFunction(file, locals, functions, ctx, parameters);
 		}
 
 		public static IEnumerable<Expression> GetStringParams(string str, int i, IEnumerable<Bohc.TypeSystem.Variable> locals, Parsing.File file, Bohc.TypeSystem.Function ctx, IExpressionParser ep, char close)

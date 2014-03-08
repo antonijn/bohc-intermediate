@@ -225,6 +225,27 @@ namespace Bohc.Parsing
 			return true;
 		}
 
+		private void parseParam(File f, string part, out string identifier, out TypeSystem.Modifiers mods, out Bohc.TypeSystem.Type type)
+		{
+			string[] paramParts = part.Split(' ');
+			Boh.Exception.require<Exceptions.ParserException>(paramParts.Length >= 2, "Parameter type expected");
+			Boh.Exception.require<Exceptions.ParserException>(paramParts.Length <= 3, "Parameters may only have one modifier");
+
+			identifier = paramParts[paramParts.Length - 1];
+			string typeName = paramParts[paramParts.Length - 2];
+
+			mods = TypeSystem.Modifiers.None;
+			if (paramParts.Length > 2)
+			{
+				Boh.Exception.require<Exceptions.ParserException>(
+					paramParts.First() == "final" || paramParts.First() == "ref", "'final' and 'ref' are the only legal modifiers for parameters");
+				mods = TypeSystem.ModifierHelper.GetModifierFromString(paramParts.First());
+			}
+
+			type = Bohc.TypeSystem.Type.GetExisting(f.getContext(), typeName, getStats().getParser());
+			Boh.Exception.require<Exceptions.ParserException>(type != null, "type doesn't exist");
+		}
+
 		private bool analyzeLambda(ref Expression last, IEnumerable<Bohc.TypeSystem.Variable> vars, ref int i, ref string next, string str, Bohc.Parsing.File file, int opprec, Bohc.TypeSystem.Function ctx)
 		{
 			if (next != "(")
@@ -248,7 +269,7 @@ namespace Bohc.Parsing
 				string id;
 				Bohc.TypeSystem.Modifiers mods;
 				Bohc.TypeSystem.Type type;
-				Statements.getParser().parseParam(file, x.Trim(), out id, out mods, out type);
+				parseParam(file, x.Trim(), out id, out mods, out type);
 				Bohc.TypeSystem.LambdaParam res = new Bohc.TypeSystem.LambdaParam(id, type);
 				res.LamdaLevel = lambdaStack/* - 1*/;
 				return res;
@@ -268,7 +289,7 @@ namespace Bohc.Parsing
 				Stack<List<Bohc.TypeSystem.Variable>> varStack = new Stack<List<Bohc.TypeSystem.Variable>>();
 				varStack.Push(parameters.Cast<Bohc.TypeSystem.Variable>().ToList());
 				varStack.Push(vars.ToList());
-				last = new Lambda(fRefType, Statements.parseBody(exprOrBod.TrimStart(), ctx, varStack, file), null, parameters);
+				last = new Lambda(fRefType, Statements.parseBody(exprOrBod.TrimStart(), ctx, varStack, null, file), null, parameters);
 				((Lambda)last).lambdaLevel = lambdaStack - 1;
 				((Lambda)last).enclosed = enclosedVars.Peek();
 				i += exprOrBod.Length;
@@ -375,7 +396,21 @@ namespace Bohc.Parsing
 				analyzeOp(ref right, vars, ref _i, ref nxt, rightstr, file, op.precedence, ctx);
 				i += _i;
 
-				last = new UnaryOperation(right, op);
+				if (op == UnaryOperation.MINUS && right is Literal)
+				{
+					if (right.getType() == TypeSystem.Primitive.Byte)
+					{
+						last = new Literal(TypeSystem.Primitive.Short, "-" + ((Literal)right).representation);
+					}
+					else
+					{
+						last = new Literal(right.getType(), "-" + ((Literal)right).representation);
+					}
+				}
+				else
+				{
+					last = new UnaryOperation(right, op);
+				}
 			}
 			else // binary operator, or suffix increment/decrement
 			{
@@ -406,7 +441,14 @@ namespace Bohc.Parsing
 				i += _i;
 
 				BinaryOperation binop = new BinaryOperation(left, right, op, ctx);
-				last = binop.left.useAsLvalue(binop);
+				if (binop.isAssignment())
+				{
+					last = binop.left.useAsLvalue(binop);
+				}
+				else
+				{
+					last = binop;
+				}
 			}
 
 			return OpBreakStat.CONTINUE;
@@ -463,33 +505,55 @@ namespace Bohc.Parsing
 
 		private static bool analyzeNumericLiteral(ref Expression last, string next)
 		{
+			int _base = next.StartsWith("0x") ? 16 : 10;
+			if (next.StartsWith("0x"))
+			{
+				next = next.Substring(2);
+			}
+
 			byte b;
 			short s;
 			int _i;
 			long l;
 			float f;
 			double d;
-			if (byte.TryParse(next, out b))
+			try
 			{
-				last = new Literal(Bohc.TypeSystem.Primitive.Byte, next);
+				b = Convert.ToByte(next, _base);
+				last = new Literal(Bohc.TypeSystem.Primitive.Byte, b.ToString());
 				return true;
 			}
-			if (short.TryParse(next, out s))
+			catch
 			{
-				last = new Literal(Bohc.TypeSystem.Primitive.Short, next);
+			}
+			try
+			{
+				s = Convert.ToInt16(next, _base);
+				last = new Literal(Bohc.TypeSystem.Primitive.Short, s.ToString());
 				return true;
 			}
-			else if (int.TryParse(next, out _i))
+			catch
 			{
-				last = new Literal(Bohc.TypeSystem.Primitive.Int, next);
+			}
+			try
+			{
+				_i = Convert.ToInt32(next, _base);
+				last = new Literal(Bohc.TypeSystem.Primitive.Int, _i.ToString());
 				return true;
 			}
-			else if (long.TryParse(next, out l))
+			catch
 			{
-				last = new Literal(Bohc.TypeSystem.Primitive.Long, next);
+			}
+			try
+			{
+				l = Convert.ToInt64(next, _base);
+				last = new Literal(Bohc.TypeSystem.Primitive.Long, l.ToString());
 				return true;
 			}
-			else if (double.TryParse(next, out d))
+			catch
+			{
+			}
+			if (double.TryParse(next, out d))
 			{
 				last = new Literal(Bohc.TypeSystem.Primitive.Double, next);
 				return true;

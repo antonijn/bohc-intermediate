@@ -11,8 +11,15 @@ namespace Bohc.Generation.Llvm
 			sb.Append("c\"");
 			foreach (byte b in chars)
 			{
-				sb.Append("\\");
-				sb.AppendFormat("{0:X2}", b);
+				if ((b & 0x80) == 0 && !char.IsControl((char)b) && b != '\\' && b != '"')
+				{
+					sb.Append((char)b);
+				}
+				else
+				{
+					sb.Append("\\");
+					sb.AppendFormat("{0:X2}", b);
+				}
 			}
 			sb.Append("\"");
 			return sb.ToString();

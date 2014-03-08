@@ -35,5 +35,10 @@ namespace Bohc.Parsing
 		{
 			throw new NotImplementedException();
 		}
+
+		public override string ToString()
+		{
+			return type.FullName();
+		}
 	}
 }

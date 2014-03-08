@@ -37,5 +37,10 @@ namespace Bohc.Parsing
 		{
 			return false;
 		}
+
+		public override string ToString()
+		{
+			return representation;
+		}
 	}
 }

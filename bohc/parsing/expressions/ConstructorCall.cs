@@ -37,5 +37,21 @@ namespace Bohc.Parsing
 		{
 			return true;
 		}
+
+		public override string ToString()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("new ").Append(function.Owner.FullName()).Append("(");
+			foreach (Expression e in parameters)
+			{
+				sb.Append(e.ToString()).Append(", ");
+			}
+			if (parameters.Length > 0)
+			{
+				sb.Remove(sb.Length - 2, 2);
+			}
+			sb.Append(")");
+			return sb.ToString();
+		}
 	}
 }

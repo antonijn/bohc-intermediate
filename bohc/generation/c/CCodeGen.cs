@@ -1829,7 +1829,7 @@ namespace Bohc.Generation.C
 				case 'u':
 					++i;
 					string rep = str.Substring(i, 2);
-					byte b = byte.Parse(rep);
+					byte b = Convert.ToByte(rep, 16);
 
 					UTF8Encoding enc = new UTF8Encoding();
 					return enc.GetString(new[] { b });

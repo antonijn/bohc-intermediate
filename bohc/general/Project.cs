@@ -132,10 +132,7 @@ namespace Bohc.General
 				externals.Add("/usr/lib/libaquastd");
 			}
 
-			IFileParser fp = new FileParser(
-				               new DefaultStatementParser(
-					               new DefaultExpressionParser()),
-				               this);
+			IFileParser fp = new FileParser(new DefaultStatementParser(new DefaultExpressionParser()), this);
 			this.pstrat = new DefaultParserStrategy(fp);
 
 			mangler = new LlvmMangler();
@@ -157,6 +154,7 @@ namespace Bohc.General
 			cstrat.compile(this);
 
 			//buildgcc(mangler, Bohc.TypeSystem.Type.Types.Where(x => !(x is Primitive) && !x.IsExtern()));
+			//buildllvm();
 
 			if (library)
 			{
@@ -173,7 +171,7 @@ namespace Bohc.General
 				{
 					System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(str));
 				}
-				System.IO.File.WriteAllText(str, g.File.content);
+				System.IO.File.WriteAllText(str, (string)g.File.parserinfo);
 			}
 
 			StringBuilder b = new StringBuilder();
@@ -213,6 +211,63 @@ namespace Bohc.General
 				builder.Append("/");
 			}
 			return builder.Append(type.Name).Append(".aqua").ToString();
+		}
+
+		private void buildllvm()
+		{
+			if (!System.IO.Directory.Exists(outputDir))
+			{
+				System.IO.Directory.CreateDirectory(outputDir);
+			}
+
+			//llc();
+			//_as();
+			//link();
+		}
+
+		private void llc()
+		{
+			Process.Start("llc", "result.ll").WaitForExit();
+			if (!noDelete)
+			{
+				System.IO.File.Delete("result.ll");
+			}
+		}
+
+		private void _as()
+		{
+			Process.Start("as", "result.s -o result.o").WaitForExit();
+			if (!noDelete)
+			{
+				System.IO.File.Delete("result.s");
+			}
+		}
+
+		private void link()
+		{
+			StringBuilder b = new StringBuilder();
+			b.Append("-pthread result.o ");
+			if (library)
+			{
+				b.Append("-fPIC ");
+			}
+			if (noStd)
+			{
+				b.Append("-lgc ");
+			}
+			foreach (string e in externals)
+			{
+				b.Append("-L\"");
+				b.Append(System.IO.Path.GetDirectoryName(e));
+				b.Append("\" ");
+				b.Append("-l\"");
+				b.Append(System.IO.Path.GetFileName(e).Substring(3));
+				b.Append("\" ");
+			}
+			b.Append("-o ");
+			b.Append(outputDir + System.IO.Path.DirectorySeparatorChar + output);
+			Process.Start("cc", b.ToString()).WaitForExit();
+			System.IO.File.Delete("result.o");
 		}
 
 		private void buildgcc(IMangler mangler, IEnumerable<Bohc.TypeSystem.Type> types)

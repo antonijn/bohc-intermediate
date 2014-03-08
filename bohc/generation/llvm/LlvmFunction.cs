@@ -15,7 +15,7 @@ namespace Bohc.Generation.Llvm
 		public LlvmFunction(LlvmType ret, string id, List<LlvmParam> parameters,
 		                    LlvmLinkage linkage, bool unwind)
 		{
-			this.id = id;
+			this.id = id.Replace('`', '.');
 			this.ret = ret;
 			this.unwind = unwind;
 			this.linkage = linkage;

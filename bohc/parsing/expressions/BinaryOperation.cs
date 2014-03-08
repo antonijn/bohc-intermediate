@@ -125,6 +125,31 @@ namespace Bohc.Parsing
 				this.operation = ASSIGN;
 				this.right = new BinaryOperation(left, right, SUB);
 			}
+			else if (operation == ASSIGN_SHL)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, SHL);
+			}
+			else if (operation == ASSIGN_SHR)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, SHR);
+			}
+			else if (operation == ASSIGN_OR)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, LOGIC_OR);
+			}
+			else if (operation == ASSIGN_AND)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, LOGIC_AND);
+			}
+			else if (operation == ASSIGN_XOR)
+			{
+				this.operation = ASSIGN;
+				this.right = new BinaryOperation(left, right, LOGIC_XOR);
+			}
 
 			if (operation != ASSIGN)
 			{
@@ -312,6 +337,11 @@ namespace Bohc.Parsing
 		public override bool isStatement()
 		{
 			return isAssignment();
+		}
+
+		public override string ToString()
+		{
+			return left.ToString() + " " + operation.representation + " " + right.ToString();
 		}
 	}
 }

@@ -14,22 +14,42 @@ namespace Bohc.TypeSystem
 {
 	public static class StdType
 	{
-		public static Package BohLang = Package.GetFromString("aqua.std");
+		static StdType()
+		{
+			try
+			{
+				BohLang = Package.GetFromString("aqua.std");
+				Obj = (Class)TypeSystem.Type.GetExisting(BohLang, "Object", null);
+				Str = (Class)TypeSystem.Type.GetExisting(BohLang, "String", null);
+				Type = (Class)TypeSystem.Type.GetExisting(BohLang, "Type", null);
 
-		public static readonly Class Obj = (Class)TypeSystem.Type.GetExisting(BohLang, "Object", null);
+				Ptr = GenericType.AllGenTypes.Single(
+					x => x.Name == "Ptr" && x.File.package == Package.Get(BohLang, "interop"));
+				Array = GenericType.AllGenTypes.Single(
+					x => x.Name == "Array" && x.File.package == BohLang);
+				Box = GenericType.AllGenTypes.Single(
+					x => x.Name == "Box" && x.File.package == BohLang);
+				ICollection = GenericType.AllGenTypes.Single(
+					x => x.Name == "Collection" && x.File.package == BohLang);
+				IIterator = GenericType.AllGenTypes.Single(
+					x => x.Name == "Iterator" && x.File.package == BohLang);
+			}
+			catch
+			{
+			}
+		}
+
+		public static Package BohLang;
+
+		public static readonly Class Obj;
 		public static readonly Class Str = (Class)TypeSystem.Type.GetExisting(BohLang, "String", null);
 		public static readonly Class Type = (Class)TypeSystem.Type.GetExisting(BohLang, "Type", null);
 
 		// TODO: check that package is Boh.std
-		public static readonly GenericType Ptr = GenericType.AllGenTypes.Single(
-			x => x.Name == "Ptr" && x.File.package == Package.Get(BohLang, "interop"));
-		public static readonly GenericType Array = GenericType.AllGenTypes.Single(
-			x => x.Name == "Array" && x.File.package == BohLang);
-		public static readonly GenericType Box = GenericType.AllGenTypes.Single(
-			x => x.Name == "Box" && x.File.package == BohLang);
-		public static readonly GenericType ICollection = GenericType.AllGenTypes.Single(
-			x => x.Name == "Collection" && x.File.package == BohLang);
-		public static readonly GenericType IIterator = GenericType.AllGenTypes.Single(
-			x => x.Name == "Iterator" && x.File.package == BohLang);
+		public static readonly GenericType Ptr;
+		public static readonly GenericType Array;
+		public static readonly GenericType Box;
+		public static readonly GenericType ICollection;
+		public static readonly GenericType IIterator;
 	}
 }

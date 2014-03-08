@@ -7,7 +7,7 @@ namespace Bohc.Generation.Llvm
 		private string str;
 
 		public LlvmParam(string str, LlvmType ty)
-			: base(new LlvmParamType(ty))
+			: base(ty)
 		{
 			this.str = str;
 		}

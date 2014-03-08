@@ -14,7 +14,7 @@ namespace Bohc.Generation.Llvm
 
 		public override string ToString()
 		{
-			return "%l." + tmp;
+			return "%" + (tmp);
 		}
 	}
 }

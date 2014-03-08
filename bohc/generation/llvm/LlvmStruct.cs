@@ -11,7 +11,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmStruct(string strname)
 		{
-			this.strname = strname;
+			this.strname = strname.Replace('`', '.');
 		}
 
 		public int Offset(string mem)

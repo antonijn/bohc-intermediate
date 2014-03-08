@@ -17,15 +17,15 @@ namespace Bohc.Generation.Llvm
 		public Llvm(LlvmFunction func)
 		{
 			this.func = func;
-			tempvc.Push(new int[1]);
+			tempvc.Push(new int[1] { 1 });
 		}
 
 		public static Stack<int[]> tempvc = new Stack<int[]>();
 
 		public readonly LlvmFunction func;
-		private StringBuilder builder = new StringBuilder();
+		private LlvmBuilder builder = new LlvmBuilder();
 
-		private StringBuilder AddIndent()
+		private LlvmBuilder AddIndent()
 		{
 			return builder.Append("\t");
 		}
@@ -35,12 +35,17 @@ namespace Bohc.Generation.Llvm
 			return builder.ToString();
 		}
 
+		public void AddComment(string com)
+		{
+			builder.Append("; ").AppendLine(com);
+		}
+
 		private LlvmValue AddBinOpRes(string op, LlvmValue left, LlvmValue right)
 		{
 			LlvmTemp result = new LlvmTemp(left.Type());
-			AddIndent().Append(result.ToString()).Append(" = ").Append(op).Append(" ")
-				.Append(left.Type().ToString()).Append(" ")
-					.Append(left.ToString()).Append(", ").AppendLine(right.ToString());
+			AddIndent().Append(result).Append(" = ").Append(op).Append(" ")
+				.Append(left.Type()).Append(" ")
+					.Append(left).Append(", ").AppendLine(right);
 			return result;
 		}
 
@@ -136,22 +141,22 @@ namespace Bohc.Generation.Llvm
 
 		public void AddAlloca(LlvmValue result, LlvmType type)
 		{
-			AddIndent().Append(result.ToString()).Append(" = alloca ").AppendLine(type.ToString());
+			AddIndent().Append(result).Append(" = alloca ").AppendLine(type);
 		}
 
 		public LlvmValue AddLoad(LlvmValue val)
 		{
 			LlvmPointer ptr = (LlvmPointer)val.Type();
 			LlvmTemp result = new LlvmTemp(ptr.t);
-			AddIndent().Append(result.ToString()).Append(" = load ").Append(ptr.ToString()).Append(" ").AppendLine(val.ToString());
+			AddIndent().Append(result).Append(" = load ").Append(ptr).Append(" ").AppendLine(val);
 			return result;
 		}
 
 		public void AddStore(LlvmValue ptr, LlvmValue rvalue)
 		{
 			AddIndent().Append("store ")
-				.Append(rvalue.Type()).Append(" ").Append(rvalue.ToString()).Append(", ")
-					.Append(ptr.Type().ToString()).Append(" ").AppendLine(ptr.ToString());
+				.Append(rvalue.Type()).Append(" ").Append(rvalue).Append(", ")
+					.Append(ptr.Type()).Append(" ").AppendLine(ptr);
 		}
 
 		public LlvmValue AddCall(LlvmValue f, IEnumerable<LlvmValue> parameters)
@@ -161,22 +166,22 @@ namespace Bohc.Generation.Llvm
 			AddIndent();
 			if (function.ret.ToString() != "void")
 			{
-				builder.Append(result.ToString()).Append(" = call ");
+				builder.Append(result).Append(" = call ");
 			}
 			else
 			{
 				builder.Append("call ");
 			}
-			builder.Append(function.ret.ToString())
-				.Append(" ").Append(f.ToString())
+			builder.Append(function)
+				.Append(" ").Append(f)
 					.Append("(");
 			foreach (LlvmValue val in parameters)
 			{
-				builder.Append(val.Type().ToString()).Append(" ").Append(val.ToString()).Append(", ");
+				builder.Append(val.Type()).Append(" ").Append(val).Append(", ");
 			}
 			if (parameters.Count() > 0)
 			{
-				builder.Remove(builder.Length - 2, 2);
+				builder.RemoveLast();
 			}
 			builder.AppendLine(")");
 			return result;
@@ -188,202 +193,210 @@ namespace Bohc.Generation.Llvm
 			AddIndent();
 			if (function.ret.ToString() != "void")
 			{
-				builder.Append(result.ToString()).Append(" = call ");
+				builder.Append(result).Append(" = call ");
 			}
 			else
 			{
 				builder.Append("call ");
 			}
-			builder.Append(function.ret.ToString())
-				.Append(" ").Append(function.ToString())
+			builder.Append(function.ret)
+				.Append(" ").Append(function)
 				.Append("(");
 			foreach (LlvmValue val in parameters)
 			{
-				builder.Append(val.Type().ToString()).Append(" ").Append(val.ToString()).Append(", ");
+				builder.Append(val.Type()).Append(" ").Append(val).Append(", ");
 			}
 			if (parameters.Count() > 0)
 			{
-				builder.Remove(builder.Length - 2, 2);
+				builder.RemoveLast();
 			}
 			builder.AppendLine(")");
 			return result;
 		}
 
-		private LlvmLabel lbl;
+		private LlvmLabel lbl = new LlvmLabel();
+
+		private void Terminator(LlvmLabel l)
+		{
+			l.id = tempvc.Peek()[0]++.ToString();
+			lbl = l;
+
+			builder.AppendLine();
+			AddComment("<label>:" + l.id);
+		}
 
 		public LlvmLabel GetLabel()
 		{
 			return lbl;
 		}
 
-		public void AddLabel(LlvmLabel label)
+		public void AddBranch(LlvmValue cond, LlvmLabel after, LlvmLabel t, LlvmLabel f)
 		{
-			lbl = label;
-			builder.Append(label.id).AppendLine(":");
+			t.preds.Add(GetLabel());
+			f.preds.Add(GetLabel());
+			AddIndent().Append("br ").Append(cond.Type()).Append(" ").Append(cond)
+				.Append(", label ").Append(t)
+					.Append(", label ").AppendLine(f);
+			Terminator(after);
 		}
 
-		public void AddBranch(LlvmValue cond, LlvmLabel t, LlvmLabel f)
+		public void AddBranch(LlvmLabel label, LlvmLabel after)
 		{
-			AddIndent().Append("br ").Append(cond.Type().ToString()).Append(" ").Append(cond.ToString())
-				.Append(", label ").Append(t.ToString())
-					.Append(", label ").AppendLine(f.ToString());
-		}
-
-		public void AddBranch(LlvmLabel label)
-		{
-			AddIndent().Append("br label ").AppendLine(label.ToString());
+			label.preds.Add(GetLabel());
+			AddIndent().Append("br label ").AppendLine(label);
+			Terminator(after);
 		}
 
 		public LlvmValue AddIcmp(Icmp cmp, LlvmValue left, LlvmValue right)
 		{
 			LlvmTemp result = new LlvmTemp(new LlvmPrimitive("i1"));
-			AddIndent().Append(result.ToString()).Append(" = icmp ")
-				.Append(cmp.ToString().ToLowerInvariant()).Append(" ").Append(left.Type().ToString()).Append(" ")
-					.Append(left.ToString()).Append(", ").AppendLine(right.ToString());
+			AddIndent().Append(result).Append(" = icmp ")
+				.Append(cmp.ToString().ToLowerInvariant()).Append(" ").Append(left.Type()).Append(" ")
+					.Append(left).Append(", ").AppendLine(right);
 			return result;
 		}
 
 		public LlvmValue AddFcmp(Fcmp cmp, LlvmValue left, LlvmValue right)
 		{
 			LlvmTemp result = new LlvmTemp(new LlvmPrimitive("i1"));
-			AddIndent().Append(result.ToString()).Append(" = fcmp ")
-				.Append(cmp.ToString().ToLowerInvariant()).Append(" ").Append(left.Type().ToString()).Append(" ")
-					.Append(left.ToString()).Append(", ").AppendLine(right.ToString());
+			AddIndent().Append(result).Append(" = fcmp ")
+				.Append(cmp.ToString().ToLowerInvariant()).Append(" ").Append(left.Type()).Append(" ")
+					.Append(left).Append(", ").AppendLine(right);
 			return result;
 		}
 
 		public LlvmValue InlinePtrToInt(LlvmValue ui, LlvmType to)
 		{
-			StringBuilder sb = new StringBuilder();
+			LlvmBuilder sb = new LlvmBuilder();
 			return new LlvmInline(to, sb.Append("ptrtoint ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString())
-			                      .Append(" to ").AppendLine(to.ToString()).ToString());
+				.Append(ui.Type()).Append(" ").Append(ui)
+			                      .Append(" to ").AppendLine(to));
 		}
 
 		public LlvmValue InlineIntToPtr(LlvmValue ui, LlvmType to)
 		{
-			StringBuilder sb = new StringBuilder();
+			LlvmBuilder sb = new LlvmBuilder();
 			return new LlvmInline(to, sb.Append("inttoptr (")
-			                      .Append(ui.Type().ToString()).Append(" ").Append(ui.ToString())
-			                      .Append(") to ").AppendLine(to.ToString()).ToString());
+			                      .Append(ui.Type()).Append(" ").Append(ui)
+			                      .Append(") to ").AppendLine(to));
 		}
 
 		public LlvmValue InlineBitcast(LlvmValue ui, LlvmType to)
 		{
-			StringBuilder sb = new StringBuilder();
+			LlvmBuilder sb = new LlvmBuilder();
 			return new LlvmInline(to, sb.Append("bitcast (")
-			                      .Append(ui.Type().ToString()).Append(" ").Append(ui.ToString())
-			                      .Append(") to ").Append(to.ToString()).ToString());
+			                      .Append(ui.Type()).Append(" ").Append(ui)
+			                      .Append(") to ").Append(to));
 		}
 
 		public LlvmValue AddPtrToInt(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = ptrtoint ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = ptrtoint ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddIntToPtr(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = inttoptr ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = inttoptr ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddUiToFp(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = uitofp ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = uitofp ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddSiToFp(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = sitofp ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = sitofp ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddFpToUi(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = fptoui ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = fptoui ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddFpToSi(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = fptosi ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = fptosi ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddZext(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = zext ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = zext ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddSext(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = sext ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = sext ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddTrunc(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = trunc ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = trunc ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddFext(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = fext ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = fext ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddFtrunc(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = ftrunc ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = ftrunc ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddBitcast(LlvmValue ui, LlvmType to)
 		{
 			LlvmTemp result = new LlvmTemp(to);
-			AddIndent().Append(result.ToString()).Append(" = bitcast ")
-				.Append(ui.Type().ToString()).Append(" ").Append(ui.ToString()).Append(" to ").AppendLine(to.ToString());
+			AddIndent().Append(result).Append(" = bitcast ")
+				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
 		}
 
 		public LlvmValue AddPhi(LlvmType ty, params Tuple<LlvmValue, LlvmLabel>[] pairs)
 		{
 			LlvmTemp result = new LlvmTemp(ty);
-			AddIndent().Append(result.ToString()).Append(" = phi ")
-				.Append(result.Type().ToString()).Append(" ");
+			AddIndent().Append(result).Append(" = phi ")
+				.Append(result.Type()).Append(" ");
 			foreach (Tuple<LlvmValue, LlvmLabel> pair in pairs)
 			{
-				builder.Append("[ ").Append(pair.Item1.ToString()).Append(", ").Append(pair.Item2.ToString()).Append(" ], ");
+				builder.Append("[ ").Append(pair.Item1).Append(", ").Append(pair.Item2).Append(" ]").Append(", ");
 			}
 			if (pairs.Length > 0)
 			{
-				builder.Remove(builder.Length - 2, 2);
+				builder.RemoveLast();
 			}
 			builder.AppendLine();
 			return result;
@@ -415,14 +428,19 @@ namespace Bohc.Generation.Llvm
 					LlvmStruct str = (LlvmStruct)t;
 					t = str.members.Values.ToArray()[int.Parse(((LlvmLiteral)idx).ToString())];
 				}
-				sb.Append(idx.Type().ToString()).Append(" ").Append(idx.ToString()).Append(", ");
+				sb.Append(idx.Type()).Append(" ").Append(idx).Append(", ");
 			}
 			sb.Remove(sb.Length - 2, 2);
 
-			StringBuilder other = new StringBuilder();
+			LlvmBuilder other = new LlvmBuilder();
 			return new LlvmInline(new LlvmPointer(t), other.Append("getelementptr inbounds (")
-				.Append(value.Type().ToString()).Append(" ")
-					.Append(value.ToString()).Append(sb.ToString()).Append(")").ToString());
+				.Append(value.Type()).Append(" ")
+					.Append(value).Append(sb).Append(")"));
+		}
+
+		public LlvmValue AddGetElementPtr(LlvmValue value, params int[] indices)
+		{
+			return AddGetElementPtr(value, indices.Select(x => new LlvmLiteral(new LlvmPrimitive("i32"), x.ToString())).ToArray());
 		}
 
 		public LlvmValue AddGetElementPtr(LlvmValue value, params LlvmValue[] indices)
@@ -442,54 +460,102 @@ namespace Bohc.Generation.Llvm
 				{
 					t = ((LlvmPointer)t).t;
 				}
-				else
+				else if (t is LlvmStruct)
 				{
 					LlvmStruct str = (LlvmStruct)t;
 					t = str.members.Values.ToArray()[int.Parse(((LlvmLiteral)idx).ToString())];
 				}
-				sb.Append(idx.Type().ToString()).Append(" ").Append(idx.ToString()).Append(", ");
+				else if (t is LlvmInlineStruct)
+				{
+					LlvmInlineStruct str = (LlvmInlineStruct)t;
+					t = str.members.Values.ToArray()[int.Parse(((LlvmLiteral)idx).ToString())];
+				}
+
+				sb.Append(idx.Type()).Append(" ").Append(idx).Append(", ");
 			}
 			sb.Remove(sb.Length - 2, 2);
 
 			LlvmTemp result = new LlvmTemp(new LlvmPointer(t));
-			AddIndent().Append(result.ToString()).Append(" = getelementptr inbounds ")
-				.Append(value.Type().ToString()).Append(" ").Append(value.ToString()).AppendLine(sb.ToString());
+			AddIndent().Append(result).Append(" = getelementptr inbounds ")
+				.Append(value.Type()).Append(" ").Append(value).AppendLine(sb);
+			return result;
+		}
+
+		public LlvmValue AddExtractValue(LlvmValue value, params int[] indices)
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append(", ");
+
+			LlvmType t = value.Type();
+			foreach (int idx in indices)
+			{
+				while (t is LlvmParamType)
+				{
+					t = ((LlvmParamType)t).t;
+				}
+
+				if (t is LlvmPointer)
+				{
+					t = ((LlvmPointer)t).t;
+				}
+				else if (t is LlvmStruct)
+				{
+					LlvmStruct str = (LlvmStruct)t;
+					t = str.members.Values.ToArray()[idx];
+				}
+				else if (t is LlvmInlineStruct)
+				{
+					LlvmInlineStruct str = (LlvmInlineStruct)t;
+					t = str.members.Values.ToArray()[idx];
+				}
+
+				sb.Append(idx).Append(", ");
+			}
+			sb.Remove(sb.Length - 2, 2);
+
+			LlvmTemp result = new LlvmTemp(t);
+			AddIndent().Append(result).Append(" = extractvalue ")
+				.Append(value.Type()).Append(" ").Append(value).AppendLine(sb);
 			return result;
 		}
 
 		public void AddSwitch(LlvmValue value, LlvmLabel def, params Tuple<LlvmValue, LlvmLabel>[] cases)
 		{
-			AddIndent().Append("switch ").Append(value.Type().ToString()).Append(" ").Append(value.ToString())
-				.Append(", label ").Append(def.ToString()).Append(" [ ");
+			AddIndent().Append("switch ").Append(value.Type()).Append(" ").Append(value)
+				.Append(", label ").Append(def).Append(" [ ");
 			foreach (var c in cases)
 			{
-				builder.Append(c.Item1.Type().ToString()).Append(" ").Append(c.Item1.ToString())
-					.Append(", label ").Append(def.ToString()).Append(" ");
+				builder.Append(c.Item1.Type()).Append(" ").Append(c.Item1)
+					.Append(", label ").Append(def).Append(" ");
 			}
 			builder.AppendLine("]");
+			Terminator(new LlvmLabel());
 		}
 
 		public void AddRet(LlvmValue val)
 		{
-			AddIndent().Append("ret ").Append(val.Type().ToString()).Append(" ").AppendLine(val.ToString());
+			AddIndent().Append("ret ").Append(val.Type()).Append(" ").AppendLine(val);
+			Terminator(new LlvmLabel());
 		}
 
 		public void AddRetVoid()
 		{
 			AddIndent().AppendLine("ret void");
+			Terminator(new LlvmLabel());
 		}
 
 		public void AddLandingPad(LlvmValue result, bool cleanup)
 		{
-			AddIndent().Append(result.ToString()).Append(" = landingpad ")
-				.Append(result.Type().ToString()).AppendLine(" personality i8* null");
+			AddIndent().Append(result).Append(" = landingpad ")
+				.Append(result.Type()).AppendLine(" personality i8* null");
 			AddIndent();
 			AddIndent().AppendLine("catch i8* null");
 		}
 
-		public void AddUnreachable()
+		public void AddUnreachable(LlvmLabel nxt)
 		{
 			AddIndent().AppendLine("unreachable");
+			Terminator(nxt);
 		}
 	}
 }

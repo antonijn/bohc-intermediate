@@ -39,16 +39,16 @@ namespace Bohc.TypeSystem
 
 		private void BuildToString()
 		{
-			Parsing.Statements.Body body = new Parsing.Statements.Body();
+			Parsing.Statements.Body body = new Parsing.Statements.Body(null);
 			ToStringM = new Function(this, Modifiers.Public, StdType.Str, "toString", new List<Parameter>(), body);
 
 			Parsing.Statements.IfStatement ifs = null;
 			foreach (Enumerator enumerator in Enumerators.Reverse<Enumerator>()) // the reverse is just for aesthetic
 			{
-				Parsing.Statements.Body newb = new Parsing.Statements.Body();
+				Parsing.Statements.Body newb = new Parsing.Statements.Body(body);
 				newb.Statements.Add(new Parsing.Statements.ReturnStatement(new Parsing.Literal(StdType.Str, "\"" + enumerator.Name + "\"")));
 
-				Parsing.Statements.Body elsebod = new Parsing.Statements.Body();
+				Parsing.Statements.Body elsebod = new Parsing.Statements.Body(body);
 				Parsing.Statements.ElseStatement elses = new Parsing.Statements.ElseStatement(elsebod);
 				if (ifs != null)
 				{

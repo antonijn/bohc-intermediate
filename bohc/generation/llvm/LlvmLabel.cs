@@ -1,21 +1,16 @@
 using System;
+using System.Collections.Generic;
 
 namespace Bohc.Generation.Llvm
 {
 	public class LlvmLabel
 	{
-		public static int tempcount = 0;
-
-		public readonly string id;
-
-		public LlvmLabel(string desc)
-		{
-			id = "." + desc + tempcount++;
-		}
+		public string id;
+		public List<LlvmLabel> preds = new List<LlvmLabel>();
 
 		public LlvmLabel()
 		{
-			id = "." + tempcount++;
+			id = "0";
 		}
 
 		public override string ToString()

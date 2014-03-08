@@ -1,0 +1,113 @@
+using System;
+using System.Linq;
+using System.Collections.Generic;
+
+namespace Bohc.Parsing
+{
+	public class TokenStream
+	{
+		private IEnumerable<Token> tokens;
+		private int offset;
+		private int length;
+		private int _size;
+
+		public TokenStream(IEnumerable<Token> tokens, int offset, int length)
+		{
+			this.tokens = tokens;
+			this.offset = offset - 1;
+			this.length = length + 1;
+			this._size = length;
+		}
+
+		public Token get()
+		{
+			return tokens.Skip(offset).First();
+		}
+
+		public Token peek(int c)
+		{
+			if (c >= length)
+			{
+				return default(Token);
+			}
+			return tokens.Skip(c + offset).First();
+		}
+
+		public bool next()
+		{
+			++offset;
+			--length;
+			return length > 0;
+		}
+
+		public bool prior()
+		{
+			--offset;
+			++length;
+			return offset >= 0;
+		}
+
+		public TokenStream until(string str, params Tuple<string, string>[] scopetokens)
+		{
+			Dictionary<string, int> scopes = new Dictionary<string, int>();
+			foreach (var st in scopetokens)
+			{
+				scopes[st.Item1] = 0;
+			}
+			for (int i = 0; i < length; ++i)
+			{
+				Token t = peek(i);
+				Tuple<string, string> tmp;
+				if ((tmp = scopetokens.SingleOrDefault(x => x.Item1 == t.value)) != null)
+				{
+					++scopes[tmp.Item1];
+				}
+				else if ((tmp = scopetokens.SingleOrDefault(x => x.Item2 == t.value)) != null)
+				{
+					--scopes[tmp.Item1];
+				}
+				if (t.value == str && !scopes.Any(x => x.Value > 0))
+				{
+					TokenStream result = read(0, i);
+					next();
+					return result;
+				}
+			}
+
+			// TODO: panic
+			throw new Exception();
+		}
+
+		public TokenStream read(int offs, int c)
+		{
+			TokenStream result = new TokenStream(tokens, offset + offs, c);
+			offset += offs + c;
+			length -= offs + c;
+			return result;
+		}
+
+		public IEnumerable<TokenStream> split(string str, params Tuple<string, string>[] scopetokens)
+		{
+			while (true)
+			{
+				TokenStream tstr = null;
+				try
+				{
+					tstr = until(str, scopetokens);
+				}
+				catch
+				{
+					break;
+				}
+				yield return tstr;
+			}
+			yield return read(0, length);
+		}
+
+		public int size()
+		{
+			return _size;
+		}
+	}
+}
+

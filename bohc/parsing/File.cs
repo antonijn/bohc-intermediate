@@ -18,7 +18,8 @@ namespace Bohc.Parsing
 	{
 		public readonly List<Package> imports = new List<Package>();
 		public readonly Package package;
-		public readonly string content;
+		public string filename;
+		public readonly object parserinfo;
 
 		public ParserState state;
 
@@ -29,11 +30,11 @@ namespace Bohc.Parsing
 
 		public IType type;
 
-		public File(List<Package> imports, Package package, string content)
+		public File(List<Package> imports, Package package, object content)
 		{
 			this.imports = imports;
 			this.package = package;
-			this.content = content;
+			this.parserinfo = content;
 		}
 
 		public override string ToString()

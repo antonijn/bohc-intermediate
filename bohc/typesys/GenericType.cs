@@ -76,7 +76,7 @@ namespace Bohc.TypeSystem
 		{
 			// TODO: PROPER REPLACING FFS!!!
 
-			string code = ParserTools.remDupW(File.content).Replace(" ,", ",").Replace(", ", ",");
+			string code = ParserTools.remDupW((string)File.parserinfo).Replace(" ,", ",").Replace(", ", ",");
 			for (int i = 0; i < what.Length; ++i)
 			{
 				string gtname = GenTypeNames[i];
@@ -98,20 +98,20 @@ namespace Bohc.TypeSystem
 
 			StringBuilder byWhat = new StringBuilder();
 			byWhat.Append(Name);
-			byWhat.Append("_");
+			byWhat.Append("`0");
 			foreach (Type t in what)
 			{
+				byWhat.Append("`1");
 				byWhat.Append(t.FullName().Replace(".", "_"));
-				byWhat.Append("_");
 			}
-			byWhat.Remove(byWhat.Length - 1, 1);
+			byWhat.Append("`2");
 
 			code = code.Replace(replaceWhat.ToString(), byWhat.ToString());
 
 			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
 
-			Parsing.File newf = parser.parseFileTS(ref code);
+			Parsing.File newf = parser.parseFileTS(ref code, File.filename);
 			Types[hash] = (Type)newf.type;
 			//parser.proj().pstrat.registerRtType(newf.type as typesys.Type);
 			parser.parseFileTP(newf);

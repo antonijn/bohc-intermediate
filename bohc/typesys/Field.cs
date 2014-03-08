@@ -18,7 +18,7 @@ namespace Bohc.TypeSystem
 
 		public readonly Modifiers Modifiers;
 		public readonly Class Owner;
-		public readonly string InitValStr;
+		public readonly object InitValStr;
 
 		Modifiers IMember.GetModifiers()
 		{
@@ -30,7 +30,7 @@ namespace Bohc.TypeSystem
 			return Identifier;
 		}
 
-		public Field(Modifiers modifiers, string identifier, Bohc.TypeSystem.Type type, Class owner, string initvalstr)
+		public Field(Modifiers modifiers, string identifier, Bohc.TypeSystem.Type type, Class owner, object initvalstr)
 			: base(identifier, type)
 		{
 			this.Modifiers = modifiers;

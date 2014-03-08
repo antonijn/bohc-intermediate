@@ -14,7 +14,7 @@ namespace Bohc.Generation.Llvm
 		{
 			this.linkage = linkage;
 			this.flags = flags;
-			this.id = id;
+			this.id = id.Replace('`', '.');
 			this.initial = initial;
 		}
 

@@ -159,6 +159,19 @@
     <Compile Include="generation\llvm\LlvmArrayType.cs" />
     <Compile Include="generation\llvm\LlvmStringLiteral.cs" />
     <Compile Include="generation\llvm\LlvmGlobalFlags.cs" />
+    <Compile Include="generation\llvm\LlvmInlineStruct.cs" />
+    <Compile Include="parsing\expressions\TokenizedExpressionParser.cs" />
+    <Compile Include="parsing\Token.cs" />
+    <Compile Include="parsing\TokenStream.cs" />
+    <Compile Include="parsing\TokenType.cs" />
+    <Compile Include="parsing\Tokenizer.cs" />
+    <Compile Include="parsing\TokenException.cs" />
+    <Compile Include="parsing\TokenizedFileParser.cs" />
+    <Compile Include="parsing\TokenRange.cs" />
+    <Compile Include="parsing\statements\TokenizedStatementParser.cs" />
+    <Compile Include="parsing\expressions\FunctionCollection.cs" />
+    <Compile Include="general\ConcurrentParserStrategy.cs" />
+    <Compile Include="generation\llvm\LlvmBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">

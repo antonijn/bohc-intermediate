@@ -63,5 +63,25 @@ namespace Bohc.Parsing
 		{
 			return true;
 		}
+
+		public override string ToString()
+		{
+			StringBuilder sb = new StringBuilder();
+			if (belongsto != null)
+			{
+				sb.Append(belongsto.ToString()).Append(".");
+			}
+			sb.Append(refersto.Identifier).Append("(");
+			foreach (Expression e in parameters)
+			{
+				sb.Append(e.ToString()).Append(", ");
+			}
+			if (parameters.Length > 0)
+			{
+				sb.Remove(sb.Length - 2, 2);
+			}
+			sb.Append(")");
+			return sb.ToString();
+		}
 	}
 }

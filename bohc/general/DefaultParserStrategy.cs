@@ -35,9 +35,6 @@ namespace Bohc.General
 		{
 			List<Bohc.Parsing.File> files = new List<Bohc.Parsing.File>();
 
-			Stopwatch sw = new Stopwatch();
-			sw.Start();
-
 			parseTS(input.input.ToArray(), files, fp);
 
 			parseTP(files, fp);
@@ -63,7 +60,7 @@ namespace Bohc.General
 			for (int i = 0; i < filenames.Length; ++i)
 			{
 				string file = System.IO.File.ReadAllText(filenames[i]);
-				Bohc.Parsing.File f = parser.parseFileTS(ref file);
+				Bohc.Parsing.File f = parser.parseFileTS(ref file, filenames[i]);
 				files.Add(f);
 			}
 		}

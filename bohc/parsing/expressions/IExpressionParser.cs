@@ -10,7 +10,6 @@ namespace Bohc.Parsing
 {
 	public interface IExpressionParser
 	{
-		Expression analyze(string str, IEnumerable<Variable> vars, File file, int opprec, Function ctx);
 		Expression analyze(string str, IEnumerable<Variable> vars, File file, Function ctx);
 		Expression analyze(string str, IEnumerable<Variable> vars, File file);
 

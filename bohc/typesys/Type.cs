@@ -28,6 +28,7 @@ namespace Bohc.TypeSystem
 		}
 
 		public GenericType OriginalGenType;
+		public object parserinfo;
 
 		/// <summary>
 		/// gets a value indicating to which extent two types are related.
@@ -61,7 +62,7 @@ namespace Bohc.TypeSystem
 
 			foreach (char ch in name)
 			{
-				if (!char.IsLetterOrDigit(ch) && ch != '_')
+				if (!char.IsLetterOrDigit(ch) && ch != '_' && ch != '`')
 				{
 					return false;
 				}

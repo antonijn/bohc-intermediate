@@ -39,7 +39,7 @@ namespace Bohc.Parsing
 
 		#region Type Skimming (TS)
 
-		public File parseFileTS(ref string file)
+		public File parseFileTS(ref string file, string filename)
 		{
 			file = ParserTools.removeComments(file);
 
@@ -50,6 +50,7 @@ namespace Bohc.Parsing
 
 			File f = parseCommonFileHeader(header, file);
 
+			f.filename = filename;
 			f.state = ParserState.TS;
 
 			string typedec = beforeTypeBody.Substring(lastSemicol + 1);
@@ -169,7 +170,7 @@ namespace Bohc.Parsing
 
 		public void parseFileTP(File f)
 		{
-			string file = f.content;
+			string file = (string)f.parserinfo;
 
 			if (f.state >= Bohc.ParserState.TP)
 			{
@@ -252,7 +253,7 @@ namespace Bohc.Parsing
 
 		public void parseFileTCS(File f)
 		{
-			string file = f.content;
+			string file = (string)f.parserinfo;
 
 			if (f.state >= ParserState.TCS)
 			{
@@ -636,7 +637,7 @@ namespace Bohc.Parsing
 			{
 				if (f.InitValStr != null)
 				{
-					f.Initial = Statements.getExpressions().analyze(f.InitValStr, new List<Variable>(), c.File);
+					f.Initial = Statements.getExpressions().analyze((string)f.InitValStr, new List<Variable>(), c.File);
 				}
 			}
 		}
@@ -665,7 +666,7 @@ namespace Bohc.Parsing
 				{
 					/*try
 					{*/
-						func.Body = Statements.parseBody(func.BodyStr, func, f);
+						func.Body = Statements.parseBody(func.BodyStr, func, null, f);
 					/*}
 					catch (System.Exception e)
 					{

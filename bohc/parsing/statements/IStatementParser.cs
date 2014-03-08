@@ -9,8 +9,8 @@ namespace Bohc.Parsing.Statements
 {
 	public interface IStatementParser
 	{
-		Body parseBody(string body, Function func, File f);
-		Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f);
+		Body parseBody(object body, Function func, Body parent, File f);
+		Body parseBody(object body, Function func, Stack<List<Variable>> vars, Body parent, File f);
 		void init(FileParser parser);
 		IFileParser getParser();
 		IExpressionParser getExpressions();

@@ -35,8 +35,9 @@ namespace Bohc.Parsing.Statements
 			return parser;
 		}
 
-		public Body parseBody(string body, Function func, File f)
+		public Body parseBody(object _body, Function func, Body parent, File f)
 		{
+			string body = (string)_body;
 			Stack<List<Variable>> vars = new Stack<List<Variable>>();
 			// TODO: remove this if it doesn't work?
 			if (func != null)
@@ -55,12 +56,12 @@ namespace Bohc.Parsing.Statements
 					vars.Peek().Add(idxer.Assignment);
 				}
 			}
-			return parseBody(body, func, vars, f);
+			return parseBody(body, func, vars, parent, f);
 		}
 
 		public Body parseBodyTillCase(ref string body, Function func, Stack<List<Variable>> vars, File f)
 		{
-			Body result = new Body();
+			Body result = new Body(func.Body);
 			vars.Push(new List<Variable>());
 
 			while (true)
@@ -81,9 +82,10 @@ namespace Bohc.Parsing.Statements
 			return result;
 		}
 
-		public Body parseBody(string body, Function func, Stack<List<Variable>> vars, File f)
+		public Body parseBody(object _body, Function func, Stack<List<Variable>> vars, Body parent, File f)
 		{
-			Body result = new Body();
+			string body = (string)_body;
+			Body result = new Body(parent);
 			vars.Push(new List<Variable>());
 
 			while (true)
@@ -111,28 +113,28 @@ namespace Bohc.Parsing.Statements
 			{
 				int closing = ParserTools.getMatchingBraceChar(line, 0, '}');
 				string bod = line.Substring(1, closing - 1);
-				result.Statements.Add(new Scope(parseBody(bod, func, vars, f)));
+				result.Statements.Add(new Scope(parseBody(bod, func, vars, result, f)));
 				line = line.Substring(closing + 1).TrimStart();
 			}
 			else if (startsWithKW(line, "if"))
 			{
-				result.Statements.Add(parseIf(ref line, func, vars, f));
+				result.Statements.Add(parseIf(ref line, func, vars, result, f));
 			}
 			else if (startsWithKW(line, "while"))
 			{
-				result.Statements.Add(parseWhile(ref line, func, vars, f));
+				result.Statements.Add(parseWhile(ref line, func, vars, result, f));
 			}
 			else if (startsWithKW(line, "for"))
 			{
-				result.Statements.Add(parseFor(ref line, func, vars, f));
+				result.Statements.Add(parseFor(ref line, func, vars, result, f));
 			}
 			else if (startsWithKW(line, "do"))
 			{
-				result.Statements.Add(parseDoWhile(ref line, func, vars, f));
+				result.Statements.Add(parseDoWhile(ref line, func, vars, result, f));
 			}
 			else if (startsWithKW(line, "try"))
 			{
-				result.Statements.Add(parseTry(ref line, func, vars, f));
+				result.Statements.Add(parseTry(ref line, func, vars, result, f));
 			}
 			else if (startsWithKW(line, "switch"))
 			{
@@ -140,7 +142,7 @@ namespace Bohc.Parsing.Statements
 			}
 			else if (startsWithKW(line, "foreach"))
 			{
-				result.Statements.Add(parseForeach(ref line, func, vars, f));
+				result.Statements.Add(parseForeach(ref line, func, vars, result, f));
 			}
 			else
 			{
@@ -149,12 +151,12 @@ namespace Bohc.Parsing.Statements
 				int semicol2 = ParserTools.indexOf(line, '{', '}', ';');
 				int semicol = Math.Max(semicol1, semicol2);
 				string stat = line.Substring(0, semicol);
-				result.Statements.Add(parseStatement(stat, func, vars, f));
+				result.Statements.Add(parseStatement(stat, func, vars, result, f));
 				line = line.Substring(semicol + 1).TrimStart();
 			}
 		}
 
-		private Statement parseForeach(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private Statement parseForeach(ref string line, Function func, Stack<List<Variable>> vars, Body b, File f)
 		{
 			line = line.Substring("foreach".Length).TrimStart();
 			
@@ -168,7 +170,7 @@ namespace Bohc.Parsing.Statements
 			string b4semi = betw.Substring(0, idxSemi).Trim();
 			string after = betw.Substring(idxSemi + 1);
 
-			VarDeclaration vardec = parseVarDec(b4semi, vars, f, b4semi.LastIndexOf(' '), b4semi.Substring(0, b4semi.LastIndexOf(' ')), Modifiers.None);
+			VarDeclaration vardec = parseVarDec(b4semi, func, vars, f, b4semi.LastIndexOf(' '), b4semi.Substring(0, b4semi.LastIndexOf(' ')), b, Modifiers.None);
 			vardec.refersto.assignedTo = true;
 			Expression expr = expressions.analyze(after, vars.SelectMany(x => x), f, func);
 
@@ -179,7 +181,7 @@ namespace Bohc.Parsing.Statements
 
 			string bodyStr = getCurlies(line);
 			line = line.Substring(bodyStr.Length + 2).TrimStart();
-			Body body = parseBody(bodyStr, func, vars, f);
+			Body body = parseBody(bodyStr, func, vars, b, f);
 
 			vars.Pop();
 
@@ -234,7 +236,7 @@ namespace Bohc.Parsing.Statements
 			return new SwitchStatement(expr, labels);
 		}
 
-		private bool parseFullVarDec(string line, Function func, Stack<List<Variable>> vars, File f, Modifiers modifiers, out Statement s)
+		private bool parseFullVarDec(string line, Function func, Stack<List<Variable>> vars, File f, Modifiers modifiers, Body body, out Statement s)
 		{
 			int wspace = Math.Max(ParserTools.indexOf(line, '<', '>', ' '), ParserTools.indexOf(line, '(', ')', ' '));
 			if (wspace != -1)
@@ -242,26 +244,26 @@ namespace Bohc.Parsing.Statements
 				string beforeWspace = line.Substring(0, wspace);
 				if (Bohc.TypeSystem.Type.Exists(f.getContext(), beforeWspace, parser))
 				{
-					s = parseVarDec(line, vars, f, wspace, beforeWspace, modifiers);
+					s = parseVarDec(line, func, vars, f, wspace, beforeWspace, body, modifiers);
 					return true;
 				}
 				else if (beforeWspace == "final")
 				{
-					return parseFullVarDec(line.Substring("final".Length).TrimStart(), func, vars, f, modifiers | Modifiers.Final, out s);
+					return parseFullVarDec(line.Substring("final".Length).TrimStart(), func, vars, f, modifiers | Modifiers.Final, body, out s);
 				}
 				else if (beforeWspace == "static")
 				{
-					return parseFullVarDec(line.Substring("static".Length).TrimStart(), func, vars, f, modifiers | Modifiers.Static, out s);
+					return parseFullVarDec(line.Substring("static".Length).TrimStart(), func, vars, f, modifiers | Modifiers.Static, body, out s);
 				}
 			}
 			s = null;
 			return false;
 		}
 
-		private Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, File f)
+		private Statement parseStatement(string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			Statement s;
-			if (parseFullVarDec(line, func, vars, f, Modifiers.None, out s))
+			if (parseFullVarDec(line, func, vars, f, Modifiers.None, result, out s))
 			{
 				return s;
 			}
@@ -310,7 +312,7 @@ namespace Bohc.Parsing.Statements
 			return new EmptyStatement();
 		}
 
-		private VarDeclaration parseVarDec(string line, Stack<List<Variable>> vars, File f, int wspace, string beforeWspace, Modifiers modifiers)
+		private VarDeclaration parseVarDec(string line, Function ctx, Stack<List<Variable>> vars, File f, int wspace, string beforeWspace, Body body, Modifiers modifiers)
 		{
 			Bohc.TypeSystem.Type type = Bohc.TypeSystem.Type.GetExisting(f.getContext(), beforeWspace, parser);
 			string id = null;
@@ -335,6 +337,7 @@ namespace Bohc.Parsing.Statements
 			Local variable = new Local(id, type, modifiers);
 			variable.LamdaLevel = expressions.getLambdaStack();
 			vars.Peek().Add(variable);
+			body.RegisterLocal(variable);
 
 			return new VarDeclaration(variable, initial);
 		}
@@ -355,23 +358,23 @@ namespace Bohc.Parsing.Statements
 			return new ReturnStatement(ret);
 		}
 
-		private void parseStatBody(ref string line, Function func, Stack<List<Variable>> vars, File f, out Body body)
+		private void parseStatBody(ref string line, Function func, Stack<List<Variable>> vars, File f, Body result, out Body body)
 		{
 			body = null;
 			if (line.StartsWith("{"))
 			{
 				string curlies = getCurlies(line);
-				body = parseBody(curlies, func, vars, f);
+				body = parseBody(curlies, func, vars, result, f);
 				line = line.TrimStart().Substring(curlies.Length + 2);
 			}
 			else
 			{
-				body = new Body();
+				body = new Body(func.Body);
 				parseLine(ref line, func, vars, body, f);
 			}
 		}
 
-		private void parseIfLike(ref string line, Function func, Stack<List<Variable>> vars, File f, out Expression condition, out Body body)
+		private void parseIfLike(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f, out Expression condition, out Body body)
 		{
 			Boh.Exception.require<ParserException>(line.StartsWith("("), "Condition must be placed between parentheses");
 
@@ -379,21 +382,21 @@ namespace Bohc.Parsing.Statements
 			condition = expressions.analyze(condstr, vars.SelectMany(x => x), f, func);
 			line = line.Substring(condstr.Length + 2).TrimStart();
 
-			parseStatBody(ref line, func, vars, f, out body);
+			parseStatBody(ref line, func, vars, f, result, out body);
 		}
 
-		private TryStatement parseTry(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private TryStatement parseTry(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			line = line.Substring("try".Length).TrimStart();
 
 			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, vars, f);
+			Body body = parseBody(curlies, func, vars, result, f);
 			line = line.Substring(curlies.Length + 2).TrimStart();
 
 			List<CatchStatement> catches = new List<CatchStatement>();
 			while (line.StartsWith("catch"))
 			{
-				catches.Add(parseCatch(ref line, func, vars, f));
+				catches.Add(parseCatch(ref line, func, vars, result, f));
 			}
 
 			FinallyStatement fin = null;
@@ -402,13 +405,13 @@ namespace Bohc.Parsing.Statements
 				line = line.Substring("finally".Length).TrimStart();
 				curlies = getCurlies(line);
 				line = line.Substring(curlies.Length + 2).TrimStart();
-				fin = new FinallyStatement(parseBody(curlies, func, f));
+				fin = new FinallyStatement(parseBody(curlies, func, result, f));
 			}
 
 			return new TryStatement(body, catches, fin);
 		}
 
-		private CatchStatement parseCatch(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private CatchStatement parseCatch(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			line = line.Substring("catch".Length).TrimStart();
 
@@ -431,7 +434,7 @@ namespace Bohc.Parsing.Statements
 			line = line.Substring(bracks.Length + 2).TrimStart();
 
 			string curlies = getCurlies(line);
-			Body body = parseBody(curlies, func, vars, f);
+			Body body = parseBody(curlies, func, vars, result, f);
 			line = line.Substring(curlies.Length + 2).TrimStart();
 
 			vars.Pop();
@@ -439,44 +442,44 @@ namespace Bohc.Parsing.Statements
 			return new CatchStatement(param, body);
 		}
 
-		private IfStatement parseIf(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private IfStatement parseIf(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			line = line.Substring("if".Length).TrimStart();
 
 			Expression condition;
 			Body body;
-			parseIfLike(ref line, func, vars, f, out condition, out body);
+			parseIfLike(ref line, func, vars, result, f, out condition, out body);
 
 			line = line.TrimStart();
 			if (line.StartsWith("else"))
 			{
-				return new IfStatement(condition, body, parseElse(ref line, func, vars, f));
+				return new IfStatement(condition, body, parseElse(ref line, func, vars, result, f));
 			}
 
 			return new IfStatement(condition, body, null);
 		}
 
-		private ElseStatement parseElse(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private ElseStatement parseElse(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			line = line.Substring("else".Length).TrimStart();
 			Body body;
-			parseStatBody(ref line, func, vars, f, out body);
+			parseStatBody(ref line, func, vars, f, result, out body);
 
 			return new ElseStatement(body);
 		}
 
-		private WhileStatement parseWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private WhileStatement parseWhile(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			line = line.Substring("while".Length).TrimStart();
 
 			Expression condition;
 			Body body;
-			parseIfLike(ref line, func, vars, f, out condition, out body);
+			parseIfLike(ref line, func, vars, result, f, out condition, out body);
 
 			return new WhileStatement(condition, body);
 		}
 
-		private ForStatement parseFor(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private ForStatement parseFor(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			vars.Push(new List<Variable>());
 
@@ -489,26 +492,26 @@ namespace Bohc.Parsing.Statements
 
 			string[] strparts = strs.ToArray();
 
-			Statement initial = parseStatement(strparts[0], func, vars, f);
+			Statement initial = parseStatement(strparts[0], func, vars, result, f);
 			Expression condition = expressions.analyze(strparts[1], vars.SelectMany(x => x), f);
-			Statement post = parseStatement(strparts[2], func, vars, f);
+			Statement post = parseStatement(strparts[2], func, vars, result, f);
 
 			line = line.Substring(betwBracks.Length).TrimStart();
 
 			Body body;
-			parseStatBody(ref line, func, vars, f, out body);
+			parseStatBody(ref line, func, vars, f, result, out body);
 
 			vars.Pop();
 
 			return new ForStatement(initial, condition, post, body);
 		}
 
-		private DoWhileStatement parseDoWhile(ref string line, Function func, Stack<List<Variable>> vars, File f)
+		private DoWhileStatement parseDoWhile(ref string line, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			line = line.Substring("do".Length).TrimStart();
 
 			string curlies = getCurlies(line);
-			Body body = parseBody(getCurlies(line), func, f);
+			Body body = parseBody(getCurlies(line), func, result, f);
 			line = line.Substring(curlies.Length + 2).TrimStart();
 
 			if (line.StartsWith("while"))
