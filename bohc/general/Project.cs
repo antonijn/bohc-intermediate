@@ -129,10 +129,11 @@ namespace Bohc.General
 
 			if (!noStd)
 			{
-				externals.Add("/usr/lib/libaquastd");
+				// TODO: uncomment
+				//externals.Add("/usr/lib/libaquastd");
 			}
 
-			IFileParser fp = new FileParser(new DefaultStatementParser(new DefaultExpressionParser()), this);
+			IFileParser fp = new TokenizedFileParser(this);
 			this.pstrat = new DefaultParserStrategy(fp);
 
 			mangler = new LlvmMangler();

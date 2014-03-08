@@ -11,6 +11,8 @@ namespace Bohc.Parsing.Statements
 		public Expression expr;
 
 		public ForeachStatement(VarDeclaration vardecl, Expression expr, Body body)
+			: this(vardecl, expr, new Scope(body)) { }
+		public ForeachStatement(VarDeclaration vardecl, Expression expr, Statement body)
 			: base(body)
 		{
 			this.vardecl = vardecl;

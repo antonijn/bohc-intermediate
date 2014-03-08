@@ -17,6 +17,8 @@ namespace Bohc.Parsing.Statements
 		public readonly Expression condition;
 
 		public WhileStatement(Expression condition, Body body)
+			: this(condition, new Scope(body)) { }
+		public WhileStatement(Expression condition, Statement body)
 			: base(body)
 		{
 			Boh.Exception.require<Exceptions.ParserException>(condition.getType() == Bohc.TypeSystem.Primitive.Boolean, "Condition must be boolean");

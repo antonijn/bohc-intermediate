@@ -15,6 +15,9 @@ namespace Bohc.Parsing.Statements
 	public class ElseStatement : BodyStatement
 	{
 		public ElseStatement(Body body)
+			: this(new Scope(body)) {
+		}
+		public ElseStatement(Statement body)
 			: base(body)
 		{
 		}

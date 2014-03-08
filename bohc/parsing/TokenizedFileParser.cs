@@ -6,6 +6,7 @@ using System.Text;
 using Bohc.General;
 
 using Bohc.TypeSystem;
+using Bohc.Parsing.Statements;
 
 namespace Bohc.Parsing
 {
@@ -13,9 +14,13 @@ namespace Bohc.Parsing
 	{
 		private Project p;
 
+		private readonly TokenizedStatementParser tsp;
+
 		public TokenizedFileParser(Project p)
 		{
 			this.p = p;
+
+			tsp = new TokenizedStatementParser(this);
 		}
 
 		private Package package(TokenStream t)
@@ -87,7 +92,7 @@ namespace Bohc.Parsing
 			throw new Exception();
 		}
 
-		private TokenRange readTypeName(TokenStream t)
+		public static TokenRange readTypeName(TokenStream t)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -237,6 +242,7 @@ namespace Bohc.Parsing
 			ts.next();
 
 			File f = parseCommonHeader(ts);
+			f.state = ParserState.TS;
 
 			// parse type
 			Modifiers modifiers = Modifiers.Public;
@@ -283,11 +289,18 @@ namespace Bohc.Parsing
 			TypeSystem.Type ty = parseClassStructEnum(f, modifiers, to.value, namestream, ts, intype);
 
 			f.type = ty;
+			ty.File = f;
 			return f;
 		}
 
 		public void parseFileTP(File f)
 		{
+			if (f.state >= ParserState.TP)
+			{
+				return;
+			}
+			f.state = ParserState.TP;
+
 			TypeSystem.Type ty = (TypeSystem.Type)f.type;
 			Tuple<TokenRange, List<TokenRange>, TokenStream> tuple = (Tuple<TokenRange, List<TokenRange>, TokenStream>)ty.parserinfo;
 			Tuple<TypeSystem.Type, List<TypeSystem.Type>, TokenStream> pinfo = new Tuple<TypeSystem.Type, List<TypeSystem.Type>, TokenStream>(
@@ -325,6 +338,12 @@ namespace Bohc.Parsing
 
 		public void parseFileTCS(File f)
 		{
+			if (f.state >= ParserState.TCS)
+			{
+				return;
+			}
+			f.state = ParserState.TCS;
+
 			TokenStream t = (TokenStream)((TypeSystem.Type)f.type).parserinfo;
 
 			parseClassTCS(f, t);
@@ -346,7 +365,7 @@ namespace Bohc.Parsing
 				}
 				t.prior();
 				TokenRange tyr = readTypeName(t);
-				TypeSystem.Type ty = TypeSystem.Type.GetExisting(tyr.str, this);
+				TypeSystem.Type ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, this);
 				t.next();
 				if (t.peek(1).value == ";")
 				{
@@ -363,22 +382,118 @@ namespace Bohc.Parsing
 				}
 				else if (t.peek(1).value == "(")
 				{
+					Function func = new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
+					parseMethodParamsTCS(func, t);
+					t.next();
+					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+					((Class)f.type).AddMember(func);
 				}
 				else
 				{
 					t.peek(1).error("unexpected token '{0}'", t.peek(1).value);
 				}
 			}
+			if (((Class)f.type).Constructors.Count == 0)
+			{
+				((Class)f.type).Constructors.Add(new Constructor(Modifiers.Public, (Class)f.type, new List<Parameter>(), null));
+			}
+		}
+
+		private void parseMethodParamsTCS(Function f, TokenStream t)
+		{
+			t.next();
+			t.next(); // skip '('
+			TokenStream pars = t.until(")", new Tuple<string, string>("(", ")"));
+			while (pars.next())
+			{
+				parseParamTCS(f, pars);
+				if (pars.next())
+				{
+					if (pars.get().value == ",")
+					{
+						continue;
+					}
+					else
+					{
+						pars.get().error("expected ','");
+					}
+				}
+			}
+		}
+
+		private void parseParamTCS(Function f, TokenStream param)
+		{
+			Modifiers mf = Modifiers.None;
+			while (param.get().isType(TokenType.MODIFIER))
+			{
+				mf |= ModifierHelper.GetModifierFromString(param.get().value);
+				param.next();
+			}
+			param.prior();
+			TokenRange tyr = readTypeName(param);
+			TypeSystem.Type ty = TypeSystem.Type.GetExisting(f.Owner.File.getContext(), tyr.str, this);
+			param.next();
+			if (!param.get().isType(TokenType.IDENTIFIER))
+			{
+				param.get().error("expected parameter identifier");
+			}
+			string id = param.get().value;
+			f.Parameters.Add(new Parameter(f, mf, id, ty));
 		}
 
 		public void parseFileTCP(File f)
 		{
-			//throw new NotImplementedException();
+			if (f.state >= ParserState.TCP)
+			{
+				return;
+			}
+			f.state = ParserState.TCP;
+
+			Class c = f.type as Class;
+			if (c != null)
+			{
+				foreach (Field field in c.Fields.Where(x => x.InitValStr != null))
+				{
+					field.Initial = tsp.getEp().analyze((TokenStream)field.InitValStr, c.Fields);
+				}
+			}
 		}
 
 		public void parseFileCP(File f)
 		{
-			//throw new NotImplementedException();
+			if (f.state >= ParserState.CP)
+			{
+				return;
+			}
+			f.state = ParserState.CP;
+
+			Class c = f.type as Class;
+			if (c == null)
+			{
+				return;
+			}
+
+			foreach (Function func in c.Functions)
+			{
+				if (!func.Modifiers.HasFlag(Modifiers.Abstract) && !func.Modifiers.HasFlag(Modifiers.Native))
+				{
+					func.Body = tsp.parseBody(func.BodyStr, func, null, f);
+
+					if (func.ReturnType != Primitive.Void && func.ReturnType != null && !func.Body.hasReturned())
+					{
+						((TokenStream)func.BodyStr).get().error("function must return a value");
+					}
+					else if (func is Constructor)
+					{
+						if (c.Super != null &&
+						    !c.Super.Constructors.Any(x => !(x.Modifiers.HasFlag(Modifiers.Private) || x.Modifiers.HasFlag(Modifiers.CVisible)) && x.Parameters.Count == 0) &&
+						    !func.Body.hasSuperBeenCalled())
+						{
+							((TokenStream)func.BodyStr).get().error("constructor must call super constructor");
+						}
+					}
+				}
+			}
 		}
 
 		public Bohc.General.Project proj()

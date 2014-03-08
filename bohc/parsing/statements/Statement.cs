@@ -14,5 +14,13 @@ namespace Bohc.Parsing.Statements
 {
 	public abstract class Statement
 	{
+		public virtual bool hasSuperBeenCalled()
+		{
+			return false;
+		}
+		public virtual bool hasReturned()
+		{
+			return false;
+		}
 	}
 }

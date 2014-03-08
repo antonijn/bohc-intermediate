@@ -14,9 +14,9 @@ namespace Bohc.Parsing.Statements
 {
 	public abstract class BodyStatement : Statement
 	{
-		public readonly Body body;
+		public readonly Statement body;
 
-		public BodyStatement(Body body)
+		public BodyStatement(Statement body)
 		{
 			this.body = body;
 		}

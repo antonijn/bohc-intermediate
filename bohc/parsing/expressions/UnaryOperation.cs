@@ -16,6 +16,7 @@ namespace Bohc.Parsing
 	{
 		public static readonly int[] UNARY_PRECENDENCES = new int[] { 7, 8 };
 
+		public static readonly Operator TYPE_CAST = new Operator(null, 8, null);
 		public static readonly Operator PLUS = new Operator("+", 7, "plus");
 		public static readonly Operator MINUS = new Operator("-", 7, "minus");
 		public static readonly Operator INCREMENT = new Operator("++", 7, "inc");

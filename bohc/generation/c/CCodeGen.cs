@@ -2345,7 +2345,7 @@ namespace Bohc.Generation.C
 			builder.Append(tmp);
 			builder.AppendLine(");");
 
-			addBody(builder, fore.body);
+			addStatement(builder, fore.body);
 			--indentation;
 			addIndent(builder);
 			builder.AppendLine("}");
@@ -2439,7 +2439,7 @@ namespace Bohc.Generation.C
 			builder.Append(typeusename);
 			builder.AppendLine(")exception;");
 
-			addBody(builder, cstat.body);
+			addStatement(builder, cstat.body);
 
 			if (finname != null)
 			{
@@ -2464,7 +2464,7 @@ namespace Bohc.Generation.C
 				finname = "temp" + tempvcounter++;
 				builder.AppendLine("void " + finname + "(void)");
 
-				addBody(builder, trys.fin.body);
+				addStatement(builder, trys.fin.body);
 			}
 
 			addIndent(builder);
@@ -2480,7 +2480,7 @@ namespace Bohc.Generation.C
 			builder.AppendLine("{");
 			++indentation;
 
-			addBody(builder, trys.body);
+			addStatement(builder, trys.body);
 
 			addJmpReset(builder, tempname);
 
@@ -2542,7 +2542,7 @@ namespace Bohc.Generation.C
 		{
 			addIndent(builder);
 			builder.AppendLine("do");
-			addBody(builder, dostat.body);
+			addStatement(builder, dostat.body);
 			addIndent(builder);
 			builder.Append("while (");
 			addExpression(builder, dostat.condition);
@@ -2576,14 +2576,14 @@ namespace Bohc.Generation.C
 			}
 			builder.AppendLine(")");
 
-			addBody(builder, forstat.body);
+			addStatement(builder, forstat.body);
 		}
 
 		private void addElse(StringBuilder builder, ElseStatement elsestat)
 		{
 			addIndent(builder);
 			builder.AppendLine("else");
-			addBody(builder, elsestat.body);
+			addStatement(builder, elsestat.body);
 		}
 
 		private void addVarDec(StringBuilder builder, VarDeclaration vdec)
@@ -2664,7 +2664,7 @@ namespace Bohc.Generation.C
 			builder.Append("while (");
 			addExpression(builder, stat.condition);
 			builder.AppendLine(")");
-			addBody(builder, stat.body);
+			addStatement(builder, stat.body);
 		}
 
 		private void addIfStat(StringBuilder builder, IfStatement stat)
@@ -2673,7 +2673,7 @@ namespace Bohc.Generation.C
 			builder.Append("if (");
 			addExpression(builder, stat.condition);
 			builder.AppendLine(")");
-			addBody(builder, stat.body);
+			addStatement(builder, stat.body);
 			if (stat.elsestat != null)
 			{
 				addElse(builder, stat.elsestat);

@@ -237,9 +237,6 @@ namespace Bohc.Parsing
 					res = new Token(TokenType.OPERATOR, "&&", i, linenum, str, filename);
 					return i;
 				}
-				--i;
-				res = new Token(TokenType.OPERATOR, "&", i, linenum, str, filename);
-				return i;
 			}
 			else if (ch == '|')
 			{
@@ -249,9 +246,24 @@ namespace Bohc.Parsing
 					res = new Token(TokenType.OPERATOR, "||", i, linenum, str, filename);
 					return i;
 				}
-				--i;
-				res = new Token(TokenType.OPERATOR, "|", i, linenum, str, filename);
-				return i;
+			}
+			else if (ch == '+')
+			{
+				char peek = str[i++];
+				if (peek == '+')
+				{
+					res = new Token(TokenType.OPERATOR, "++", i, linenum, str, filename);
+					return i;
+				}
+			}
+			else if (ch == '-')
+			{
+				char peek = str[i++];
+				if (peek == '+')
+				{
+					res = new Token(TokenType.OPERATOR, "--", i, linenum, str, filename);
+					return i;
+				}
 			}
 
 			--i;
@@ -337,7 +349,7 @@ namespace Bohc.Parsing
 			{
 				return new Token(TokenType.CLASS_ENUM_STRUCT, id, i, linenum, str, filename);
 			}
-			if (id == "if" || id == "for" || id == "while" || id == "do" || id == "try" || id == "catch")
+			if (id == "if" || id == "for" || id == "while" || id == "do" || id == "try" || id == "catch" || id == "foreach")
 			{
 				return new Token(TokenType.IF_OR_LOOP, id, i, linenum, str, filename);
 			}
@@ -430,7 +442,7 @@ namespace Bohc.Parsing
 				}
 			}
 
-			if (sb[0] == '0' && tty == TokenType.DEC_INTEGER)
+			if (sb[0] == '0' && sb.Length > 1 && tty == TokenType.DEC_INTEGER)
 			{
 				tty = TokenType.OCT_INTEGER;
 			}

@@ -21,21 +21,22 @@ namespace Bohc.Parsing
 			new Tuple<string, string>("{", "}"),
 		};
 
-		private IStatementParser istats;
+		private TokenizedStatementParser istats;
+		private int lambdaStack = 0;
 
-		public void init(IStatementParser statements)
+		public void init(TokenizedStatementParser statements)
 		{
 			istats = statements;
 		}
 
-		public IStatementParser getStats()
+		public TokenizedStatementParser getStats()
 		{
 			return istats;
 		}
 
 		public int getLambdaStack()
 		{
-			throw new NotImplementedException();
+			return lambdaStack;
 		}
 
 		public Expression analyze(TokenStream t, IEnumerable<Bohc.TypeSystem.Variable> vars, Bohc.TypeSystem.Function ctx)
@@ -100,12 +101,32 @@ namespace Bohc.Parsing
 				return true;
 			}
 
-			/*TypeSystem.Type ty = TypeSystem.Type.GetExisting(to.value, getStats().getParser());
+			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), to.value, getStats().getFp());
 			if (ty != null)
 			{
 				expr = new ExprType(ty);
 				return true;
-			}*/
+			}
+
+			// if nothing prior, it might be a static or instance variable belonging to the class
+			if (expr == null)
+			{
+				try
+				{
+					expr = new ExprType(ctx.Owner);
+					solveIdentifier(ref expr, t, vars, ctx, ctx.Owner, true, false);
+					return true;
+				}
+				catch
+				{
+					if (!ctx.Modifiers.HasFlag(Modifiers.Static))
+					{
+						expr = ((Class)ctx.Owner).ThisVarExpr;
+						solveIdentifier(ref expr, t, vars, ctx, ctx.Owner, false, true);
+						return true;
+					}
+				}
+			}
 
 			try
 			{
@@ -128,16 +149,66 @@ namespace Bohc.Parsing
 			}
 
 			t.next();
-			analyze(ref expr, t.until(")", scopes), vars, opprec, ctx);
+			analyze(ref expr, t.until(")", scopes), vars, null, ctx);
+
+			ExprType type = expr as ExprType;
+			if (type != null && opprec != UnaryOperation.TYPEOF)
+			{
+				// a typecast has operator precedence 8, hence the 8
+				// TODO: or is it 7?
+				Expression e = null;
+				t.prior();
+				analyze(ref e, t, vars, UnaryOperation.TYPE_CAST, ctx);
+				// only apply if it's actually followed by something
+				if (e != null)
+				{
+					expr = new TypeCast(type.type, e);
+				}
+			}
+
 			return true;
+		}
+
+		private string intToDecStr(Token to)
+		{
+			string i = to.value;
+			if (i.EndsWith("l") || i.EndsWith("L"))
+			{
+				i = i.Substring(0, i.Length - 1);
+			}
+			if (to.isType(TokenType.DEC_INTEGER))
+			{
+				return i;
+			}
+			bool sign = i.StartsWith("-");
+			if (sign)
+			{
+				i = i.Substring(1);
+			}
+			if (to.isType(TokenType.BIN_INTEGER))
+			{
+				i = i.Substring(2);
+				return (Convert.ToInt64(i, 2) * (sign ? -1 : 1)).ToString();
+			}
+			if (to.isType(TokenType.HEX_INTEGER))
+			{
+				i = i.Substring(2);
+				return (Convert.ToInt64(i, 16) * (sign ? -1 : 1)).ToString();
+			}
+			if (to.isType(TokenType.OCT_INTEGER))
+			{
+				i = i.Substring(1);
+				return (Convert.ToInt64(i, 8) * (sign ? -1 : 1)).ToString();
+			}
+			throw new NotImplementedException();
 		}
 
 		private bool analyzeLiteral(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
 		{
 			Token to = t.get();
-			if (to.isType(TokenType.DEC_INTEGER) || to.isType(TokenType.BIN_INTEGER) || to.isType(TokenType.HEX_INTEGER))
+			if (to.isType(TokenType.DEC_INTEGER) || to.isType(TokenType.BIN_INTEGER) || to.isType(TokenType.HEX_INTEGER) || to.isType(TokenType.OCT_INTEGER))
 			{
-				expr = new Literal(Primitive.Int, to.value);
+				expr = new Literal(Primitive.Int, intToDecStr(to));
 				return true;
 			}
 			else if (to.isType(TokenType.FLOAT))
@@ -177,7 +248,13 @@ namespace Bohc.Parsing
 		{
 			t.next();
 			TokenStream ps = t.until(")", scopes);
-			foreach (TokenStream ts in ps.split(",", scopes))
+			ps.next();
+			TokenStream[] tss = ps.split(",", scopes).ToArray();
+			if (tss.Length == 1 && tss.Single().size() == 0)
+			{
+				yield break;
+			}
+			foreach (TokenStream ts in tss)
 			{
 				yield return analyze(ts, vars, ctx);
 			}
@@ -188,8 +265,8 @@ namespace Bohc.Parsing
 			Token to = t.get();
 
 			IEnumerable<Function> functions = owner.GetFunctions(to.value, ctx.Owner)
-				.Where(x => (!maybeStatic && x.Modifiers.HasFlag(Modifiers.Static) ||
-				        (!maybeInstance && !x.Modifiers.HasFlag(Modifiers.Static)))).ToArray();
+				.Where(x => (maybeStatic && x.Modifiers.HasFlag(Modifiers.Static) ||
+				        (maybeInstance && !x.Modifiers.HasFlag(Modifiers.Static)))).ToArray();
 			Field field = owner.GetField(to.value, ctx.Owner);
 			if (field != null && ((field.Modifiers.HasFlag(Modifiers.Static) && !maybeStatic) ||
 			    (!field.Modifiers.HasFlag(Modifiers.Static) && !maybeInstance)))
@@ -291,10 +368,33 @@ namespace Bohc.Parsing
 			CONTINUE,
 			NOTHING,
 		}
+
+		private void analyzeNewOp(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
+		{
+			TokenRange tyr = TokenizedFileParser.readTypeName(t);
+			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), tyr.str, getStats().getFp());
+			if (t.next() && t.get().value != "(")
+			{
+				throw new TokenException(t.get(), "unexpected token '{0}', expected '('", t.get().value);
+			}
+			Expression[] parameters = getParameters(t, vars, ctx).ToArray();
+			Constructor c = (Constructor)Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ty).Constructors, ctx, parameters);
+			expr = new ConstructorCall(c, parameters);
+		}
 	
 		private OpBreakStat analyzeOperator(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
 		{
+			BinaryOperation.ADD.GetType();
+			UnaryOperation.DECREMENT.GetType();
+
 			Token to = t.get();
+
+			if (to.value == "new")
+			{
+				analyzeNewOp(ref expr, t, vars, opprec, ctx);
+				return OpBreakStat.CONTINUE;
+			}
+
 			if (!to.isType(TokenType.OPERATOR))
 			{
 				return OpBreakStat.NOTHING;
@@ -309,7 +409,7 @@ namespace Bohc.Parsing
 			if (expr == null) // unary
 			{
 				Operator op = Operator.getExisting(to.value, OperationType.UNARY);
-				if (opprec == null && op.precedence < opprec.precedence)
+				if (opprec != null && op.precedence < opprec.precedence)
 				{
 					t.prior();
 					return OpBreakStat.BREAK;

@@ -19,6 +19,8 @@ namespace Bohc.Parsing.Statements
 		public readonly Statement final;
 
 		public ForStatement(Statement initial, Expression condition, Statement final, Body body)
+			: this(initial, condition, final, new Scope(body)) { }
+		public ForStatement(Statement initial, Expression condition, Statement final, Statement body)
 			: base(body)
 		{
 			if (condition == null)

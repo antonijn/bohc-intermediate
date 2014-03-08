@@ -204,18 +204,26 @@ namespace Bohc.Generation.Llvm
 				LlvmTemp tmp = new LlvmTemp(new LlvmPointer(type(p.Type)));
 				llvm.AddAlloca(tmp, type(p.Type));
 				llvm.AddStore(tmp,
-				              llvm.func.parameters.Single(x => x.ToString() == "%" + p.Identifier));
+					llvm.func.parameters.Single(x => x.ToString() == "%" + p.Identifier));
 				locals[p] = tmp;
 			}
-			addBody(llvm, b);
 
-			if (!b.hasReturned())
+			if (b != null)
+			{
+				addBody(llvm, b);
+
+				if (!b.hasReturned())
+				{
+					llvm.AddRetVoid();
+				}
+
+				addNullChecks(llvm, nullchecks.Pop());
+				nulllabelstack.Pop();
+			}
+			else
 			{
 				llvm.AddRetVoid();
 			}
-
-			addNullChecks(llvm, nullchecks.Pop());
-			nulllabelstack.Pop();
 		}
 
 		private LlvmFunction function(Function f)
@@ -274,6 +282,12 @@ namespace Bohc.Generation.Llvm
 		private int frts = 0;
 		private LlvmType type(TypeSystem.Type t)
 		{
+			// TODO: remove this asap
+			if (t == null)
+			{
+				return new LlvmPointer(new LlvmPrimitive("i8"));
+			}
+
 			Primitive p = t as Primitive;
 			if (p != null)
 			{
@@ -577,6 +591,7 @@ namespace Bohc.Generation.Llvm
 			if (addSpecificStat<BreakStatement>(llvm, stat, addBreak)) { return; }
 			if (addSpecificStat<ContinueStatement>(llvm, stat, addContinue)) { return; }
 			if (addSpecificStat<VarDeclaration>(llvm, stat, addVarDec)) { return; }
+			if (addSpecificStat<Scope>(llvm, stat, (l, e) => addBody(l, e.body))) { return; }
 		}
 
 		private void addForeachStat(Llvm llvm, ForeachStatement fes)
@@ -598,11 +613,11 @@ namespace Bohc.Generation.Llvm
 			{
 				llvm.AddBranch(v, ifl, ifl, skipelse);
 			}
-			addBody(llvm, ifs.body);
+			addStatement(llvm, ifs.body);
 			if (ifs.elsestat != null)
 			{
 				llvm.AddBranch(skipelse, elsel);
-				addBody(llvm, ifs.elsestat.body);
+				addStatement(llvm, ifs.elsestat.body);
 			}
 			llvm.AddBranch(skipelse, skipelse);
 		}
@@ -617,7 +632,7 @@ namespace Bohc.Generation.Llvm
 			LlvmLabel skip = new LlvmLabel();
 			skiplabels.Push(skip);
 			llvm.AddBranch(v, cont, cont, skip);
-			addBody(llvm, ws.body);
+			addStatement(llvm, ws.body);
 			llvm.AddBranch(start, skip);
 			skiplabels.Pop();
 			restrtlabels.Pop();
@@ -631,7 +646,7 @@ namespace Bohc.Generation.Llvm
 			LlvmLabel skip = new LlvmLabel();
 			skiplabels.Push(skip);
 			restrtlabels.Push(cond);
-			addBody(llvm, stat.body);
+			addStatement(llvm, stat.body);
 			skiplabels.Pop();
 			restrtlabels.Pop();
 			llvm.AddBranch(cond, cond);
@@ -650,7 +665,7 @@ namespace Bohc.Generation.Llvm
 			restrtlabels.Push(start);
 			skiplabels.Push(skip);
 			llvm.AddBranch(v, cont, cont, skip);
-			addBody(llvm, fors.body);
+			addStatement(llvm, fors.body);
 			skiplabels.Pop();
 			restrtlabels.Pop();
 			addStatement(llvm, fors.final);
@@ -725,7 +740,7 @@ namespace Bohc.Generation.Llvm
 			LlvmLabel c = new LlvmLabel();
 			LlvmTry t = new LlvmTry(c);
 			tries.Push(t);
-			addBody(llvm, trys.body);
+			addStatement(llvm, trys.body);
 			tries.Pop();
 			llvm.AddBranch(c, c);
 			LlvmTemp tmp = new LlvmTemp(new LlvmPointer(new LlvmPrimitive(Primitive.Byte.LlvmName)));

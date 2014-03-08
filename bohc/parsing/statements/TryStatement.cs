@@ -18,6 +18,8 @@ namespace Bohc.Parsing.Statements
 		public readonly FinallyStatement fin;
 
 		public TryStatement(Body body, List<CatchStatement> catches, FinallyStatement fin)
+			: this(new Scope(body), catches, fin) { }
+		public TryStatement(Statement body, List<CatchStatement> catches, FinallyStatement fin)
 			: base(body)
 		{
 			this.catches = catches;

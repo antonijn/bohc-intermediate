@@ -18,12 +18,24 @@ namespace Bohc.Parsing.Statements
 		public readonly ElseStatement elsestat;
 
 		public IfStatement(Expression condition, Body body, ElseStatement elsestat)
+			: this(condition, new Scope(body), elsestat) { }
+		public IfStatement(Expression condition, Statement body, ElseStatement elsestat)
 			: base(body)
 		{
 			Boh.Exception.require<Exceptions.ParserException>(condition.getType() == Bohc.TypeSystem.Primitive.Boolean, "Condition must be boolean");
 
 			this.condition = condition;
 			this.elsestat = elsestat;
+		}
+
+		public override bool hasReturned()
+		{
+			return body.hasReturned() && (elsestat == null || elsestat.body.hasReturned());
+		}
+
+		public override bool hasSuperBeenCalled()
+		{
+			return body.hasSuperBeenCalled() && (elsestat == null || elsestat.body.hasSuperBeenCalled());
 		}
 	}
 }

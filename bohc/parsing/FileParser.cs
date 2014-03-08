@@ -664,14 +664,7 @@ namespace Bohc.Parsing
 			{
 				if (!func.Modifiers.HasFlag(Modifiers.Abstract) && !func.Modifiers.HasFlag(Modifiers.Native))
 				{
-					/*try
-					{*/
-						func.Body = Statements.parseBody(func.BodyStr, func, null, f);
-					/*}
-					catch (System.Exception e)
-					{
-						throw new System.Exception(func.Identifier, e);
-					}*/
+					func.Body = Statements.parseBody(func.BodyStr, func, null, f);
 
 					if (func.ReturnType != Primitive.Void && func.ReturnType != null)
 					{

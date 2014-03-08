@@ -15,6 +15,9 @@ namespace Bohc.Parsing.Statements
 	public class FinallyStatement : BodyStatement
 	{
 		public FinallyStatement(Body body)
+			: this(new Scope(body)) {
+		}
+		public FinallyStatement(Statement body)
 			: base(body)
 		{
 		}

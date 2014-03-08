@@ -17,6 +17,8 @@ namespace Bohc.Parsing.Statements
 		public readonly Bohc.TypeSystem.Parameter param;
 
 		public CatchStatement(Bohc.TypeSystem.Parameter param, Body body)
+			: this(param, new Scope(body)) { }
+		public CatchStatement(Bohc.TypeSystem.Parameter param, Statement body)
 			: base(body)
 		{
 			this.param = param;

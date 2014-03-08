@@ -111,7 +111,7 @@ namespace Bohc.Parsing.Statements
 			return false;
 		}
 
-		private bool tryReturnsOrSuper(TryStatement trys, Func<Body, bool> bodyAct)
+		private bool tryReturnsOrSuper(TryStatement trys, Func<Statement, bool> bodyAct)
 		{
 			if (!bodyAct(trys.body))
 			{

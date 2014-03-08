@@ -19,6 +19,11 @@ namespace Bohc.Parsing
 			this._size = length;
 		}
 
+		public TokenStream fork()
+		{
+			return new TokenStream(tokens, offset, length);
+		}
+
 		public Token get()
 		{
 			return tokens.Skip(offset).First();
@@ -57,6 +62,14 @@ namespace Bohc.Parsing
 			for (int i = 0; i < length; ++i)
 			{
 				Token t = peek(i);
+
+				if (t.value == str && !scopes.Any(x => x.Value > 0))
+				{
+					TokenStream result = read(0, i);
+					next();
+					return result;
+				}
+
 				Tuple<string, string> tmp;
 				if ((tmp = scopetokens.SingleOrDefault(x => x.Item1 == t.value)) != null)
 				{
@@ -66,12 +79,11 @@ namespace Bohc.Parsing
 				{
 					--scopes[tmp.Item1];
 				}
-				if (t.value == str && !scopes.Any(x => x.Value > 0))
-				{
-					TokenStream result = read(0, i);
-					next();
-					return result;
-				}
+			}
+
+			if (!scopes.Any(x => x.Value > 0))
+			{
+				return read(0, length);
 			}
 
 			// TODO: panic
@@ -94,6 +106,10 @@ namespace Bohc.Parsing
 				try
 				{
 					tstr = until(str, scopetokens);
+					if (tstr.size() == 0)
+					{
+						break;
+					}
 				}
 				catch
 				{
@@ -107,6 +123,11 @@ namespace Bohc.Parsing
 		public int size()
 		{
 			return _size;
+		}
+
+		public override string ToString()
+		{
+			return get().ToString();
 		}
 	}
 }

@@ -38,7 +38,7 @@ namespace Bohc.Parsing
 		{
 			IEnumerable<Operator> result = operators.Where(x => x.representation == op &&
 				(otype == OperationType.BINARY ? BinaryOperation.BINARY_PRECEDENCES.Contains(x.precedence) :
-				(otype == OperationType.UNARY ? UnaryOperation.UNARY_PRECENDENCES.Contains(x.precedence) : true)));
+					(otype == OperationType.UNARY ? UnaryOperation.UNARY_PRECENDENCES.Contains(x.precedence) : true))).ToArray();
 			Boh.Exception.require<Exceptions.ParserException>(result.Count() != 0, "No operator found for '" + op + "'");
 			if (result.Count() == 2)
 			{

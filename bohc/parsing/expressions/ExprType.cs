@@ -23,7 +23,7 @@ namespace Bohc.Parsing
 
 		public override Bohc.TypeSystem.Type getType()
 		{
-			throw new NotImplementedException();
+			return type;
 		}
 
 		public override bool isLvalue(Bohc.TypeSystem.Function ctx)

@@ -22,7 +22,7 @@ namespace Bohc.TypeSystem
 		public readonly string Identifier;
 		public readonly List<Parameter> Parameters;
 
-		public readonly string BodyStr;
+		public object BodyStr;
 		public Parsing.Statements.Body Body;
 
 		public bool IsVariadic()
@@ -44,7 +44,7 @@ namespace Bohc.TypeSystem
 			return Identifier;
 		}
 
-		public Function(Bohc.TypeSystem.Type owner, Modifiers modifiers, Bohc.TypeSystem.Type returnType, string identifier, List<Parameter> parameters, string bodystr)
+		public Function(Bohc.TypeSystem.Type owner, Modifiers modifiers, Bohc.TypeSystem.Type returnType, string identifier, List<Parameter> parameters, object bodystr)
 		{
 			this.Owner = owner;
 			this.Modifiers = modifiers;

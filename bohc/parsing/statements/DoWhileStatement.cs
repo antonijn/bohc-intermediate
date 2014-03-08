@@ -17,11 +17,23 @@ namespace Bohc.Parsing.Statements
 		public readonly Expression condition;
 
 		public DoWhileStatement(Expression condition, Body body)
+			: this(condition, new Scope(body)) { }
+		public DoWhileStatement(Expression condition, Statement body)
 			: base(body)
 		{
 			Boh.Exception.require<Exceptions.ParserException>(condition.getType() == Bohc.TypeSystem.Primitive.Boolean, "Condition must be boolean");
 
 			this.condition = condition;
+		}
+
+		public override bool hasSuperBeenCalled()
+		{
+			return body.hasSuperBeenCalled();
+		}
+
+		public override bool hasReturned()
+		{
+			return body.hasReturned();
 		}
 	}
 }
