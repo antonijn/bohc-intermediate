@@ -17,6 +17,9 @@ namespace Bohc.TypeSystem
 		public Modifiers Modifiers;
 
 		public bool assignedTo = false;
+		public int usageCount = 0;
+
+		public Bohc.Parsing.TokenRange info;
 
 		public Local(string identifier, Type type, Modifiers modifiers)
 			: base(identifier, type)

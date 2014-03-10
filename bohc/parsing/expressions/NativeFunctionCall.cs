@@ -19,15 +19,7 @@ namespace Bohc.Parsing
 
 		public override Bohc.TypeSystem.Type getType()
 		{
-			if (function == NativeFunction.NativeDeref)
-			{
-				return ((ExprType)parameters [0]).type;
-			}
-			else if (function == NativeFunction.NativeRef)
-			{
-				return Primitive.Int;
-			}
-			else if (function == NativeFunction.NativeSizeof)
+			if (function == NativeFunction.NativeSizeof)
 			{
 				return Primitive.Int;
 			}
@@ -37,12 +29,12 @@ namespace Bohc.Parsing
 
 		public override bool isLvalue(Function ctx)
 		{
-			return function == NativeFunction.NativeDeref;
+			return false;
 		}
 
 		public override bool isStatement()
 		{
-			return function != NativeFunction.NativeDeref;
+			return false;
 		}
 	}
 }

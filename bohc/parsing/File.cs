@@ -20,6 +20,7 @@ namespace Bohc.Parsing
 		public readonly Package package;
 		public string filename;
 		public readonly object parserinfo;
+		public bool ignore = false;
 
 		public ParserState state;
 

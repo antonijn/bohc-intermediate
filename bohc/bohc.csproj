@@ -172,6 +172,8 @@
     <Compile Include="parsing\expressions\FunctionCollection.cs" />
     <Compile Include="general\ConcurrentParserStrategy.cs" />
     <Compile Include="generation\llvm\LlvmBuilder.cs" />
+    <Compile Include="general\ErrorManager.cs" />
+    <Compile Include="general\Platform.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">

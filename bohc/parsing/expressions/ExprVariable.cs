@@ -76,6 +76,7 @@ namespace Bohc.Parsing
 			if (l != null)
 			{
 				Boh.Exception.require<Exceptions.ParserException>(l.assignedTo, l.Identifier + " was not yet assigned to");
+				++l.usageCount;
 			}
 		}
 

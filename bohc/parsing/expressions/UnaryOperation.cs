@@ -25,6 +25,7 @@ namespace Bohc.Parsing
 		public static readonly Operator DECREMENT_POST = new Operator("--", 7, "dec_post");
 		public static readonly Operator INVERT = new Operator("!", 7, "inv");
 		public static readonly Operator NOT = new Operator("~", 7, "not");
+		public static readonly Operator SIZEOF = new Operator("sizeof", 8, "sizeof");
 		public static readonly Operator TYPEOF = new Operator("typeof", 8, "typeof");
 		public static readonly Operator DEFAULT = new Operator("default", 8, "default");
 
@@ -42,6 +43,10 @@ namespace Bohc.Parsing
 			if (operation == TYPEOF)
 			{
 				return Bohc.TypeSystem.StdType.Type;
+			}
+			else if (operation == SIZEOF)
+			{
+				return Bohc.TypeSystem.Primitive.Int;
 			}
 			else if (operation == DEFAULT)
 			{

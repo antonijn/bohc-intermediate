@@ -24,6 +24,7 @@ namespace Bohc.General
 		public DefaultParserStrategy(IFileParser fp)
 		{
 			this.fp = fp;
+			fp.regStrat(this);
 		}
 
 		public ParserState getpstate()

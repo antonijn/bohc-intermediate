@@ -7,10 +7,12 @@ namespace Bohc.Generation.Llvm
 {
 	public class LlvmModule
 	{
-		public LlvmModule()
+		public LlvmModule(string targetTriple)
 		{
+			this.targetTriple = targetTriple;
 		}
 
+		private string targetTriple;
 		private StringBuilder types = new StringBuilder();
 		private StringBuilder decls = new StringBuilder();
 		private StringBuilder globvars = new StringBuilder();
@@ -18,7 +20,8 @@ namespace Bohc.Generation.Llvm
 
 		public override string ToString()
 		{
-			return types.ToString() + Environment.NewLine +
+			return "target triple = \"" + targetTriple + "\"" + Environment.NewLine + Environment.NewLine +
+			types.ToString() + Environment.NewLine +
 			decls.ToString() + Environment.NewLine +
 			globvars.ToString() + Environment.NewLine +
 			impls.ToString() + Environment.NewLine;

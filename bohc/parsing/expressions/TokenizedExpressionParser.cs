@@ -29,7 +29,7 @@ namespace Bohc.Parsing
 			istats = statements;
 		}
 
-		public TokenizedStatementParser getStats()
+		public TokenizedStatementParser getSp()
 		{
 			return istats;
 		}
@@ -64,6 +64,7 @@ namespace Bohc.Parsing
 			while (t.next())
 			{
 				if (analyzeBrackets(ref expr, t, vars, opprec, ctx)) { continue; }
+				if (analyzeIndexer(ref expr, t, vars, opprec, ctx)) { continue; }
 				if (analyzeLiteral(ref expr, t, vars, opprec, ctx)) { continue; }
 				OpBreakStat obs = analyzeOperator(ref expr, t, vars, opprec, ctx);
 				if (obs == OpBreakStat.BREAK)
@@ -76,6 +77,24 @@ namespace Bohc.Parsing
 				}
 				if (analyzeName(ref expr, t, vars, opprec, ctx)) { continue; }
 			}
+		}
+
+		private bool analyzeIndexer(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
+		{
+			Token to = t.get();
+			if (to.value != "[")
+			{
+				return false;
+			}
+
+			Expression[] parameters = getParameters(t, vars, ctx, ']').ToArray();
+			IEnumerable<Indexer> funcs = expr.getType().GetFunctions("this", (TypeSystem.Type)ctx.Owner.File.type).OfType<Indexer>();
+			expr = new IndexerCall(
+				funcs.SingleOrDefault(x => !x.IsAssignment()),
+				funcs.SingleOrDefault(x => x.IsAssignment()),
+				expr, parameters);
+			t.prior();
+			return true;
 		}
 
 		private bool analyzeName(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
@@ -101,7 +120,7 @@ namespace Bohc.Parsing
 				return true;
 			}
 
-			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), to.value, getStats().getFp());
+			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), to.value, getSp().getFp());
 			if (ty != null)
 			{
 				expr = new ExprType(ty);
@@ -134,7 +153,7 @@ namespace Bohc.Parsing
 			}
 			catch
 			{
-				throw new TokenException(to, "invalid identifier in context: '{0}'", to.value);
+				throw new TokenException(getSp().getFp().getEM(), to, "invalid identifier in context: '{0}'", to.value);
 			}
 			return true;
 		}
@@ -244,10 +263,10 @@ namespace Bohc.Parsing
 			return false;
 		}
 
-		private IEnumerable<Expression> getParameters(TokenStream t, IEnumerable<Variable> vars, Function ctx)
+		private IEnumerable<Expression> getParameters(TokenStream t, IEnumerable<Variable> vars, Function ctx, char close = ')')
 		{
 			t.next();
-			TokenStream ps = t.until(")", scopes);
+			TokenStream ps = t.until(close.ToString(), scopes);
 			ps.next();
 			TokenStream[] tss = ps.split(",", scopes).ToArray();
 			if (tss.Length == 1 && tss.Single().size() == 0)
@@ -268,8 +287,8 @@ namespace Bohc.Parsing
 				.Where(x => (maybeStatic && x.Modifiers.HasFlag(Modifiers.Static) ||
 				        (maybeInstance && !x.Modifiers.HasFlag(Modifiers.Static)))).ToArray();
 			Field field = owner.GetField(to.value, ctx.Owner);
-			if (field != null && ((field.Modifiers.HasFlag(Modifiers.Static) && !maybeStatic) ||
-			    (!field.Modifiers.HasFlag(Modifiers.Static) && !maybeInstance)))
+			if (field != null && !((field.Modifiers.HasFlag(Modifiers.Static) && maybeStatic) ||
+			    (!field.Modifiers.HasFlag(Modifiers.Static) && maybeInstance)))
 			{
 				field = null;
 			}
@@ -313,7 +332,7 @@ namespace Bohc.Parsing
 			Token to = t.get();
 			if (!to.isType(TokenType.IDENTIFIER))
 			{
-				throw new TokenException(to, "not an identifier: '{0}'", to.value);
+				throw new TokenException(getSp().getFp().getEM(), to, "not an identifier: '{0}'", to.value);
 			}
 
 			if (expr is ExprPackage)
@@ -335,7 +354,7 @@ namespace Bohc.Parsing
 					return true;
 				}
 
-				throw new TokenException(to, "package '{0}' has no member named '{1}'", p.ToString(), to.value);
+				throw new TokenException(getSp().getFp().getEM(), to, "package '{0}' has no member named '{1}'", p.ToString(), to.value);
 			}
 
 			if (expr is ExprType)
@@ -346,7 +365,7 @@ namespace Bohc.Parsing
 				}
 				catch
 				{
-					throw new TokenException(to, "'{0}' has no member named '{1}'", expr.getType().FullName(), to.value);
+					throw new TokenException(getSp().getFp().getEM(), to, "'{0}' has no member named '{1}'", expr.getType().FullName(), to.value);
 				}
 				return true;
 			}
@@ -357,7 +376,7 @@ namespace Bohc.Parsing
 			}
 			catch
 			{
-				throw new TokenException(to, "'{0}' has no member named '{1}'", expr.getType().FullName(), to.value);
+				throw new TokenException(getSp().getFp().getEM(), to, "'{0}' has no member named '{1}'", expr.getType().FullName(), to.value);
 			}
 			return true;
 		}
@@ -371,11 +390,11 @@ namespace Bohc.Parsing
 
 		private void analyzeNewOp(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
 		{
-			TokenRange tyr = TokenizedFileParser.readTypeName(t);
-			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), tyr.str, getStats().getFp());
+			TokenRange tyr = TokenizedFileParser.readTypeName(getSp().getFp().getEM(), t);
+			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), tyr.str, getSp().getFp());
 			if (t.next() && t.get().value != "(")
 			{
-				throw new TokenException(t.get(), "unexpected token '{0}', expected '('", t.get().value);
+				throw new TokenException(getSp().getFp().getEM(), t.get(), "unexpected token '{0}', expected '('", t.get().value);
 			}
 			Expression[] parameters = getParameters(t, vars, ctx).ToArray();
 			Constructor c = (Constructor)Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ty).Constructors, ctx, parameters);

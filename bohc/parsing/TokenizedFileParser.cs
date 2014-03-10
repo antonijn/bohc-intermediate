@@ -12,15 +12,35 @@ namespace Bohc.Parsing
 {
 	public class TokenizedFileParser : IFileParser
 	{
-		private Project p;
+		private readonly Project p;
+		private readonly Platform pf;
+		private readonly ErrorManager emanager;
 
 		private readonly TokenizedStatementParser tsp;
 
-		public TokenizedFileParser(Project p)
+		public TokenizedFileParser(Project p, Platform pf)
 		{
 			this.p = p;
+			this.pf = pf;
+			this.emanager = new ErrorManager(p);
 
 			tsp = new TokenizedStatementParser(this);
+		}
+
+		private IParserStrategy pstrat;
+		public void regStrat(IParserStrategy pstrat)
+		{
+			this.pstrat = pstrat;
+		}
+
+		public IParserStrategy getStrat()
+		{
+			return pstrat;
+		}
+
+		public ErrorManager getEM()
+		{
+			return emanager;
 		}
 
 		private Package package(TokenStream t)
@@ -31,7 +51,7 @@ namespace Bohc.Parsing
 				Token to = t.get();
 				if (!to.isType(TokenType.IDENTIFIER))
 				{
-					to.error("unexpected token '{0}', expected package name", to.value);
+					to.error(emanager, "unexpected token '{0}', expected package name", to.value);
 					return Package.Global;
 				}
 				p = Package.Get(p, to.value);
@@ -41,7 +61,7 @@ namespace Bohc.Parsing
 				}
 				if (t.get().value != ".")
 				{
-					t.get().error("invalid token: '{0}', expected '.'", t.get().value);
+					t.get().error(emanager, "invalid token: '{0}', expected '.'", t.get().value);
 					return Package.Global;
 				}
 			}
@@ -84,7 +104,7 @@ namespace Bohc.Parsing
 			namestream.next();
 			if (!namestream.get().isType(TokenType.IDENTIFIER))
 			{
-				namestream.get().error("invalid typename: '{0}'", namestream.get().value);
+				namestream.get().error(emanager, "invalid typename: '{0}'", namestream.get().value);
 				return null;
 			}
 
@@ -92,7 +112,7 @@ namespace Bohc.Parsing
 			throw new Exception();
 		}
 
-		public static TokenRange readTypeName(TokenStream t)
+		public static TokenRange readTypeName(ErrorManager e, TokenStream t)
 		{
 			StringBuilder sb = new StringBuilder();
 
@@ -106,7 +126,7 @@ namespace Bohc.Parsing
 				}
 				if (!t.get().isType(TokenType.IDENTIFIER) && !t.get().isType(TokenType.PRIMITIVE))
 				{
-					t.get().error("unexpected token '{0}', expected identifier", t.get().value);
+					t.get().error(e, "unexpected token '{0}', expected identifier", t.get().value);
 				}
 
 				sb.Append(t.get().value);
@@ -119,21 +139,38 @@ namespace Bohc.Parsing
 				}
 
 				Token to = t.get();
-				if (to.value != "." && to.value != "<")
+				if (to.value != "." && to.value != "<" && to.value != "[")
 				{
 					t.prior();
 					break;
 				}
 
+				if (to.value == "[")
+				{
+					sb.Append("[");
+					t.next();
+					if (t.get().value != "]")
+					{
+						t.prior();
+						t.prior();
+						break;
+					}
+					sb.Append("]");
+					last = t.get();
+					break;
+				}
+
 				if (to.value == "<")
 				{
+					sb.Append("<");
+					t.next();
 					TokenStream gpars = t.until(">", new Tuple<string, string>("<", ">"));
+					t.prior();
 					while (gpars.next())
 					{
 						sb.Append(gpars.get().value);
 					}
 					sb.Append(">");
-					t.prior();
 					last = t.get();
 					break;
 				}
@@ -152,10 +189,10 @@ namespace Bohc.Parsing
 			List<TokenRange> strings = new List<TokenRange>();
 			foreach (TokenStream ts in t.split(",", new Tuple<string, string>("<", ">"), new Tuple<string, string>("(", ")")))
 			{
-				strings.Add(readTypeName(ts));
+				strings.Add(readTypeName(emanager, ts));
 				if (ts.next())
 				{
-					ts.get().error("unexpected token '{0}'", ts.get().value);
+					ts.get().error(emanager, "unexpected token '{0}'", ts.get().value);
 				}
 			}
 			return strings;
@@ -175,25 +212,25 @@ namespace Bohc.Parsing
 				Token extendsImplements = namestream.get();
 				if (extendsImplements.value != "extends" && extendsImplements.value != "implements")
 				{
-					extendsImplements.error("unexpected token '{0}', expected 'extends' or 'implements'", extendsImplements.value);
+					extendsImplements.error(emanager, "unexpected token '{0}', expected 'extends' or 'implements'", extendsImplements.value);
 				}
 
 				if (extendsImplements.value == "extends")
 				{
 					try
 					{
-						extends = readTypeName(namestream);
+						extends = readTypeName(emanager, namestream);
 					}
 					catch (Bohc.Exceptions.ParserException)
 					{
-						extendsImplements.error("a type name must follow the 'extends' keyword");
+						extendsImplements.error(emanager, "a type name must follow the 'extends' keyword");
 					}
 					if (namestream.next())
 					{
 						extendsImplements = namestream.get();
 						if (extendsImplements.value != "implements")
 						{
-							extendsImplements.error("unexpected token '{0}', expected implements'", extendsImplements.value);
+							extendsImplements.error(emanager, "unexpected token '{0}', expected implements'", extendsImplements.value);
 						}
 						else
 						{
@@ -250,7 +287,7 @@ namespace Bohc.Parsing
 			Token to = ts.get();
 			if (to.value != "private" && to.value != "public")
 			{
-				to.error("unexpected token '{0}', expected access modifier", to.value);
+				to.error(emanager, "unexpected token '{0}', expected access modifier", to.value);
 			}
 			else
 			{
@@ -268,9 +305,15 @@ namespace Bohc.Parsing
 				modifiers |= ModifierHelper.GetModifierFromString(to.value);
 			}
 
+			if (!Platform.IsPlatform(modifiers, pf))
+			{
+				f.ignore = true;
+				return f;
+			}
+
 			if (!to.isType(TokenType.CLASS_ENUM_STRUCT))
 			{
-				to.error("unexpected token '{0}', expected 'class', 'enum' or 'struct'", to.value);
+				to.error(emanager, "unexpected token '{0}', expected 'class', 'enum' or 'struct'", to.value);
 				// TODO: panic
 			}
 
@@ -295,7 +338,7 @@ namespace Bohc.Parsing
 
 		public void parseFileTP(File f)
 		{
-			if (f.state >= ParserState.TP)
+			if (f.state >= ParserState.TP || f.ignore)
 			{
 				return;
 			}
@@ -310,15 +353,15 @@ namespace Bohc.Parsing
 				);
 			if (pinfo.Item1 == ty)
 			{
-				tuple.Item1.error("cannot extend self");
+				tuple.Item1.error(emanager, "cannot extend self");
 			}
 			if (pinfo.Item1 == null && tuple.Item1 != null)
 			{
-				tuple.Item1.error("type not found: '{0}'", tuple.Item1.str);
+				tuple.Item1.error(emanager, "type not found: '{0}'", tuple.Item1.str);
 			}
 			else if (pinfo.Item1 != null && pinfo.Item1.Modifiers.HasFlag(Modifiers.Final))
 			{
-				tuple.Item1.error("cannot extend a class marked 'final'");
+				tuple.Item1.error(emanager, "cannot extend a class marked 'final'");
 			}
 
 			if (pinfo.Item1 != null)
@@ -338,7 +381,7 @@ namespace Bohc.Parsing
 
 		public void parseFileTCS(File f)
 		{
-			if (f.state >= ParserState.TCS)
+			if (f.state >= ParserState.TCS || f.ignore)
 			{
 				return;
 			}
@@ -354,43 +397,114 @@ namespace Bohc.Parsing
 			while (t.next())
 			{
 				Token to = t.get();
+				if (to.value == "}")
+				{
+					break;
+				}
 				if (to.value != "private" && to.value != "protected" && to.value != "public")
 				{
-					to.error("unexpected token '{0}', expected access modifier", to.value);
+					to.error(emanager, "unexpected token '{0}', expected access modifier", to.value);
 				}
+
 				Modifiers mf = ModifierHelper.GetModifierFromString(to.value);
 				while (t.next() && t.get().isType(TokenType.MODIFIER))
 				{
 					mf |= ModifierHelper.GetModifierFromString(t.get().value);
 				}
-				t.prior();
-				TokenRange tyr = readTypeName(t);
-				TypeSystem.Type ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, this);
-				t.next();
+
+				TypeSystem.Type ty = Primitive.Void;
+				bool isConstr = false;
+
+				if (!(isConstr = t.get().value == "this"))
+				{
+					t.prior();
+
+					TokenRange tyr = readTypeName(emanager, t);
+					ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, this);
+					t.next();
+				}
+
 				if (t.peek(1).value == ";")
 				{
-					((Class)f.type).Fields.Add(new Field(mf, t.get().value, ty, (Class)f.type, null));
+					if (Platform.IsPlatform(mf, pf))
+					{
+						((Class)f.type).Fields.Add(new Field(mf, t.get().value, ty, (Class)f.type, null));
+					}
 					t.next();
 				}
 				else if (t.peek(1).value == "=")
 				{
+					string id = t.get().value;
 					t.next();
 					t.next();
 					TokenStream init = t.until(";");
 					t.prior();
-					((Class)f.type).Fields.Add(new Field(mf, t.get().value, ty, (Class)f.type, init));
+
+					if (Platform.IsPlatform(mf, pf))
+					{
+						((Class)f.type).Fields.Add(new Field(mf, id, ty, (Class)f.type, init));
+					}
 				}
 				else if (t.peek(1).value == "(")
 				{
-					Function func = new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
-					parseMethodParamsTCS(func, t);
+					Function func = isConstr ? 
+					                new Constructor(mf, (TypeSystem.Class)f.type, new List<Parameter>(), null)
+					                : new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
+					parseMethodParamsTCS(func, t, '(', ')');
 					t.next();
 					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
-					((Class)f.type).AddMember(func);
+					if (Platform.IsPlatform(mf, pf))
+					{
+						((Class)f.type).AddMember(func);
+					}
+					t.prior();
+				}
+				else if (t.peek(1).value == "[")
+				{
+					if (t.get().value != "this")
+					{
+						t.get().error(emanager, "indexers must be called 'this'");
+					}
+					Indexer func = new Indexer((TypeSystem.Type)f.type, mf, ty, new List<Parameter>(), null);
+					parseMethodParamsTCS(func, t, '[', ']');
+					if (t.get().value != "(")
+					{
+						t.get().error(emanager, "expected '('");
+					}
+
+					Parameter assign = null;
+
+					t.next();
+					if (t.get().value != ")")
+					{
+						Modifiers amf = Modifiers.None;
+
+						t.prior();
+						while (t.next() && t.get().isType(TokenType.MODIFIER))
+						{
+							amf |= ModifierHelper.GetModifierFromString(t.get().value);
+						}
+
+						t.prior();
+						TokenRange atyr = readTypeName(emanager, t);
+						TypeSystem.Type aty = TypeSystem.Type.GetExisting(f.getContext(), atyr.str, this);
+						t.next();
+						assign = new Parameter(func, amf, t.get().value, aty);
+						t.next();
+					}
+					t.next();
+					t.next();
+					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+					func.Assignment = assign;
+					if (Platform.IsPlatform(mf, pf))
+					{
+						((Class)f.type).AddMember(func);
+					}
+					t.prior();
 				}
 				else
 				{
-					t.peek(1).error("unexpected token '{0}'", t.peek(1).value);
+					t.peek(1).error(emanager, "unexpected token '{0}'", t.peek(1).value);
 				}
 			}
 			if (((Class)f.type).Constructors.Count == 0)
@@ -399,11 +513,11 @@ namespace Bohc.Parsing
 			}
 		}
 
-		private void parseMethodParamsTCS(Function f, TokenStream t)
+		private void parseMethodParamsTCS(Function f, TokenStream t, char open, char close)
 		{
 			t.next();
 			t.next(); // skip '('
-			TokenStream pars = t.until(")", new Tuple<string, string>("(", ")"));
+			TokenStream pars = t.until(close.ToString(), new Tuple<string, string>(open.ToString(), close.ToString()));
 			while (pars.next())
 			{
 				parseParamTCS(f, pars);
@@ -415,7 +529,7 @@ namespace Bohc.Parsing
 					}
 					else
 					{
-						pars.get().error("expected ','");
+						pars.get().error(emanager, "expected ','");
 					}
 				}
 			}
@@ -430,12 +544,12 @@ namespace Bohc.Parsing
 				param.next();
 			}
 			param.prior();
-			TokenRange tyr = readTypeName(param);
+			TokenRange tyr = readTypeName(emanager, param);
 			TypeSystem.Type ty = TypeSystem.Type.GetExisting(f.Owner.File.getContext(), tyr.str, this);
 			param.next();
 			if (!param.get().isType(TokenType.IDENTIFIER))
 			{
-				param.get().error("expected parameter identifier");
+				param.get().error(emanager, "expected parameter identifier");
 			}
 			string id = param.get().value;
 			f.Parameters.Add(new Parameter(f, mf, id, ty));
@@ -443,7 +557,7 @@ namespace Bohc.Parsing
 
 		public void parseFileTCP(File f)
 		{
-			if (f.state >= ParserState.TCP)
+			if (f.state >= ParserState.TCP || f.ignore)
 			{
 				return;
 			}
@@ -461,7 +575,7 @@ namespace Bohc.Parsing
 
 		public void parseFileCP(File f)
 		{
-			if (f.state >= ParserState.CP)
+			if (f.state >= ParserState.CP || f.ignore)
 			{
 				return;
 			}
@@ -481,7 +595,7 @@ namespace Bohc.Parsing
 
 					if (func.ReturnType != Primitive.Void && func.ReturnType != null && !func.Body.hasReturned())
 					{
-						((TokenStream)func.BodyStr).get().error("function must return a value");
+						((TokenStream)func.BodyStr).get().error(emanager, "function must return a value");
 					}
 					else if (func is Constructor)
 					{
@@ -489,7 +603,7 @@ namespace Bohc.Parsing
 						    !c.Super.Constructors.Any(x => !(x.Modifiers.HasFlag(Modifiers.Private) || x.Modifiers.HasFlag(Modifiers.CVisible)) && x.Parameters.Count == 0) &&
 						    !func.Body.hasSuperBeenCalled())
 						{
-							((TokenStream)func.BodyStr).get().error("constructor must call super constructor");
+							((TokenStream)func.BodyStr).get().error(emanager, "constructor must call super constructor");
 						}
 					}
 				}

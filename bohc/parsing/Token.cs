@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using System.Collections.Generic;
+using Bohc.General;
 
 namespace Bohc.Parsing
 {
@@ -42,19 +43,19 @@ namespace Bohc.Parsing
 			return "[ " + linenum + ":" + column + ": " + tokentype[0].ToString() + ": \"" + value + "\" ]";
 		}
 
-		public void error(string format, params object[] args)
+		public void error(ErrorManager e, string format, params object[] args)
 		{
-			new TokenRange(this, this, value).error(format, args);
+			new TokenRange(this, this, value).error(e, format, args);
 		}
 
-		public void warning(string format, params object[] args)
+		public void warning(ErrorManager e, string format, params object[] args)
 		{
-			new TokenRange(this, this, value).warning(format, args);
+			new TokenRange(this, this, value).warning(e, format, args);
 		}
 
-		public void hint(string format, params object[] args)
+		public void hint(ErrorManager e, string format, params object[] args)
 		{
-			new TokenRange(this, this, value).hint(format, args);
+			new TokenRange(this, this, value).hint(e, format, args);
 		}
 
 		public void display(string msg, string msg2, ConsoleColor cc)

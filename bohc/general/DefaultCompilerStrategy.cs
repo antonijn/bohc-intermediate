@@ -31,16 +31,34 @@ namespace Bohc.General
 
 		public void compile(Project p)
 		{
-			IEnumerable<Bohc.TypeSystem.Type> types =
-				Bohc.TypeSystem.Type.Types.Where(x => !(x is Bohc.TypeSystem.Primitive));
-			codegen.generateGeneralBit(types);
-
-			foreach (Bohc.TypeSystem.Type type in types)
+			if (p.emanager.errors == 0)
 			{
-				codegen.generateFor(type, types);
-			}
+				IEnumerable<Bohc.TypeSystem.Type> types =
+					Bohc.TypeSystem.Type.Types.Where(x => !(x is Bohc.TypeSystem.Primitive)).Where(x => !x.File.ignore);
+				codegen.generateGeneralBit(types);
 
-			codegen.finish(types);
+				foreach (Bohc.TypeSystem.Type type in types)
+				{
+					codegen.generateFor(type, types);
+				}
+
+				codegen.finish(types);
+
+				if (p.emanager.warnings == 1)
+				{
+					Console.Error.WriteLine();
+					Console.Error.WriteLine("Project compiled with 1 warning");
+				}
+				else if (p.emanager.warnings > 1)
+				{
+					Console.Error.WriteLine();
+					Console.Error.WriteLine("Project compiled with {0} warnings", p.emanager.warnings);
+				}
+			}
+			else
+			{
+				Console.Error.WriteLine("Could not compile project, {0} errors were generated", p.emanager.errors);
+			}
 		}
 	}
 }

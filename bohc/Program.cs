@@ -44,8 +44,7 @@ namespace Bohc
 			{
 				"TestClass.boh",
 				"-n",
-				//"-N",
-				//"-S",
+				"-t",
 			};
 #endif
 

@@ -16,8 +16,6 @@ namespace Bohc.TypeSystem
 
 		public static readonly Dictionary<string, NativeFunction> Funcs = new Dictionary<string, NativeFunction>();
 
-		public static readonly NativeFunction NativeRef = new NativeFunction(1, "native_ref");
-		public static readonly NativeFunction NativeDeref = new NativeFunction(3, "native_deref");
 		public static readonly NativeFunction NativeSizeof = new NativeFunction(1, "native_sizeof");
 	}
 }

@@ -1861,7 +1861,7 @@ namespace Bohc.Generation.C
 
 		private void addNativeExpression(StringBuilder builder, NativeFunctionCall nfcall)
 		{
-			if (nfcall.function == NativeFunction.NativeDeref)
+			/*if (nfcall.function == NativeFunction.NativeDeref)
 			{
 				ExprType type = (ExprType)nfcall.parameters [0];
 				builder.Append("(*(");
@@ -1877,7 +1877,7 @@ namespace Bohc.Generation.C
 				builder.Append("&");
 				addExpression(builder, nfcall.parameters [0]);
 			}
-			else if (nfcall.function == NativeFunction.NativeSizeof)
+			else */if (nfcall.function == NativeFunction.NativeSizeof)
 			{
 				builder.Append("sizeof(");
 				builder.Append(mangler.getCTypeName(((ExprType)nfcall.parameters[0]).type));

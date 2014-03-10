@@ -15,7 +15,7 @@ namespace Bohc.TypeSystem
 		}
 
 		public Indexer(Type owner, Modifiers mods, Type returnType, List<Parameter> indices, string body)
-			: base(owner, mods, returnType, "indexer", indices, body)
+			: base(owner, mods, returnType, "this", indices, body)
 		{
 		}
 	}

@@ -9,12 +9,12 @@ using Bohc.Parsing;
 using Bohc.Parsing.Statements;
 using Bohc.TypeSystem;
 using Bohc.Generation.Mangling;
+using Bohc.General;
 
 namespace Bohc.Generation.Llvm
 {
 	public class LlvmCodeGen : ICodeGen
 	{
-
 		private IMangler mangler;
 
 		private Dictionary<Function, LlvmFunction> functions = new Dictionary<Function, LlvmFunction>();
@@ -24,7 +24,7 @@ namespace Bohc.Generation.Llvm
 		private Dictionary<Variable, LlvmValue> svars = new Dictionary<Variable, LlvmValue>();
 		private Stack<Dictionary<LlvmLabel, LlvmValue>> nullchecks = new Stack<Dictionary<LlvmLabel, LlvmValue>>();
 
-		public readonly LlvmModule module = new LlvmModule();
+		public LlvmModule module;
 
 		private Stack<TypeSystem.Type> currentFRetTypes = new Stack<TypeSystem.Type>();
 		private Stack<LlvmLabel> skiplabels = new Stack<LlvmLabel>();
@@ -32,11 +32,14 @@ namespace Bohc.Generation.Llvm
 		private Stack<LlvmTry> tries = new Stack<LlvmTry>();
 
 		private Bohc.General.Project project;
+		private readonly Platform platform;
 
-		public LlvmCodeGen(IMangler mangler, Bohc.General.Project project)
+		public LlvmCodeGen(IMangler mangler, Bohc.General.Project project, Platform platform)
 		{
+			this.module = new LlvmModule(platform.triple());
 			this.mangler = mangler;
 			this.project = project;
+			this.platform = platform;
 		}
 
 		private LlvmFunction aquathrownullex = null;
@@ -523,12 +526,25 @@ namespace Bohc.Generation.Llvm
 							new LlvmParam("%argc", new LlvmPrimitive("i32")),
 							new LlvmParam("%argv", new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))))
 						}, LlvmLinkage.None, false);
+						LlvmFunction aqua_init = new LlvmFunction(new LlvmPointer(new LlvmPrimitive("i8")),
+							                         "@aqua_init", new List<LlvmParam>
+						{ new LlvmParam("%argc", new LlvmPrimitive("i32")),
+							new LlvmParam("%argv", new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))))
+						}, LlvmLinkage.External, false);
+						module.AddDeclaration(aqua_init);
+						LlvmFunction aqua_exit = new LlvmFunction(new LlvmPrimitive("void"),
+							"@aqua_exit", new List<LlvmParam>
+							{ new LlvmParam("%code", new LlvmPrimitive("i32")) }, LlvmLinkage.External, false);
+						module.AddDeclaration(aqua_exit);
+
 						Llvm ll = new Llvm(main);
 						ll.AddCall(function(f), new LlvmValue[]
 						           {
-							new LlvmUndef(new LlvmPointer(new LlvmPrimitive("i8")))
-						});
-						ll.AddRet(new LlvmLiteral(new LlvmPrimitive("i32"), "0"));
+								ll.AddCall(aqua_init,
+									new[] { main.parameters.First(), main.parameters.Last() }),
+							});
+						ll.AddCall(aqua_exit, new[] { new LlvmLiteral(new LlvmPrimitive("i32"), "0") });
+						ll.AddUnreachable(new LlvmLabel());
 						module.AddImplementation(ll);
 
 						return;
@@ -861,12 +877,12 @@ namespace Bohc.Generation.Llvm
 		private Primitive sysint()
 		{
 			// TODO: proper
-			return Primitive.Long;
+			return platform.longType();
 		}
 
 		private LlvmValue addNativeExpression(Llvm llvm, NativeFunctionCall nfcall, bool lvalue)
 		{
-			if (nfcall.function == NativeFunction.NativeDeref)
+			/*if (nfcall.function == NativeFunction.NativeDeref)
 			{
 				ExprType ty = (ExprType)nfcall.parameters [0];
 				Expression ptre = nfcall.parameters[1];
@@ -886,7 +902,7 @@ namespace Bohc.Generation.Llvm
 				LlvmValue addr = addExpression(llvm, nfcall.parameters[0], true);
 				return llvm.AddPtrToInt(addr, type(sysint()));
 			}
-			else if (nfcall.function == NativeFunction.NativeSizeof)
+			else */if (nfcall.function == NativeFunction.NativeSizeof)
 			{
 				return addSizeof(llvm, type(((ExprType)nfcall.parameters[0]).type));
 			}

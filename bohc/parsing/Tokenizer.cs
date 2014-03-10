@@ -237,6 +237,7 @@ namespace Bohc.Parsing
 					res = new Token(TokenType.OPERATOR, "&&", i, linenum, str, filename);
 					return i;
 				}
+				--i;
 			}
 			else if (ch == '|')
 			{
@@ -246,6 +247,7 @@ namespace Bohc.Parsing
 					res = new Token(TokenType.OPERATOR, "||", i, linenum, str, filename);
 					return i;
 				}
+				--i;
 			}
 			else if (ch == '+')
 			{
@@ -255,15 +257,17 @@ namespace Bohc.Parsing
 					res = new Token(TokenType.OPERATOR, "++", i, linenum, str, filename);
 					return i;
 				}
+				--i;
 			}
 			else if (ch == '-')
 			{
 				char peek = str[i++];
-				if (peek == '+')
+				if (peek == '-')
 				{
 					res = new Token(TokenType.OPERATOR, "--", i, linenum, str, filename);
 					return i;
 				}
+				--i;
 			}
 
 			--i;
@@ -340,12 +344,12 @@ namespace Bohc.Parsing
 			{
 				return new Token(new[] { TokenType.DIRECTIVE, TokenType.MODIFIER }, id, i, linenum, str, filename);
 			}
-			if (id == "private" || id == "protected" || id == "public" ||
-			    id == "static" || id == "final" || id == "ref" || id == "abstract")
+			TypeSystem.Modifiers mf;
+			if (Enum.TryParse<TypeSystem.Modifiers>(id, true, out mf))
 			{
 				return new Token(TokenType.MODIFIER, id, i, linenum, str, filename);
 			}
-			if (id == "class" || id == "enum" || id == "struct")
+			if (id == "class" || id == "enum" || id == "struct" || id == "interface")
 			{
 				return new Token(TokenType.CLASS_ENUM_STRUCT, id, i, linenum, str, filename);
 			}
@@ -369,6 +373,14 @@ namespace Bohc.Parsing
 			if (id == "true" || id == "false")
 			{
 				return new Token(TokenType.BOOLEAN, id, i, linenum, str, filename);
+			}
+			if (id == "null")
+			{
+				return new Token(TokenType.NULL, id, i, linenum, str, filename);
+			}
+			if (id == "sizeof" || id == "typeof")
+			{
+				return new Token(TokenType.OPERATOR, id, i, linenum, str, filename);
 			}
 			return new Token(TokenType.IDENTIFIER, id, i, linenum, str, filename);
 		}

@@ -13,6 +13,7 @@ namespace Bohc.Parsing.Statements
 	{
 		private readonly TokenizedExpressionParser expressions = new TokenizedExpressionParser();
 		private TokenizedFileParser parser;
+		private Stack<bool> breakBlocks = new Stack<bool>();
 
 		public TokenizedStatementParser(TokenizedFileParser parser)
 		{
@@ -67,6 +68,12 @@ namespace Bohc.Parsing.Statements
 			}
 
 			vars.Pop();
+
+			foreach (Local l in result.locals.Where(x => x.usageCount == 0))
+			{
+				l.info.warning(getFp().getEM(), "unused local variable '{0}'", l.Identifier);
+			}
+
 			return result;
 		}
 
@@ -103,6 +110,11 @@ namespace Bohc.Parsing.Statements
 		private bool tryParseVarDec(ref TokenStream tin, out Statement stat, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			TokenStream t = tin.fork();
+
+			t.next();
+			Token first = t.get();
+			t.prior();
+
 			Modifiers mf = Modifiers.None;
 			while (t.next() && t.get().isType(TokenType.MODIFIER))
 			{
@@ -114,7 +126,7 @@ namespace Bohc.Parsing.Statements
 				return false;
 			}
 			t.prior();
-			TokenRange tyr = TokenizedFileParser.readTypeName(t);
+			TokenRange tyr = TokenizedFileParser.readTypeName(getFp().getEM(), t);
 			t.next();
 			if (!t.get().isType(TokenType.IDENTIFIER)) // if 'identifier clash', it is a vardec
 			{
@@ -129,6 +141,7 @@ namespace Bohc.Parsing.Statements
 			variable.LamdaLevel = expressions.getLambdaStack();
 			vars.Peek().Add(variable);
 			result.RegisterLocal(variable);
+			variable.info = new TokenRange(first, t.get(), null);
 
 			if (t.next() && t.get().value == ";")
 			{
@@ -144,7 +157,7 @@ namespace Bohc.Parsing.Statements
 				return true;
 			}
 
-			t.get().error("unexpected token '{0}', expected '=' or ';'", t.get().value);
+			t.get().error(getFp().getEM(), "unexpected token '{0}', expected '=' or ';'", t.get().value);
 			throw new System.Exception();
 		}
 
@@ -220,14 +233,14 @@ namespace Bohc.Parsing.Statements
 			}
 			if (!t.get().isType(TokenType.IDENTIFIER) && !t.get().isType(TokenType.PRIMITIVE))
 			{
-				t.get().error("expected type name");
+				t.get().error(getFp().getEM(), "expected type name");
 			}
 			t.prior();
-			TokenRange tyr = TokenizedFileParser.readTypeName(t);
+			TokenRange tyr = TokenizedFileParser.readTypeName(getFp().getEM(), t);
 			t.next();
 			if (!t.get().isType(TokenType.IDENTIFIER)) // if 'identifier clash', it is a vardec
 			{
-				t.get().error("expected identifier");
+				t.get().error(getFp().getEM(), "expected identifier");
 			}
 			TypeSystem.Type ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, parser);
 			string id = t.get().value;
@@ -260,7 +273,9 @@ namespace Bohc.Parsing.Statements
 			Statement initial = parseNext(ref initialr, func, vars, result, f);
 			Expression cond = getEp().analyze(condr, vars.SelectMany(x => x), func);
 			Statement final = parseNext(ref finalr, func, vars, result, f);
+			breakBlocks.Push(true);
 			Statement body = parseNext(ref t, func, vars, result, f);
+			breakBlocks.Pop();
 			return new ForStatement(initial, cond, final, body);
 		}
 
@@ -281,10 +296,12 @@ namespace Bohc.Parsing.Statements
 		private Statement parseDo(ref TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			t.next();
+			breakBlocks.Push(true);
 			Statement bod = parseNext(ref t, func, vars, result, f);
+			breakBlocks.Pop();
 			if (t.get().value != "while")
 			{
-				t.get().error("expected 'while' after 'do' block");
+				t.get().error(getFp().getEM(), "expected 'while' after 'do' block");
 			}
 			t.next();
 			t.next();
@@ -297,7 +314,9 @@ namespace Bohc.Parsing.Statements
 		{
 			Expression condition;
 			Statement body;
+			breakBlocks.Push(true);
 			parseIfLike(ref t, func, vars, result, f, out condition, out body);
+			breakBlocks.Pop();
 			return new WhileStatement(condition, body);
 		}
 
@@ -312,6 +331,41 @@ namespace Bohc.Parsing.Statements
 
 		private Statement parseControlFlow(TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
+			switch (t.get().value)
+			{
+				case "break":
+					if (!breakBlocks.Any(x => x))
+					{
+						t.get().error(getFp().getEM(), "no loop to break from");
+					}
+					t.next();
+					return new BreakStatement();
+				case "continue":
+					if (!breakBlocks.Any(x => x))
+					{
+						t.get().error(getFp().getEM(), "no loop to continue to");
+					}
+					t.next();
+					return new ContinueStatement();
+				case "return":
+					if (t.next() && t.get().value == ";")
+					{
+						if (func.ReturnType != Primitive.Void)
+						{
+							t.get().error(getFp().getEM(), "expected statement; method return type not 'void'");
+						}
+						return new ReturnStatement(null);
+					}
+					Token first = t.get();
+					Expression ret = getEp().analyze(t.until(";", new Tuple<string, string>("{", "}")), vars.SelectMany(x => x), func);
+					if (ret.getType().Extends(func.ReturnType) == 0)
+					{
+						first.error(getFp().getEM(), "return type must match function type");
+					}
+					return new ReturnStatement(ret);
+				case "throw":
+					return new ThrowStatement(getEp().analyze(t.until(";", new Tuple<string, string>("{", "}")), vars.SelectMany(x => x), func));
+			}
 			throw new NotImplementedException();
 		}
 	}

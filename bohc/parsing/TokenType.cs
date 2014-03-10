@@ -7,6 +7,7 @@ namespace Bohc.Parsing
 		UNIDENTIFIED, // spaces, etc
 
 		IDENTIFIER,
+		NATIVE,
 
 		NEWLINE,
 

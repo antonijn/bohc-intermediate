@@ -1,4 +1,5 @@
 using System;
+using Bohc.General;
 
 namespace Bohc.Parsing
 {
@@ -6,16 +7,18 @@ namespace Bohc.Parsing
 	{
 		public Token token;
 		public string msg;
+		private ErrorManager e;
 
-		public TokenException(Token token, string frmt, params object[] args)
+		public TokenException(ErrorManager e, Token token, string frmt, params object[] args)
 		{
 			this.token = token;
 			this.msg = string.Format(frmt, args);
+			this.e = e;
 		}
 
 		public void display()
 		{
-			token.error(msg);
+			token.error(e, msg);
 		}
 	}
 }

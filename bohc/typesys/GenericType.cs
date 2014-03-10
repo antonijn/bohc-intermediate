@@ -115,15 +115,15 @@ namespace Bohc.TypeSystem
 			Types[hash] = (Type)newf.type;
 			//parser.proj().pstrat.registerRtType(newf.type as typesys.Type);
 			parser.parseFileTP(newf);
-			if (parser.proj().pstrat.getpstate() >= ParserState.TCS)
+			if (parser.getStrat().getpstate() >= ParserState.TCS)
 			{
 				parser.parseFileTCS(newf);
 			}
-			if (parser.proj().pstrat.getpstate() >= ParserState.TCP)
+			if (parser.getStrat().getpstate() >= ParserState.TCP)
 			{
 				parser.parseFileTCP(newf);
 			}
-			if (parser.proj().pstrat.getpstate() >= ParserState.CP)
+			if (parser.getStrat().getpstate() >= ParserState.CP)
 			{
 				parser.parseFileCP(newf);
 			}

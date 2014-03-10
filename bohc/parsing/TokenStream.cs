@@ -117,7 +117,10 @@ namespace Bohc.Parsing
 				}
 				yield return tstr;
 			}
-			yield return read(0, length);
+			if (length > 0)
+			{
+				yield return read(0, length);
+			}
 		}
 
 		public int size()

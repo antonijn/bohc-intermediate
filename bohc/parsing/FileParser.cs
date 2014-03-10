@@ -24,17 +24,38 @@ namespace Bohc.Parsing
 	{
 		public readonly IStatementParser Statements;
 		public readonly Project input;
+		private readonly Platform pf;
 
-		public FileParser(IStatementParser Statements, Project input)
+		private readonly ErrorManager emanager;
+
+		public FileParser(IStatementParser Statements, Project input, Platform pf)
 		{
 			this.Statements = Statements;
 			this.Statements.init(this);
 			this.input = input;
+			this.emanager = new ErrorManager(input);
+			this.pf = pf;
+		}
+
+		private IParserStrategy pstrat;
+		public void regStrat(IParserStrategy p)
+		{
+			this.pstrat = p;
+		}
+
+		public IParserStrategy getStrat()
+		{
+			return pstrat;
 		}
 
 		public Project proj()
 		{
 			return input;
+		}
+
+		public ErrorManager getEM()
+		{
+			return emanager;
 		}
 
 		#region Type Skimming (TS)

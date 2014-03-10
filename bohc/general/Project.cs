@@ -49,10 +49,10 @@ namespace Bohc.General
 		public List<string> cfiles = new List<string>();
 		public List<string> externals = new List<string>();
 
-		public readonly IParserStrategy pstrat;
-		public readonly ICompilerStrategy cstrat;
 
-		private readonly IMangler mangler;
+		public ErrorManager emanager;
+
+		private IMangler mangler;
 
 		private void analyzeInput(string[] args)
 		{
@@ -129,30 +129,55 @@ namespace Bohc.General
 
 			if (!noStd)
 			{
-				// TODO: uncomment
-				//externals.Add("/usr/lib/libaquastd");
-			}
-
-			IFileParser fp = new TokenizedFileParser(this);
-			this.pstrat = new DefaultParserStrategy(fp);
-
-			mangler = new LlvmMangler();
-			this.cstrat = new DefaultCompilerStrategy(mangler, new LlvmCodeGen(mangler, this));
-
-			foreach (string e in externals)
-			{
-				loadExtern(e, fp);
+				externals.Add("/usr/lib/libaquastd");
 			}
 		}
 
 		public void Parse()
 		{
-			pstrat.parse(this);
+			if (thisMachine)
+			{
+				Parse(Platform.compiler);
+			}
+			else
+			{
+				Parse(Platform.Pf_Linux32);
+				Parse(Platform.Pf_Linux64);
+				Parse(Platform.Pf_Windows32);
+				Parse(Platform.Pf_Windows64);
+			}
+		}
+
+		private void Parse(Platform pf)
+		{
+			IFileParser fp = new TokenizedFileParser(this, pf);
+			DefaultParserStrategy ps = new DefaultParserStrategy(fp);
+			foreach (string e in externals)
+			{
+				loadExtern(e, fp);
+			}
+			ps.parse(this);
 		}
 
 		public void Build()
 		{
-			cstrat.compile(this);
+			if (thisMachine)
+			{
+				Build(Platform.compiler);
+			}
+			else
+			{
+				Build(Platform.Pf_Linux32);
+				Build(Platform.Pf_Linux64);
+				Build(Platform.Pf_Windows32);
+				Build(Platform.Pf_Windows64);
+			}
+		}
+
+		private void Build(Platform pf)
+		{
+			mangler = new LlvmMangler();
+			new DefaultCompilerStrategy(mangler, new LlvmCodeGen(mangler, this, pf)).compile(this);
 
 			//buildgcc(mangler, Bohc.TypeSystem.Type.Types.Where(x => !(x is Primitive) && !x.IsExtern()));
 			//buildllvm();
