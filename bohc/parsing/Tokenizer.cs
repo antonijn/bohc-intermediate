@@ -361,6 +361,10 @@ namespace Bohc.Parsing
 			{
 				return new Token(TokenType.CONTROL_FLOW, id, i, linenum, str, filename);
 			}
+			if (id == "new")
+			{
+				return new Token(TokenType.NEW, id, i, linenum, str, filename);
+			}
 			if (id == "import")
 			{
 				return new Token(TokenType.DIRECTIVE, id, i, linenum, str, filename);

@@ -16,8 +16,13 @@ namespace Bohc.TypeSystem
 	{
 		public Modifiers Modifiers;
 
-		public bool assignedTo = false;
+		public Stack<bool> assignedTo = new Stack<bool>(new [] { false });
 		public int usageCount = 0;
+
+		public bool wasAssignedTo()
+		{
+			return assignedTo.Any(x => x);
+		}
 
 		public Bohc.Parsing.TokenRange info;
 

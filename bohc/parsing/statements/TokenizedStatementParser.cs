@@ -58,6 +58,11 @@ namespace Bohc.Parsing.Statements
 
 		public Body parseBody(object _body, Function func, Stack<List<Variable>> vars, Body parent, File f)
 		{
+			foreach (TypeSystem.Local l in vars.SelectMany(x => x).OfType<TypeSystem.Local>())
+			{
+				l.assignedTo.Push(false);
+			}
+
 			TokenStream body = (TokenStream)_body;
 			Body result = new Body(func.Body);
 			vars.Push(new List<Variable>());
@@ -72,6 +77,11 @@ namespace Bohc.Parsing.Statements
 			foreach (Local l in result.locals.Where(x => x.usageCount == 0))
 			{
 				l.info.warning(getFp().getEM(), "unused local variable '{0}'", l.Identifier);
+			}
+
+			foreach (TypeSystem.Local l in vars.SelectMany(x => x).OfType<TypeSystem.Local>())
+			{
+				l.assignedTo.Pop();
 			}
 
 			return result;
@@ -143,7 +153,13 @@ namespace Bohc.Parsing.Statements
 			result.RegisterLocal(variable);
 			variable.info = new TokenRange(first, t.get(), null);
 
-			if (t.next() && t.get().value == ";")
+			if (!t.next())
+			{
+				stat = new VarDeclaration(variable, null);
+				return true;
+			}
+
+			if (t.get().value == ";")
 			{
 				stat = new VarDeclaration(variable, null);
 				return true;
@@ -175,8 +191,38 @@ namespace Bohc.Parsing.Statements
 					return parseFor(ref t, func, vars, result, f);
 				case "try":
 					return parseTry(ref t, func, vars, result, f);
+				case "foreach":
+					return parseForeach(ref t, func, vars, result, f);
 			}
 			throw new NotImplementedException();
+		}
+
+		private Statement parseForeach(ref TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)
+		{
+			t.next();
+			t.next();
+			TokenStream initialr = t.until(";", new Tuple<string, string>("{", "}"));
+			Token firstI = initialr.peek(1);
+			initialr.next();
+			TokenStream condr = t.until(")", new Tuple<string, string>("{", "}"), new Tuple<string, string>("(", ")"));
+			Statement initial = parseNext(ref initialr, func, vars, result, f);
+			if (!(initial is VarDeclaration))
+			{
+				firstI.error(getFp().getEM(), "expected variable declaration");
+			}
+			else if (((VarDeclaration)initial).initial != null)
+			{
+				firstI.error(getFp().getEM(), "iteration variables may not be given initial values");
+			}
+			((VarDeclaration)initial).refersto.assignedTo.Pop();
+			((VarDeclaration)initial).refersto.assignedTo.Push(true);
+
+			Expression cond = getEp().analyze(condr, vars.SelectMany(x => x), func);
+			breakBlocks.Push(true);
+			Statement body = parseNext(ref t, func, vars, result, f);
+			breakBlocks.Pop();
+			t.prior();
+			return new ForeachStatement((VarDeclaration)initial, cond, body);
 		}
 
 		private Statement parseTry(ref TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)
@@ -276,6 +322,7 @@ namespace Bohc.Parsing.Statements
 			breakBlocks.Push(true);
 			Statement body = parseNext(ref t, func, vars, result, f);
 			breakBlocks.Pop();
+			t.prior();
 			return new ForStatement(initial, cond, final, body);
 		}
 
@@ -327,6 +374,7 @@ namespace Bohc.Parsing.Statements
 			TokenStream c = t.until(")", new Tuple<string, string>("(", ")"));
 			condition = getEp().analyze(c, vars.SelectMany(x => x), func);
 			body = parseNext(ref t, func, vars, result, f);
+			t.prior();
 		}
 
 		private Statement parseControlFlow(TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)

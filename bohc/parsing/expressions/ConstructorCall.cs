@@ -38,6 +38,11 @@ namespace Bohc.Parsing
 			return true;
 		}
 
+		public override bool shouldCheckNull()
+		{
+			return false;
+		}
+
 		public override string ToString()
 		{
 			StringBuilder sb = new StringBuilder();

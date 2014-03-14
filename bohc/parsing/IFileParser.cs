@@ -14,6 +14,7 @@ namespace Bohc.Parsing
 		void parseFileCP(File f);
 		Project proj();
 		ErrorManager getEM();
+		TypeSystem.Type getNewType(TypeSystem.GenericType gt, TypeSystem.Type[] types, Action<TypeSystem.Type> reg, Action<TypeSystem.Type> regdone);
 	}
 }
 

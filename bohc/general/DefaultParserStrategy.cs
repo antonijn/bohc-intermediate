@@ -75,11 +75,11 @@ namespace Bohc.General
 				try
 				{
 #endif
-					if (f.type is Bohc.TypeSystem.Type)
-					{
-						parser.parseFileTP(f);
+				//if (f.type is Bohc.TypeSystem.Type)
+				//	{
+					parser.parseFileTP(f);
 						//Console.WriteLine("Type Parsing for: {0}", ((typesys.Type)f.type).fullName());
-					}
+				//	}
 #if !DEBUG
 				}
 				catch (Exception e)

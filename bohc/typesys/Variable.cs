@@ -33,5 +33,10 @@ namespace Bohc.TypeSystem
 				NullChecked = true;
 			}
 		}
+
+		public override string ToString()
+		{
+			return GetType().ToString() + ": " + Identifier;
+		}
 	}
 }

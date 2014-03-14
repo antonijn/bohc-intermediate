@@ -577,7 +577,7 @@ namespace Bohc.General
 				Environment.Exit(1);
 			}
 
-			var types = externTS(root, ext);
+			var types = externTS(root, parser, ext);
 
 			externTcsTcp(parser, types);
 		}
@@ -722,14 +722,18 @@ namespace Bohc.General
 			}
 		}
 
-		private List<Bohc.TypeSystem.Type> externTS(XElement root, string ext)
+		private List<Bohc.TypeSystem.Type> externTS(XElement root, IFileParser fp, string ext)
 		{
 			List<Bohc.TypeSystem.Type> types = new List<Bohc.TypeSystem.Type>();
+			externGenTypes(root, fp, ext);
 			externClass(root, types);
 			externStruct(root, types);
 			externInterface(root, types);
 			externEnum(root, types);
-			externGenTypes(root, ext);
+			foreach (Class c in types.OfType<Class>().Where(x => x.Super == null && x != StdType.Obj))
+			{
+				c.Super = StdType.Obj;
+			}
 			return types;
 		}
 
@@ -797,7 +801,7 @@ namespace Bohc.General
 			}
 		}
 
-		private void externGenTypes(XElement root, string ext)
+		private void externGenTypes(XElement root, IFileParser fp, string ext)
 		{
 			foreach (XElement x in root.Elements("gentype"))
 			{
@@ -808,9 +812,9 @@ namespace Bohc.General
 				{
 					name = name.Substring(name.LastIndexOf('.') + 1);
 				}
-				Bohc.Parsing.File f = new File(null, Bohc.TypeSystem.Package.GetFromString(pkg), System.IO.File.ReadAllText(System.IO.Path.GetDirectoryName(ext) + System.IO.Path.DirectorySeparatorChar + file));
-				Bohc.TypeSystem.GenericType gt = new Bohc.TypeSystem.GenericType(x.Elements("param").SelectMany(y => y.Attributes("name").Select(z => z.Value)).ToArray(), name);
-				gt.File = f;
+				string fname = System.IO.Path.GetDirectoryName(ext) + System.IO.Path.DirectorySeparatorChar + file;
+				string txt = System.IO.File.ReadAllText(fname);
+				fp.parseFileTS(ref txt, fname);
 			}
 		}
 	}

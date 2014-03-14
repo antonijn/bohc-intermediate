@@ -540,8 +540,13 @@ namespace Bohc.Generation.Llvm
 
 		public void AddRetVoid()
 		{
+			AddRetVoid(new LlvmLabel());
+		}
+
+		public void AddRetVoid(LlvmLabel l)
+		{
 			AddIndent().AppendLine("ret void");
-			Terminator(new LlvmLabel());
+			Terminator(l);
 		}
 
 		public void AddLandingPad(LlvmValue result, bool cleanup)

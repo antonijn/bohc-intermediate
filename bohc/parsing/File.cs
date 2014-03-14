@@ -19,7 +19,7 @@ namespace Bohc.Parsing
 		public readonly List<Package> imports = new List<Package>();
 		public readonly Package package;
 		public string filename;
-		public readonly object parserinfo;
+		public object parserinfo;
 		public bool ignore = false;
 
 		public ParserState state;

@@ -34,7 +34,7 @@ namespace Bohc.General
 			if (p.emanager.errors == 0)
 			{
 				IEnumerable<Bohc.TypeSystem.Type> types =
-					Bohc.TypeSystem.Type.Types.Where(x => !(x is Bohc.TypeSystem.Primitive)).Where(x => !x.File.ignore);
+					Bohc.TypeSystem.Type.Types.Where(x => !(x is Bohc.TypeSystem.Primitive)).Where(x => x.File == null || !x.File.ignore);
 				codegen.generateGeneralBit(types);
 
 				foreach (Bohc.TypeSystem.Type type in types)

@@ -27,6 +27,99 @@ namespace Bohc.Parsing
 			tsp = new TokenizedStatementParser(this);
 		}
 
+		private IEnumerable<Token> tokensForPackageReverse(Package p, int c, int l, string line, string fname)
+		{
+			while (p != Package.Global)
+			{
+				yield return new Token(TokenType.OPERATOR, ".", c, l, line, fname);
+				yield return new Token(TokenType.IDENTIFIER, p.Name, c, l, line, fname);
+				p = p.Parent;
+			}
+		}
+
+		private IEnumerable<Token> tokensForType(TypeSystem.Type t, int c, int l, string line, string fname)
+		{
+			foreach (Token to in tokensForPackageReverse(t.Package, c, l, line, fname).Reverse())
+			{
+				yield return to;
+			}
+			yield return new Token(TokenType.IDENTIFIER, t.Name, c, l, line, fname);
+		}
+
+		public TypeSystem.Type getNewType(GenericType gt, TypeSystem.Type[] what, Action<TypeSystem.Type> reg, Action<TypeSystem.Type> regdone)
+		{
+			string codestr = ParserTools.remDupW((string)gt.File.parserinfo).Replace(" ,", ",").Replace(", ", ",");
+
+			StringBuilder replaceWhat = new StringBuilder();
+			replaceWhat.Append(gt.Name);
+			replaceWhat.Append("<");
+			foreach (string str in gt.GenTypeNames)
+			{
+				replaceWhat.Append(str).Append(",");
+			}
+			replaceWhat.Remove(replaceWhat.Length - 1, 1);
+			replaceWhat.Append(">");
+
+			StringBuilder byWhat = new StringBuilder();
+			byWhat.Append(gt.Name);
+			byWhat.Append("`0");
+			foreach (TypeSystem.Type t in what)
+			{
+				byWhat.Append("`1");
+				byWhat.Append(t.FullName().Replace('.', '`'));
+			}
+			byWhat.Append("`2");
+
+			codestr = codestr.Replace(replaceWhat.ToString(), byWhat.ToString());
+
+			IEnumerable<Token> code;
+			using (StringReader sr = new StringReader(codestr))
+			{
+				Tokenizer tn = new Tokenizer(sr, gt.File.filename);
+				code = tn.lex().ToArray();
+			}
+
+			for (int i = 0; i < what.Length; ++i)
+			{
+				string gtname = gt.GenTypeNames[i];
+				TypeSystem.Type w = what[i];
+
+				code = code.SelectMany(x => x.value == gtname ? 
+					tokensForType(w, x.column, x.linenum, x.line, x.filename).ToArray()
+					: new[] { x });
+			}
+			Token[] tokens = code.ToArray();
+			StringBuilder sb = new StringBuilder();
+			foreach (Token t in tokens)
+			{
+				sb.Append(t.value).Append(" ");
+			}
+			codestr = sb.ToString();
+
+			Parsing.File newf = parseFileTS(ref codestr, gt.File.filename);
+			reg((TypeSystem.Type)newf.type);
+			//parser.proj().pstrat.registerRtType(newf.type as typesys.Type);
+			parseFileTP(newf);
+			if (getStrat().getpstate() >= ParserState.TCS)
+			{
+				parseFileTCS(newf);
+			}
+			if (getStrat().getpstate() >= ParserState.TCP)
+			{
+				parseFileTCP(newf);
+			}
+			if (getStrat().getpstate() >= ParserState.CP)
+			{
+				parseFileCP(newf);
+			}
+
+			((TypeSystem.Type)newf.type).OriginalGenType = gt;
+			newf.type.SetFile(newf);
+			regdone((TypeSystem.Type)newf.type);
+
+			return (TypeSystem.Type)newf.type;
+		}
+
 		private IParserStrategy pstrat;
 		public void regStrat(IParserStrategy pstrat)
 		{
@@ -70,7 +163,7 @@ namespace Bohc.Parsing
 
 		private File parseCommonHeader(TokenStream t)
 		{
-			Package pckg = null;
+			Package pckg = Package.Global;
 			if (t.get().value == "package")
 			{
 				t.next();
@@ -97,9 +190,10 @@ namespace Bohc.Parsing
 			return new File(imports, pckg, t);
 		}
 
-		private GenericType genericType(Modifiers mods, TokenStream namestream)
+		private GenericType genericType(Modifiers mods, TokenStream namestream, File f)
 		{
 			List<string> typenames = new List<string>();
+			List<string> inits = new List<string>();
 
 			namestream.next();
 			if (!namestream.get().isType(TokenType.IDENTIFIER))
@@ -107,9 +201,44 @@ namespace Bohc.Parsing
 				namestream.get().error(emanager, "invalid typename: '{0}'", namestream.get().value);
 				return null;
 			}
+			string name = namestream.get().value;
+			namestream.next();
+			while (namestream.next())
+			{
+				if (!namestream.get().isType(TokenType.IDENTIFIER))
+				{
+					namestream.get().error(emanager, "invalid generic parameter name: '{0}'", namestream.get().value);
+					return null;
+				}
+				typenames.Add(namestream.get().value);
+				namestream.next();
+				if (namestream.get().value == "=")
+				{
+					TokenRange tr = readTypeName(emanager, namestream);
+					inits.Add(tr.str);
 
-			// TODO
-			throw new Exception();
+					namestream.next();
+				}
+				if (namestream.get().value == ">")
+				{
+					break;
+				}
+				if (namestream.get().value == ",")
+				{
+					continue;
+				}
+				namestream.get().error(emanager, "unexpected token '{0}'", namestream.get());
+			}
+
+			GenericType gt = new GenericType(typenames.ToArray(), name);
+			gt.File = f;
+
+			if (inits.Count == typenames.Count)
+			{
+				gt.InitialTypeNames = inits.ToArray();
+			}
+
+			return gt;
 		}
 
 		public static TokenRange readTypeName(ErrorManager e, TokenStream t)
@@ -147,7 +276,6 @@ namespace Bohc.Parsing
 
 				if (to.value == "[")
 				{
-					sb.Append("[");
 					t.next();
 					if (t.get().value != "]")
 					{
@@ -155,7 +283,7 @@ namespace Bohc.Parsing
 						t.prior();
 						break;
 					}
-					sb.Append("]");
+					sb.Append("[]");
 					last = t.get();
 					break;
 				}
@@ -321,7 +449,9 @@ namespace Bohc.Parsing
 			TokenStream namestream = ts.until("{");
 			if (namestream.peek(2).value == "<")
 			{
-				f.type = genericType(modifiers, namestream);
+				f.type = genericType(modifiers, namestream, f);
+				ts.prior();
+				f.parserinfo = file;
 				return f;
 			}
 			ts.prior();
@@ -343,6 +473,12 @@ namespace Bohc.Parsing
 				return;
 			}
 			f.state = ParserState.TP;
+
+			if (f.type is GenericType)
+			{
+				((GenericType)f.type).InitialTypes = ((GenericType)f.type).InitialTypeNames.Select(x => TypeSystem.Type.GetExisting(f.getContext(), x, this)).ToArray();
+				return;
+			}
 
 			TypeSystem.Type ty = (TypeSystem.Type)f.type;
 			Tuple<TokenRange, List<TokenRange>, TokenStream> tuple = (Tuple<TokenRange, List<TokenRange>, TokenStream>)ty.parserinfo;
@@ -367,6 +503,10 @@ namespace Bohc.Parsing
 			if (pinfo.Item1 != null)
 			{
 				((Class)ty).Super = (Class)pinfo.Item1;
+			}
+			else
+			{
+				((Class)ty).Super = StdType.Obj;
 			}
 			if (pinfo.Item2 != null)
 			{
@@ -510,6 +650,11 @@ namespace Bohc.Parsing
 			if (((Class)f.type).Constructors.Count == 0)
 			{
 				((Class)f.type).Constructors.Add(new Constructor(Modifiers.Public, (Class)f.type, new List<Parameter>(), null));
+			}
+			if (((Class)f.type).StaticConstr == null)
+			{
+				((Class)f.type).StaticConstr = new StaticConstructor((Class)f.type, null);
+				((Class)f.type).StaticConstr.Body = new Body(null);
 			}
 		}
 

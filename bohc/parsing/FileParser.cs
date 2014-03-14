@@ -37,6 +37,11 @@ namespace Bohc.Parsing
 			this.pf = pf;
 		}
 
+		public TypeSystem.Type getNewType(GenericType gt, TypeSystem.Type[] types, Action<TypeSystem.Type> reg, Action<TypeSystem.Type> regdone)
+		{
+			throw new System.Exception();
+		}
+
 		private IParserStrategy pstrat;
 		public void regStrat(IParserStrategy p)
 		{

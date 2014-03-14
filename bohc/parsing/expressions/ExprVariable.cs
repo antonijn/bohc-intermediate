@@ -64,7 +64,8 @@ namespace Bohc.Parsing
 			TypeSystem.Local l = refersto as TypeSystem.Local;
 			if (l != null && binop.operation == BinaryOperation.ASSIGN)
 			{
-				l.assignedTo = true;
+				l.assignedTo.Pop();
+				l.assignedTo.Push(true);
 			}
 
 			return binop;
@@ -75,7 +76,7 @@ namespace Bohc.Parsing
 			TypeSystem.Local l = refersto as TypeSystem.Local;
 			if (l != null)
 			{
-				Boh.Exception.require<Exceptions.ParserException>(l.assignedTo, l.Identifier + " was not yet assigned to");
+				Boh.Exception.require<Exceptions.ParserException>(l.wasAssignedTo(), l.Identifier + " was not yet assigned to");
 				++l.usageCount;
 			}
 		}
@@ -83,6 +84,11 @@ namespace Bohc.Parsing
 		public override bool isStatement()
 		{
 			return false;
+		}
+
+		public override bool shouldCheckNull()
+		{
+			return refersto.Identifier != "this" && refersto.Identifier != "super";
 		}
 
 		public override string ToString()

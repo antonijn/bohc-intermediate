@@ -32,38 +32,27 @@ namespace Bohc.TypeSystem
 		public List<GenericFunction> GenFuncs = new List<GenericFunction>();
 		public StaticConstructor StaticConstr;
 
-		private class FuncComp : IEqualityComparer<Function>
+		private IEnumerable<Function> GetAllFuncs(IEnumerable<Function> done)
 		{
-			public bool Equals(Function f0, Function f1)
+			List<Function> funcs = new List<Function>();
+			foreach (Function f in Functions.Where(x => x.Modifiers.HasFlag(Modifiers.Private)))
 			{
-				// can't be private
-				// TODO: can't have different access modifiers
-				// names must match
-				// parameter types must be equal
-				// neither can be override
-
-				return (f0.Identifier == f1.Identifier) &&
-					(f0.Parameters.Select(x => x.Type).SequenceEqual(f1.Parameters.Select(x => x.Type))) &&
-					!(f0.Modifiers.HasFlag(Modifiers.Override) || f1.Modifiers.HasFlag(Modifiers.Override));
+				if (!done.Any(x => x.Identifier == f.Identifier && x.Parameters.SequenceEqual(f.Parameters)))
+				{
+					funcs.Add(f);
+				}
 			}
-
-			public int GetHashCode(Function f)
-			{
-				return f.GetHashCode();
-			}
+			return done.Concat(funcs);
 		}
 
 		public IEnumerable<Function> GetAllFuncs()
 		{
+			List<Function> funcs = new List<Function>(Functions);
 			if (Super != null)
 			{
-				return Functions.Union(Super.GetAllFuncs()
-				                        .Where(x => !x.Modifiers.HasFlag(TypeSystem.Modifiers.Private))
-				                        .Where(x => !(x is TypeSystem.Constructor))
-				                        .Where(x => !(x is TypeSystem.StaticConstructor)), new FuncComp());
+				return Super.GetAllFuncs(funcs);
 			}
-
-			return Functions;
+			return funcs;
 		}
 
 		public override Parsing.Expression DefaultVal()

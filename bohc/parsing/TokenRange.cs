@@ -70,6 +70,11 @@ namespace Bohc.Parsing
 			Console.ForegroundColor = colors.Peek();
 			Console.WriteLine();
 		}
+
+		public override string ToString()
+		{
+			return str;
+		}
 	}
 }
 

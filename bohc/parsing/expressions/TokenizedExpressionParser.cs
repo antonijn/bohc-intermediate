@@ -77,6 +77,18 @@ namespace Bohc.Parsing
 				}
 				if (analyzeName(ref expr, t, vars, opprec, ctx)) { continue; }
 			}
+
+			if (expr != null)
+			{
+				try
+				{
+					expr.useAsRvalue();
+				}
+				catch
+				{
+					throw new TokenException(getSp().getFp().getEM(), t.get(), "use of unassigned local variable");
+				}
+			}
 		}
 
 		private bool analyzeIndexer(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
@@ -88,7 +100,7 @@ namespace Bohc.Parsing
 			}
 
 			Expression[] parameters = getParameters(t, vars, ctx, ']').ToArray();
-			IEnumerable<Indexer> funcs = expr.getType().GetFunctions("this", (TypeSystem.Type)ctx.Owner.File.type).OfType<Indexer>();
+			IEnumerable<Indexer> funcs = expr.getType().GetFunctions("this", (TypeSystem.Type)ctx.Owner.File.type).OfType<Indexer>().ToArray();
 			expr = new IndexerCall(
 				funcs.SingleOrDefault(x => !x.IsAssignment()),
 				funcs.SingleOrDefault(x => x.IsAssignment()),
@@ -167,8 +179,28 @@ namespace Bohc.Parsing
 				return false;
 			}
 
+			ExprVariable ev = expr as ExprVariable;
+			if (ev != null)
+			{
+				if (ev.refersto == ((Class)ctx.Owner).This)
+				{
+					Expression[] parameters = getParameters(t, vars, ctx).ToArray();
+					Function f = Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ctx.Owner).Constructors, ctx, parameters);
+					expr = new FunctionCall(f, expr, parameters);
+					return true;
+				}
+				else if (ev.refersto == ((Class)ctx.Owner).SuperVar)
+				{
+					Expression[] parameters = getParameters(t, vars, ctx).ToArray();
+					Function f = Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ctx.Owner).Super.Constructors, ctx, parameters);
+					expr = new FunctionCall(f, expr, parameters);
+					return true;
+				}
+			}
+
 			t.next();
 			analyze(ref expr, t.until(")", scopes), vars, null, ctx);
+			t.prior();
 
 			ExprType type = expr as ExprType;
 			if (type != null && opprec != UnaryOperation.TYPEOF)
@@ -312,6 +344,7 @@ namespace Bohc.Parsing
 				Expression[] parameters = getParameters(t, vars, ctx).ToArray();
 				Function f = Function.GetCompatibleFunction(ctx.Owner.File, vars, functions, ctx, parameters);
 				expr = new FunctionCall(f, expr, parameters);
+				t.prior();
 				return;
 			}
 
@@ -392,13 +425,32 @@ namespace Bohc.Parsing
 		{
 			TokenRange tyr = TokenizedFileParser.readTypeName(getSp().getFp().getEM(), t);
 			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), tyr.str, getSp().getFp());
-			if (t.next() && t.get().value != "(")
+			t.next();
+			if (t.get().value == "(")
 			{
-				throw new TokenException(getSp().getFp().getEM(), t.get(), "unexpected token '{0}', expected '('", t.get().value);
+				Expression[] parameters = getParameters(t, vars, ctx).ToArray();
+				Constructor c = (Constructor)Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ty).Constructors, ctx, parameters);
+				expr = new ConstructorCall(c, parameters);
+				t.prior();
 			}
-			Expression[] parameters = getParameters(t, vars, ctx).ToArray();
-			Constructor c = (Constructor)Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ty).Constructors, ctx, parameters);
-			expr = new ConstructorCall(c, parameters);
+			else if (t.get().value == "[")
+			{
+				Token to = t.peek(1);
+				Expression[] parameters = getParameters(t, vars, ctx, ']').ToArray();
+				if (parameters.Length > 1 || (parameters.Length == 1 && parameters.Single().getType().Extends(Primitive.Int) == 0))
+				{
+					throw new TokenException(getSp().getFp().getEM(), to, "array initializers take one or less integer parameters");
+				}
+				t.prior();
+				// TODO: check for '{'
+				expr = new ConstructorCall(((Class)StdType.Array.GetTypeFor(new[] { ty }, getSp().getFp()))
+					.Constructors.Single(x => x.Parameters.Count == parameters.Length),
+					parameters);
+			}
+			else
+			{
+				throw new TokenException(getSp().getFp().getEM(), t.get(), "unexpected token '{0}', expected '(' or '['", t.get().value);
+			}
 		}
 	
 		private OpBreakStat analyzeOperator(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
@@ -460,7 +512,16 @@ namespace Bohc.Parsing
 
 				Expression right = null;
 				analyze(ref right, t, vars, op, ctx);
-				expr = expr.useAsLvalue(new BinaryOperation(expr, right, op));
+				if (op == BinaryOperation.ASSIGN)
+				{
+					right.useAsRvalue();
+					expr = expr.useAsLvalue(new BinaryOperation(expr, right, op));
+				}
+				else
+				{
+					expr.useAsRvalue();
+					expr = new BinaryOperation(expr, right, op);
+				}
 			}
 
 			return OpBreakStat.CONTINUE;

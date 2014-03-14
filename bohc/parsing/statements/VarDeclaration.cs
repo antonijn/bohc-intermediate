@@ -21,7 +21,8 @@ namespace Bohc.Parsing.Statements
 		{
 			if (initial != null)
 			{
-				refersto.assignedTo = true;
+				refersto.assignedTo.Pop();
+				refersto.assignedTo.Push(true);
 			}
 
 			this.refersto = refersto;

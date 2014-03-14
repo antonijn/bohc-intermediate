@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.IO;
 
 using Bohc.Parsing;
 
@@ -20,7 +21,10 @@ namespace Bohc.TypeSystem
 		public static readonly List<Type> TypeInstances = new List<Type>();
 
 		public readonly string[] GenTypeNames;
+		public string[] InitialTypeNames;
 		public readonly string Name;
+
+		public TypeSystem.Type[] InitialTypes;
 
 		public GenericType(string[] genTypeNames, string name)
 		{
@@ -33,17 +37,17 @@ namespace Bohc.TypeSystem
 			}
 		}
 
-		File IType.GetFile()
+		Parsing.File IType.GetFile()
 		{
 			return File;
 		}
 
-		void IType.SetFile(File f)
+		void IType.SetFile(Parsing.File f)
 		{
 			File = f;
 		}
 
-		public File File;
+		public Parsing.File File;
 
 		private readonly Dictionary<int, Bohc.TypeSystem.Type> Types = new Dictionary<int, Bohc.TypeSystem.Type>();
 
@@ -76,13 +80,18 @@ namespace Bohc.TypeSystem
 		{
 			// TODO: PROPER REPLACING FFS!!!
 
-			string code = ParserTools.remDupW((string)File.parserinfo).Replace(" ,", ",").Replace(", ", ",");
+			return parser.getNewType(this, what, x => Types[hash] = x, x => TypeInstances.Add(x));
+
+			/*string code = ParserTools.remDupW((string)File.parserinfo).Replace(" ,", ",").Replace(", ", ",");
 			for (int i = 0; i < what.Length; ++i)
 			{
 				string gtname = GenTypeNames[i];
 				Type w = what[i];
 
-				code = code.Replace(gtname, w.FullName());
+				StringReader sr = new StringReader(code);
+				Tokenizer tn = new Tokenizer(sr, File.filename);
+				tn.lex().ToArray().SelectMany(x => x.value == );
+				code = code.Replace();
 			}
 
 			StringBuilder replaceWhat = new StringBuilder();
@@ -105,8 +114,6 @@ namespace Bohc.TypeSystem
 				byWhat.Append(t.FullName().Replace(".", "_"));
 			}
 			byWhat.Append("`2");
-
-			code = code.Replace(replaceWhat.ToString(), byWhat.ToString());
 
 			//code = System.Text.RegularExpressions.Regex.Replace(code, ">[\\ \n\r]*{", "{");
 
@@ -161,7 +168,7 @@ namespace Bohc.TypeSystem
 				typestrrep.Remove(typestrrep.Length - 2, 2);
 				Boh.Exception._throw<Exceptions.CodeGenException>(typestrrep.ToString() + " are not valid types for " + Name);
 				return null;
-			}
+			}*/
 		}
 	}
 }
