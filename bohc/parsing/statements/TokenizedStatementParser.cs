@@ -87,7 +87,7 @@ namespace Bohc.Parsing.Statements
 			return result;
 		}
 
-		private Statement parseNext(ref TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)
+		public Statement parseNext(ref TokenStream t, Function func, Stack<List<Variable>> vars, Body result, File f)
 		{
 			Token c = t.get();
 			if (c.value == "{")
@@ -145,6 +145,11 @@ namespace Bohc.Parsing.Statements
 			}
 			tin = t;
 			TypeSystem.Type ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, parser);
+			if (ty == null)
+			{
+				stat = null;
+				return false;
+			}
 			string id = t.get().value;
 
 			Local variable = new Local(id, ty, mf);

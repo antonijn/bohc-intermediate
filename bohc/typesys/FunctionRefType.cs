@@ -101,5 +101,10 @@ namespace Bohc.TypeSystem
 			// TODO: implement functions
 			return Enumerable.Empty<Function>();
 		}
+
+		public override int getSizeof(Bohc.General.Platform pf)
+		{
+			return pf.longType().getSizeof(pf) * 2;
+		}
 	}
 }

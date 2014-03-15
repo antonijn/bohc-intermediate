@@ -22,7 +22,7 @@ namespace Bohc.Parsing
 		};
 
 		private TokenizedStatementParser istats;
-		private int lambdaStack = 0;
+		private Stack<List<Variable>> lambdaStack = new Stack<List<Variable>>();
 
 		public void init(TokenizedStatementParser statements)
 		{
@@ -36,7 +36,7 @@ namespace Bohc.Parsing
 
 		public int getLambdaStack()
 		{
-			return lambdaStack;
+			return lambdaStack.Count;
 		}
 
 		public Expression analyze(TokenStream t, IEnumerable<Bohc.TypeSystem.Variable> vars, Bohc.TypeSystem.Function ctx)
@@ -63,6 +63,12 @@ namespace Bohc.Parsing
 		{
 			while (t.next())
 			{
+				if (expr is ExprType && ((ExprType)expr).type is FunctionRefType)
+				{
+					analyzeLambda(ref expr, t, vars, opprec, ctx, ((FunctionRefType)((ExprType)expr).type).RetType);
+					continue;
+				}
+
 				if (analyzeBrackets(ref expr, t, vars, opprec, ctx)) { continue; }
 				if (analyzeIndexer(ref expr, t, vars, opprec, ctx)) { continue; }
 				if (analyzeLiteral(ref expr, t, vars, opprec, ctx)) { continue; }
@@ -121,6 +127,11 @@ namespace Bohc.Parsing
 			Variable local = vars.SingleOrDefault(x => x.Identifier == to.value);
 			if (local != null)
 			{
+				if (local is Local && local.LamdaLevel < lambdaStack.Count && !lambdaStack.Peek().Contains(local))
+				{
+					local.Enclosed = true;
+					lambdaStack.Peek().Add(local);
+				}
 				expr = new ExprVariable(local, null);
 				return true;
 			}
@@ -132,12 +143,33 @@ namespace Bohc.Parsing
 				return true;
 			}
 
-			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), to.value, getSp().getFp());
+			TokenStream ts = t.fork();
+			TokenRange tr = TokenizedFileParser.readTypeName(getSp().getFp().getEM(), ts);
+			TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), tr.str, getSp().getFp());
+			if (ty != null)
+			{
+				expr = new ExprType(ty);
+				while (ts.offset() != t.offset())
+				{
+					t.next();
+				}
+
+				return true;
+			}
+
+			ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), to.value, getSp().getFp());
 			if (ty != null)
 			{
 				expr = new ExprType(ty);
 				return true;
 			}
+
+			/*TypeSystem.Type ty = TypeSystem.Type.GetExisting(ctx.Owner.File.getContext(), to.value, getSp().getFp());
+			if (ty != null)
+			{
+				expr = new ExprType(ty);
+				return true;
+			}*/
 
 			// if nothing prior, it might be a static or instance variable belonging to the class
 			if (expr == null)
@@ -170,13 +202,50 @@ namespace Bohc.Parsing
 			return true;
 		}
 
-		
+		private void analyzeLambda(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx, TypeSystem.Type ret, params LambdaParam[] pars)
+		{
+			//t.prior();
+			TokenStream ts = t;
+			Body lb = new Body(null);
+			lambdaStack.Push(new List<Variable>());
+			lb.Statements.Add(getSp().parseNext(ref ts, ctx, new Stack<List<Variable>>(new[] { new List<Variable>(vars), new List<Variable>(pars), new List<Variable>() }), lb, ctx.Owner.File));
+			while (t.offset() != ts.offset())
+			{
+				t.next();
+			}
+			expr = new Lambda(FunctionRefType.Get(ret, pars.Select(x => x.Type).ToArray()), lb, null, pars);
+			((Lambda)expr).enclosed = lambdaStack.Pop();
+		}
+
+		private void analyzeLambda(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
+		{
+			TypeSystem.Type ret = ((ExprType)expr).type;
+			List<LambdaParam> lps = new List<LambdaParam>();
+			while (t.get().value != ")")
+			{
+				TokenRange tr = TokenizedFileParser.readTypeName(getSp().getFp().getEM(), t);
+				t.next();
+				string id = t.get().value;
+				t.next();
+				LambdaParam lp = new LambdaParam(id, TypeSystem.Type.GetExisting(tr.str, getSp().getFp()));
+				lps.Add(lp);
+			}
+
+			analyzeLambda(ref expr, t, vars, opprec, ctx, ret, lps.ToArray());
+		}
 
 		private bool analyzeBrackets(ref Expression expr, TokenStream t, IEnumerable<Variable> vars, Operator opprec, Function ctx)
 		{
 			if (t.get().value != "(")
 			{
 				return false;
+			}
+
+			ExprType et = expr as ExprType;
+			if (et != null)
+			{
+				analyzeLambda(ref expr, t, vars, opprec, ctx);
+				return true;
 			}
 
 			ExprVariable ev = expr as ExprVariable;

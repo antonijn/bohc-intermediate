@@ -79,5 +79,10 @@ namespace Bohc.TypeSystem
 		{
 			return true;
 		}
+
+		public override int getSizeof(Bohc.General.Platform pf)
+		{
+			return pf.longType().getSizeof(pf) * 2;
+		}
 	}
 }

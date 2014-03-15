@@ -197,15 +197,23 @@ namespace Bohc.Generation.Llvm
 			return func;
 		}
 
-		void addFunction(Body b, IEnumerable<Variable> parameters, Llvm llvm)
+		private void addFunction(Body b, IEnumerable<Variable> parameters, Llvm llvm)
 		{
 			nullchecks.Push(new Dictionary<LlvmLabel, LlvmValue>());
 			nulllabelstack.Push(null);
 
 			foreach (Variable p in parameters)
 			{
-				LlvmTemp tmp = new LlvmTemp(new LlvmPointer(type(p.Type)));
-				llvm.AddAlloca(tmp, type(p.Type));
+				LlvmValue tmp = new LlvmTemp(new LlvmPointer(type(p.Type)));
+				if (p.Enclosed && !(p is Parameter && ((Parameter)p).Modifiers.HasFlag(Modifiers.Final)))
+				{
+					tmp = llvm.AddCall(aqua_alloc(), new[] { addSizeof(llvm, type(p.Type)) });
+					tmp = llvm.AddBitcast(tmp, new LlvmPointer(type(p.Type)));
+				}
+				else
+				{
+					llvm.AddAlloca(tmp, type(p.Type));
+				}
 				llvm.AddStore(tmp,
 					llvm.func.parameters.Single(x => x.ToString() == "%" + p.Identifier));
 				locals[p] = tmp;
@@ -287,7 +295,10 @@ namespace Bohc.Generation.Llvm
 						llvm.AddCall(function(((Class)f.Owner).Super.StaticConstr), new [] { new LlvmUndef(new LlvmPointer(new LlvmPrimitive("i8"))) });
 					}
 				}
+				int temp = lambdalevel;
+				lambdalevel = 0;
 				addFunction(f.Body, parameterList, llvm);
+				lambdalevel = temp;
 				currentFRetTypes.Pop();
 				module.AddImplementation(llvm);
 			}
@@ -345,7 +356,35 @@ namespace Bohc.Generation.Llvm
 				return str;
 			}
 
+			Interface iface = t as Interface;
+			if (iface != null)
+			{
+				LlvmStruct str = new LlvmStruct(mangler.getCTypeName(t));
+				types[t] = str;
+				str.members = new Dictionary<string, LlvmType>
+				{
+					{ "object", type(StdType.Obj) },
+					{ "vtable", vtabletyIface(iface) },
+				};
+				module.AddStruct(str);
+				return str;
+			}
+
 			throw new NotImplementedException();
+		}
+
+		private LlvmType vtabletyIface(Interface iface)
+		{
+			LlvmStruct str = new LlvmStruct("%vtable." + mangler.getCName(iface));
+			str.members = new Dictionary<string, LlvmType>();
+			foreach (Function f in iface.GetAllFuncs())
+			{
+				LlvmType lt = getfptype(f);
+				((LlvmFunctionPtrType)lt).parameters[0] = type(StdType.Obj);
+				str.members[f.Identifier] = lt;
+			}
+			module.AddStruct(str);
+			return new LlvmPointer(str);
 		}
 
 		private LlvmType vtablety(Class c)
@@ -595,22 +634,10 @@ namespace Bohc.Generation.Llvm
 		private void addBody(Llvm llvm, Body body)
 		{
 			//LlvmValue temp = llvm.AddCall(llvm_stacksave(), Enumerable.Empty<LlvmValue>());
-			foreach (Local l in body.locals)
+			foreach (Local l in body.locals.Where(x => !(x.Enclosed && !x.Modifiers.HasFlag(Modifiers.Final))))
 			{
-				LlvmValue v = null;
-				if (!l.Enclosed)
-				{
-					v = new LlvmTemp(new LlvmPointer(type(l.Type)));
+				LlvmValue v = new LlvmTemp(new LlvmPointer(type(l.Type)));
 					llvm.AddAlloca(v, type(l.Type));
-				}
-				else
-				{
-					v = llvm.AddCall(aqua_alloc(),
-					                 new LlvmValue[] {
-						addSizeof(llvm, type(l.Type))
-					});
-					v = llvm.AddBitcast(v, new LlvmPointer(type(l.Type)));
-				}
 				locals[l] = v;
 			}
 			addSimpleBody(llvm, body);
@@ -742,8 +769,19 @@ namespace Bohc.Generation.Llvm
 		{
 			if (vd.initial != null)
 			{
+				LlvmValue l = null;
+				if (vd.refersto.Enclosed && !vd.refersto.Modifiers.HasFlag(Modifiers.Final))
+				{
+					l = llvm.AddCall(aqua_alloc(), new[] { addSizeof(llvm, type(vd.refersto.Type)) });
+					l = llvm.AddBitcast(l, new LlvmPointer(type(vd.refersto.Type)));
+					locals[vd.refersto] = l;
+				}
+				else
+				{
+					l = locals[vd.refersto];
+				}
 				LlvmValue r = addConversion(llvm, vd.initial, vd.refersto.Type);
-				llvm.AddStore(locals[vd.refersto], r);
+				llvm.AddStore(l, r);
 			}
 		}
 
@@ -947,6 +985,23 @@ namespace Bohc.Generation.Llvm
 			return addExpression(llvm, re.onwhat, true);
 		}
 
+		private Modifiers getmods(Variable v)
+		{
+			if (v is Parameter)
+			{
+				return ((Parameter)v).Modifiers;
+			}
+			if (v is Local)
+			{
+				return ((Local)v).Modifiers;
+			}
+			if (v is Field)
+			{
+				return ((Field)v).Modifiers;
+			}
+			return Modifiers.None;
+		}
+
 		private int lambdacnt = 0;
 		private int lambdalevel = 0;
 		private Stack<LlvmParam> lmbdctxts = new Stack<LlvmParam>();
@@ -966,13 +1021,21 @@ namespace Bohc.Generation.Llvm
 				}
 			}
 
-			LlvmStruct str = new LlvmStruct("%anon.ctx." + lambdacnt.ToString());
-			str.members = l.enclosed.ToDictionary(x => "%" + x.Identifier, x => (LlvmType)new LlvmPointer(type(x.Type)));
-			module.AddStruct(str);
-			LlvmParam ctx = new LlvmParam("%this", new LlvmPointer(str));
-			Llvm ll = new Llvm(new LlvmFunction(type(l.type.RetType), "@anon." + lambdacnt++.ToString(),
-			                                    new[] { ctx }.Concat(l.lambdaParams.Select(x => new LlvmParam("%" + x.Identifier,
-			                                         type(x.Type)))).ToList(), LlvmLinkage.Internal, true));
+			LlvmType ptype = new LlvmPointer(new LlvmPrimitive("i8"));
+			LlvmInlineStruct str = null;
+			if (l.enclosed.Count != 0)
+			{
+				str = new LlvmInlineStruct();
+				str.members = l.enclosed.ToDictionary(x => "%" + x.Identifier, x => getmods(x).HasFlag(Modifiers.Final) ? (LlvmType)type(x.Type) : (LlvmType)new LlvmPointer(type(x.Type)));
+				ptype = new LlvmPointer(str);
+			}
+			LlvmParam ctx = new LlvmParam("%this", ptype);
+			LlvmFunction lfunc = new LlvmFunction(type(l.type.RetType), "@anon." + lambdacnt++.ToString(),
+				                     new[] { ctx }.Concat(l.lambdaParams.Select(x => new LlvmParam("%" + x.Identifier,
+					                     type(x.Type)))).ToList(), LlvmLinkage.Internal, true);
+			LlvmValue fval = lfunc;
+
+			Llvm ll = new Llvm(lfunc);
 			lmbdctxts.Push(ctx);
 			currentFRetTypes.Push(l.type.RetType);
 			++lambdalevel;
@@ -982,34 +1045,26 @@ namespace Bohc.Generation.Llvm
 			currentFRetTypes.Pop();
 			module.AddImplementation(ll);
 
-			LlvmValue ctxallocb = llvm.AddCall(aqua_alloc(), new [] {addSizeof(llvm, str)});
-			LlvmValue ctxalloc = llvm.AddBitcast(ctxallocb, new LlvmPointer(str));
-			for (int i = 0; i < l.enclosed.Count; ++i)
+			LlvmValue ctxallocb = null;
+			if (l.enclosed.Count != 0)
 			{
-				LlvmValue sto = llvm.AddGetElementPtr(
-					ctxalloc,
-					new LlvmValue[] {
-					new LlvmLiteral(new LlvmPrimitive("i32"), "0"),
-					new LlvmLiteral(new LlvmPrimitive("i32"), i.ToString()),
+				ctxallocb = llvm.AddCall(aqua_alloc(), new [] { addSizeof(llvm, str) });
+				LlvmValue ctxalloc = llvm.AddBitcast(ctxallocb, new LlvmPointer(str));
+				for (int i = 0; i < l.enclosed.Count; ++i)
+				{
+					Variable enc = l.enclosed[i];
+					llvm.AddStore(llvm.AddGetElementPtr(ctxalloc, 0, i), addExpression(llvm, new ExprVariable(enc, null), !getmods(enc).HasFlag(Modifiers.Final)));
 				}
-					);
-				llvm.AddStore(sto, addExpression(llvm, new ExprVariable(l.enclosed[i], null), true));
+				fval = llvm.AddBitcast(lfunc, ((LlvmInlineStruct)type(l.type)).members.Last().Value);
 			}
 
-			LlvmTemp res = new LlvmTemp(new LlvmPointer(type(l.type)));
-			llvm.AddAlloca(res, type(l.type));
-			LlvmValue resobj = llvm.AddGetElementPtr(res, new LlvmValue[] {
-				new LlvmLiteral(new LlvmPrimitive("i32"), "0"),
-				new LlvmLiteral(new LlvmPrimitive("i32"), "0"),
-			});
-			llvm.AddStore(resobj, ctxallocb);
-			LlvmValue resfunc = llvm.AddGetElementPtr(res, new LlvmValue[] {
-				new LlvmLiteral(new LlvmPrimitive("i32"), "0"),
-				new LlvmLiteral(new LlvmPrimitive("i32"), "1"),
-			});
-			llvm.AddStore(resfunc, llvm.AddBitcast(ll.func, ((LlvmInlineStruct)type(l.type)).members["function"]));
-
-			return llvm.AddLoad(res);
+			LlvmValue v = new LlvmUndef(type(l.type));
+			if (ctxallocb != null)
+			{
+				v = llvm.AddInsertValue(v, ctxallocb, 0);
+			}
+			v = llvm.AddInsertValue(v, fval, 1);
+			return v;
 		}
 
 		private LlvmValue addExprVariableLvalue(Llvm llvm, ExprVariable v)
@@ -1023,9 +1078,13 @@ namespace Bohc.Generation.Llvm
 					                      {
 						new LlvmLiteral(new LlvmPrimitive("i32"), "0"),
 						new LlvmLiteral(new LlvmPrimitive("i32"), 
-						                ((LlvmStruct)((LlvmPointer)th.Type()).t)
+								((LlvmInlineStruct)((LlvmPointer)th.Type()).t)
 						                .Offset("%" + v.refersto.Identifier).ToString())
 					});
+					if (((Local)v.refersto).Modifiers.HasFlag(Modifiers.Final))
+					{
+						return tmp;
+					}
 					return llvm.AddLoad(tmp);
 				}
 				return locals[v.refersto];
@@ -1426,10 +1485,6 @@ namespace Bohc.Generation.Llvm
 				llvm.AddStore(v, dec);
 				return ld;
 			}
-			else if (unop.operation == UnaryOperation.DEFAULT)
-			{
-				return addExpression(llvm, ((ExprType)unop.onwhat).type.DefaultVal());
-			}
 			else if (unop.operation == UnaryOperation.INCREMENT)
 			{
 				LlvmValue v = addExpression(llvm, unop.onwhat, true);
@@ -1473,6 +1528,10 @@ namespace Bohc.Generation.Llvm
 			{
 				return addSizeof(llvm, type(((ExprType)unop.onwhat).type));
 			}
+			else if (unop.operation == UnaryOperation.DEFAULT)
+			{
+				return new LlvmZeroinitializer(type(((ExprType)unop.onwhat).type));
+			}
 
 			throw new NotImplementedException();
 		}
@@ -1501,8 +1560,8 @@ namespace Bohc.Generation.Llvm
 				llvm.AddBranch(skip, skip);
 
 				return llvm.AddPhi(new LlvmPrimitive(Primitive.Boolean.LlvmName),
-				           new Tuple<LlvmValue, LlvmLabel>(lvalue, origin),
-				           new Tuple<LlvmValue, LlvmLabel>(rvalue, cont));
+					new Tuple<LlvmValue, LlvmLabel>(lvalue, origin),
+					new Tuple<LlvmValue, LlvmLabel>(rvalue, cont));
 			}
 			else if (binop.operation == BinaryOperation.CONDIT_OR)
 			{
@@ -1515,8 +1574,8 @@ namespace Bohc.Generation.Llvm
 				llvm.AddBranch(skip, skip);
 
 				return llvm.AddPhi(new LlvmPrimitive(Primitive.Boolean.LlvmName),
-				           new Tuple<LlvmValue, LlvmLabel>(lvalue, origin),
-				           new Tuple<LlvmValue, LlvmLabel>(rvalue, cont));
+					new Tuple<LlvmValue, LlvmLabel>(lvalue, origin),
+					new Tuple<LlvmValue, LlvmLabel>(rvalue, cont));
 			}
 			else if (binop.operation == BinaryOperation.DIV)
 			{
@@ -1543,12 +1602,42 @@ namespace Bohc.Generation.Llvm
 					return llvm.AddFcmp(Fcmp.Oeq, addExpression(llvm, binop.left), addExpression(llvm, binop.right));
 				}
 
+				if (binop.left.getType() is FunctionRefType)
+				{
+					LlvmValue l = addExpression(llvm, binop.left);
+					LlvmValue r = addConversion(llvm, binop.right, binop.left.getType());
+					LlvmValue tmp1 = llvm.AddExtractValue(l, 0);
+					LlvmValue tmp2 = llvm.AddExtractValue(r, 0);
+					LlvmValue tmp = llvm.AddIcmp(Icmp.Eq, tmp1, tmp2);
+					tmp1 = llvm.AddExtractValue(l, 1);
+					tmp2 = llvm.AddExtractValue(r, 1);
+					return llvm.AddAnd(tmp, llvm.AddIcmp(Icmp.Eq, tmp1, tmp2));
+				}
+
 				if (binop.left.getType().IsReferenceType())
 				{
 					List<LlvmValue> pars = new List<LlvmValue>();
 
-					LlvmValue l = addConversion(llvm, binop.left, StdType.Obj);
-					LlvmValue r = addConversion(llvm, binop.right, StdType.Obj);
+					LlvmValue l = null;
+					if (binop.left.getType() is Interface)
+					{
+						l = addExpression(llvm, binop.left);
+						l = llvm.AddExtractValue(l, 0);
+					}
+					else
+					{
+						l = addConversion(llvm, binop.left, StdType.Obj);
+					}
+					LlvmValue r = null;
+					if (binop.right.getType() is Interface)
+					{
+						r = addExpression(llvm, binop.right);
+						r = llvm.AddExtractValue(r, 0);
+					}
+					else
+					{
+						r = addConversion(llvm, binop.right, StdType.Obj);
+					}
 					pars.Add(new LlvmUndef(new LlvmPointer(new LlvmPrimitive("i8"))));
 					pars.Add(l);
 					pars.Add(r);
@@ -1589,10 +1678,11 @@ namespace Bohc.Generation.Llvm
 				{
 					// int, float, or bool cmp
 					return addFloatIntOp(llvm, binop, 
-					                    (_2, _3) => llvm.AddFcmp(Fcmp.One, _2, _3),
-					                    (_2, _3) => llvm.AddIcmp(Icmp.Ne, _2, _3),
-					                    (_2, _3) => llvm.AddIcmp(Icmp.Ne, _2, _3));
+						(_2, _3) => llvm.AddFcmp(Fcmp.One, _2, _3),
+						(_2, _3) => llvm.AddIcmp(Icmp.Ne, _2, _3),
+						(_2, _3) => llvm.AddIcmp(Icmp.Ne, _2, _3));
 				}
+				return addUnOp(llvm, new UnaryOperation(new BinaryOperation(binop.left, binop.right, BinaryOperation.EQUAL), UnaryOperation.INVERT));
 			}
 			else if (binop.operation == BinaryOperation.RELAT_G)
 			{
@@ -1602,9 +1692,9 @@ namespace Bohc.Generation.Llvm
 					throw new NotImplementedException();
 				}
 				return addFloatIntOp(llvm, binop, 
-				                     (_2, _3) => llvm.AddFcmp(Fcmp.Ogt, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Sgt, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Ugt, _2, _3));
+					(_2, _3) => llvm.AddFcmp(Fcmp.Ogt, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Sgt, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Ugt, _2, _3));
 			}
 			else if (binop.operation == BinaryOperation.RELAT_GE)
 			{
@@ -1614,9 +1704,9 @@ namespace Bohc.Generation.Llvm
 					throw new NotImplementedException();
 				}
 				return addFloatIntOp(llvm, binop, 
-				                     (_2, _3) => llvm.AddFcmp(Fcmp.Oge, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Sge, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Uge, _2, _3));
+					(_2, _3) => llvm.AddFcmp(Fcmp.Oge, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Sge, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Uge, _2, _3));
 			}
 			else if (binop.operation == BinaryOperation.RELAT_L)
 			{
@@ -1626,9 +1716,9 @@ namespace Bohc.Generation.Llvm
 					throw new NotImplementedException();
 				}
 				return addFloatIntOp(llvm, binop, 
-				                     (_2, _3) => llvm.AddFcmp(Fcmp.Olt, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Slt, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Ult, _2, _3));
+					(_2, _3) => llvm.AddFcmp(Fcmp.Olt, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Slt, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Ult, _2, _3));
 			}
 			else if (binop.operation == BinaryOperation.RELAT_LE)
 			{
@@ -1638,9 +1728,9 @@ namespace Bohc.Generation.Llvm
 					throw new NotImplementedException();
 				}
 				return addFloatIntOp(llvm, binop, 
-				                     (_2, _3) => llvm.AddFcmp(Fcmp.Ole, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Sle, _2, _3),
-				                     (_2, _3) => llvm.AddIcmp(Icmp.Ule, _2, _3));
+					(_2, _3) => llvm.AddFcmp(Fcmp.Ole, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Sle, _2, _3),
+					(_2, _3) => llvm.AddIcmp(Icmp.Ule, _2, _3));
 			}
 			else if (binop.operation == BinaryOperation.REM)
 			{
@@ -1650,9 +1740,9 @@ namespace Bohc.Generation.Llvm
 					throw new NotImplementedException();
 				}
 				return addFloatIntOp(llvm, binop, 
-				                    llvm.AddFrem,
-				                    llvm.AddSrem,
-				                    llvm.AddUrem);
+					llvm.AddFrem,
+					llvm.AddSrem,
+					llvm.AddUrem);
 			}
 			else if (binop.operation == BinaryOperation.R_EQ)
 			{
@@ -1683,9 +1773,10 @@ namespace Bohc.Generation.Llvm
 
 		private LlvmValue addSizeof(Llvm llvm, LlvmType ty)
 		{
-			return llvm.InlinePtrToInt(llvm.InlineGetElementPtr(new LlvmLiteral(new LlvmPointer(ty), "null"), 
+			return new LlvmLiteral(type(platform.longType()), ty.size(platform).ToString());
+			/*return llvm.AddPtrToInt(llvm.AddGetElementPtr(new LlvmLiteral(new LlvmPointer(ty), "null"), 
 			                                              new LlvmLiteral(new LlvmPrimitive("i32"), "1")),
-			                        new LlvmPrimitive("i64"));
+			                        new LlvmPrimitive("i64"));*/
 		}
 
 		private LlvmValue addConversion(Llvm llvm, Expression expression)
@@ -1710,6 +1801,14 @@ namespace Bohc.Generation.Llvm
 			{
 				if (((Literal)expression).representation == "NULL")
 				{
+					if (to is Interface)
+					{
+						return new LlvmZeroinitializer(type(to));
+					}
+					if (to is FunctionRefType)
+					{
+						return new LlvmZeroinitializer(type(to));
+					}
 					return new LlvmLiteral(type(to), "null");
 				}
 

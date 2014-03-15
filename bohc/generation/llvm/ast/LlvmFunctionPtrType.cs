@@ -29,6 +29,11 @@ namespace Bohc.Generation.Llvm
 			}
 			return sb.Append(")*").ToString();
 		}
+
+		public override int size(General.Platform p)
+		{
+			return p.longType().getSizeofBytes(p);
+		}
 	}
 }
 

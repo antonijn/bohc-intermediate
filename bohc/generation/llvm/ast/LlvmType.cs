@@ -10,6 +10,12 @@ namespace Bohc.Generation.Llvm
 		{
 			return obj.ToString() == ToString();
 		}
+
+		public abstract int size(General.Platform p);
+		public virtual int padding(General.Platform p)
+		{
+			return size(p);
+		}
 	}
 }
 

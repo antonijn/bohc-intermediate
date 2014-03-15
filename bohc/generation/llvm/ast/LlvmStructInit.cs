@@ -5,10 +5,9 @@ namespace Bohc.Generation.Llvm
 {
 	public class LlvmStructInit : LlvmValue
 	{
-		private LlvmStruct ty;
+		private LlvmType ty;
 		public LlvmValue[] members;
-
-		public LlvmStructInit(LlvmStruct ty, params LlvmValue[] members)
+		public LlvmStructInit(LlvmType ty, params LlvmValue[] members)
 		{
 			this.ty = ty;
 			this.members = members;

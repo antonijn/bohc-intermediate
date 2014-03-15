@@ -7,26 +7,26 @@ namespace Bohc.Parsing
 	public class TokenStream
 	{
 		private IEnumerable<Token> tokens;
-		private int offset;
+		private int _offset;
 		private int length;
 		private int _size;
 
 		public TokenStream(IEnumerable<Token> tokens, int offset, int length)
 		{
 			this.tokens = tokens;
-			this.offset = offset - 1;
+			this._offset = offset - 1;
 			this.length = length + 1;
 			this._size = length;
 		}
 
 		public TokenStream fork()
 		{
-			return new TokenStream(tokens, offset, length);
+			return new TokenStream(tokens, _offset, length);
 		}
 
 		public Token get()
 		{
-			return tokens.Skip(offset).First();
+			return tokens.Skip(_offset).First();
 		}
 
 		public Token peek(int c)
@@ -35,21 +35,21 @@ namespace Bohc.Parsing
 			{
 				return default(Token);
 			}
-			return tokens.Skip(c + offset).First();
+			return tokens.Skip(c + _offset).First();
 		}
 
 		public bool next()
 		{
-			++offset;
+			++_offset;
 			--length;
 			return length > 0;
 		}
 
 		public bool prior()
 		{
-			--offset;
+			--_offset;
 			++length;
-			return offset >= 0;
+			return _offset >= 0;
 		}
 
 		public TokenStream until(string str, params Tuple<string, string>[] scopetokens)
@@ -92,8 +92,8 @@ namespace Bohc.Parsing
 
 		public TokenStream read(int offs, int c)
 		{
-			TokenStream result = new TokenStream(tokens, offset + offs, c);
-			offset += offs + c;
+			TokenStream result = new TokenStream(tokens, _offset + offs, c);
+			_offset += offs + c;
 			length -= offs + c;
 			return result;
 		}
@@ -126,6 +126,11 @@ namespace Bohc.Parsing
 		public int size()
 		{
 			return _size;
+		}
+
+		public int offset()
+		{
+			return _offset;
 		}
 
 		public override string ToString()

@@ -15,6 +15,11 @@ namespace Bohc.Generation.Llvm
 		{
 			return t.ToString() + "*";
 		}
+
+		public override int size(General.Platform p)
+		{
+			return p.longType().getSizeofBytes(p);
+		}
 	}
 }
 

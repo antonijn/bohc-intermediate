@@ -382,7 +382,11 @@ namespace Bohc.Parsing
 			{
 				return new Token(TokenType.NULL, id, i, linenum, str, filename);
 			}
-			if (id == "sizeof" || id == "typeof")
+			if (id == "sizeof" || id == "typeof" || id == "default")
+			{
+				return new Token(TokenType.OPERATOR, id, i, linenum, str, filename);
+			}
+			if (id == "r_eq")
 			{
 				return new Token(TokenType.OPERATOR, id, i, linenum, str, filename);
 			}

@@ -28,7 +28,7 @@ namespace Bohc.TypeSystem
 
 		public override int Extends(Type other)
 		{
-			if (other is Class || other is Interface)
+			if (other is Class || other is Interface || other is FunctionRefType)
 			{
 				return 1;
 			}
@@ -42,6 +42,11 @@ namespace Bohc.TypeSystem
 		}
 
 		public override IEnumerable<Function> GetFunctions(string id, TypeSystem.Type context)
+		{
+			throw new NotImplementedException();
+		}
+
+		public override int getSizeof(Bohc.General.Platform pf)
 		{
 			throw new NotImplementedException();
 		}

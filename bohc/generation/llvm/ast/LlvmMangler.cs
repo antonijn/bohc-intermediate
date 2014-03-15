@@ -68,6 +68,14 @@ namespace Bohc.Generation.Llvm
 			{
 				return "enum." + type.FullName();
 			}
+			else if (type is TypeSystem.Interface)
+			{
+				return "interface." + type.FullName();
+			}
+			else if (type is TypeSystem.FunctionRefType)
+			{
+				return "function." + type.FullName();
+			}
 			else if (type is Primitive)
 			{
 				return ((Primitive)type).LlvmName;

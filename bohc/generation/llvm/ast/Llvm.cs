@@ -519,6 +519,46 @@ namespace Bohc.Generation.Llvm
 			return result;
 		}
 
+		public LlvmValue AddInsertValue(LlvmValue value, LlvmValue set, params int[] indices)
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append(", ");
+
+			sb.Append(set.Type().ToString()).Append(" ").Append(set.ToString()).Append(", ");
+
+			LlvmType t = value.Type();
+			foreach (int idx in indices)
+			{
+				while (t is LlvmParamType)
+				{
+					t = ((LlvmParamType)t).t;
+				}
+
+				if (t is LlvmPointer)
+				{
+					t = ((LlvmPointer)t).t;
+				}
+				else if (t is LlvmStruct)
+				{
+					LlvmStruct str = (LlvmStruct)t;
+					t = str.members.Values.ToArray()[idx];
+				}
+				else if (t is LlvmInlineStruct)
+				{
+					LlvmInlineStruct str = (LlvmInlineStruct)t;
+					t = str.members.Values.ToArray()[idx];
+				}
+
+				sb.Append(idx).Append(", ");
+			}
+			sb.Remove(sb.Length - 2, 2);
+
+			LlvmTemp result = new LlvmTemp(value.Type());
+			AddIndent().Append(result).Append(" = insertvalue ")
+				.Append(value.Type()).Append(" ").Append(value).AppendLine(sb);
+			return result;
+		}
+
 		public void AddSwitch(LlvmValue value, LlvmLabel def, params Tuple<LlvmValue, LlvmLabel>[] cases)
 		{
 			AddIndent().Append("switch ").Append(value.Type()).Append(" ").Append(value)

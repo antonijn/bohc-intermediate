@@ -41,6 +41,16 @@ namespace Bohc.Generation.Llvm
 			return t.ToString() + (modifiers == LlvmParamModifiers.None ? "" : 
 				(" " + modifiers.ToString().ToLowerInvariant()));
 		}
+
+		public override int size(General.Platform p)
+		{
+			return t.size(p);
+		}
+
+		public override int padding(General.Platform p)
+		{
+			return t.padding(p);
+		}
 	}
 }
 

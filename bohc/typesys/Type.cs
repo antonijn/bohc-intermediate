@@ -266,6 +266,17 @@ namespace Bohc.TypeSystem
 
 		public abstract Parsing.Expression DefaultVal();
 		public abstract bool IsReferenceType();
+		public abstract int getSizeof(General.Platform pf);
+
+		public int getSizeofBytes(General.Platform pf)
+		{
+			return (int)Math.Ceiling(getSizeof(pf) / 8.0);
+		}
+
+		public virtual int getAlign(General.Platform pf)
+		{
+			return 1 << (int)Math.Ceiling(Math.Log(getSizeofBytes(pf)) / Math.Log(2));
+		}
 
 		public XElement XElement;
 		public bool IsExtern()

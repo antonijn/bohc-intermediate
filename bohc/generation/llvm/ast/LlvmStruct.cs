@@ -32,6 +32,31 @@ namespace Bohc.Generation.Llvm
 		{
 			return strname;
 		}
+
+		private void pad(ref int s, int w)
+		{
+			while ((s % w) != 0)
+				++s;
+		}
+
+		public override int size(General.Platform p)
+		{
+			int size = 0;
+			int max = 1;
+			foreach (LlvmType ty in members.Values)
+			{
+				pad(ref size, ty.padding(p));
+				int ns = ty.size(p);
+				size += ns;
+				max = Math.Max(max, ns);
+			}
+			if (size == 0)
+			{
+				return 1;
+			}
+			pad(ref size, max);
+			return size;
+		}
 	}
 }
 

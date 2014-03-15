@@ -268,7 +268,7 @@ namespace Bohc.Parsing
 				}
 
 				Token to = t.get();
-				if (to.value != "." && to.value != "<" && to.value != "[")
+				if (to.value != "." && to.value != "<" && to.value != "[" && to.value != "(")
 				{
 					t.prior();
 					break;
@@ -284,6 +284,21 @@ namespace Bohc.Parsing
 						break;
 					}
 					sb.Append("[]");
+					last = t.get();
+					break;
+				}
+
+				if (to.value == "(")
+				{
+					sb.Append("(");
+					t.next();
+					TokenStream gpars = t.until(")", new Tuple<string, string>("(", ")"));
+					t.prior();
+					while (gpars.next())
+					{
+						sb.Append(gpars.get().value);
+					}
+					sb.Append(")");
 					last = t.get();
 					break;
 				}
@@ -389,6 +404,12 @@ namespace Bohc.Parsing
 				case "enum":
 					{
 						TypeSystem.Type ty = TypeSystem.Enum.Get(f.package, modifiers, name.value);
+						ty.parserinfo = new Tuple<TokenRange, List<TokenRange>, TokenStream>(extends, implements, body);
+						return ty;
+					}
+				case "interface":
+					{
+						TypeSystem.Type ty = TypeSystem.Interface.Get(f.package, modifiers, name.value);
 						ty.parserinfo = new Tuple<TokenRange, List<TokenRange>, TokenStream>(extends, implements, body);
 						return ty;
 					}
@@ -504,7 +525,7 @@ namespace Bohc.Parsing
 			{
 				((Class)ty).Super = (Class)pinfo.Item1;
 			}
-			else
+			else if (ty is Class)
 			{
 				((Class)ty).Super = StdType.Obj;
 			}
@@ -512,7 +533,14 @@ namespace Bohc.Parsing
 			{
 				foreach (TypeSystem.Type t in pinfo.Item2)
 				{
-					((Class)ty).Implement((Interface)t);
+					if (ty is Class)
+					{
+						((Class)ty).Implement((Interface)t);
+					}
+					else
+					{
+						((Interface)ty).Implements.Add((Interface)t);
+					}
 				}
 			}
 
@@ -529,10 +557,101 @@ namespace Bohc.Parsing
 
 			TokenStream t = (TokenStream)((TypeSystem.Type)f.type).parserinfo;
 
-			parseClassTCS(f, t);
+			if (f.type is Class)
+			{
+				parseClassTCS(f, t);
+			}
+			else if (f.type is Interface)
+			{
+				parseInterfaceTCS(f, t);
+			}
 		}
 
-		void parseClassTCS(File f, TokenStream t)
+		private void parseInterfaceTCS(File f, TokenStream t)
+		{
+			while (t.next())
+			{
+				Token to = t.get();
+				if (to.value == "}")
+				{
+					break;
+				}
+
+				Modifiers mf = Modifiers.None;
+				while (t.next() && t.get().isType(TokenType.MODIFIER))
+				{
+					mf |= ModifierHelper.GetModifierFromString(t.get().value);
+				}
+
+				TypeSystem.Type ty = Primitive.Void;
+
+				t.prior();
+				t.prior();
+
+				TokenRange tyr = readTypeName(emanager, t);
+				ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, this);
+				t.next();
+
+				if (t.peek(1).value == "(")
+				{
+					Function func = new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
+					parseMethodParamsTCS(func, t, '(', ')');
+					if (Platform.IsPlatform(mf, pf))
+					{
+						((Interface)f.type).Functions.Add(func);
+					}
+				}
+				else if (t.peek(1).value == "[")
+				{
+					if (t.get().value != "this")
+					{
+						t.get().error(emanager, "indexers must be called 'this'");
+					}
+					Indexer func = new Indexer((TypeSystem.Type)f.type, mf, ty, new List<Parameter>(), null);
+					parseMethodParamsTCS(func, t, '[', ']');
+					if (t.get().value != "(")
+					{
+						t.get().error(emanager, "expected '('");
+					}
+
+					Parameter assign = null;
+
+					t.next();
+					if (t.get().value != ")")
+					{
+						Modifiers amf = Modifiers.None;
+
+						t.prior();
+						while (t.next() && t.get().isType(TokenType.MODIFIER))
+						{
+							amf |= ModifierHelper.GetModifierFromString(t.get().value);
+						}
+
+						t.prior();
+						TokenRange atyr = readTypeName(emanager, t);
+						TypeSystem.Type aty = TypeSystem.Type.GetExisting(f.getContext(), atyr.str, this);
+						t.next();
+						assign = new Parameter(func, amf, t.get().value, aty);
+						t.next();
+					}
+					t.next();
+					t.next();
+					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+					func.Assignment = assign;
+					if (Platform.IsPlatform(mf, pf))
+					{
+						((Class)f.type).AddMember(func);
+					}
+					t.prior();
+				}
+				else
+				{
+					t.peek(1).error(emanager, "unexpected token '{0}'", t.peek(1).value);
+				}
+			}
+		}
+
+		private void parseClassTCS(File f, TokenStream t)
 		{
 			while (t.next())
 			{

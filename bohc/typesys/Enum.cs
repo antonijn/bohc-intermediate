@@ -135,5 +135,10 @@ namespace Bohc.TypeSystem
 		{
 			return false;
 		}
+
+		public override int getSizeof(Bohc.General.Platform pf)
+		{
+			return pf.longType().getSizeof(pf);
+		}
 	}
 }

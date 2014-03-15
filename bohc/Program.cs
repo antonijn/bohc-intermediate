@@ -43,6 +43,7 @@ namespace Bohc
 			args = new string[]
 			{
 				"TestClass.boh",
+				"Interface.aqua",
 				"-n",
 				"-t",
 			};

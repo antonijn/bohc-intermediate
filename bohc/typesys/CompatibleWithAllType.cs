@@ -38,5 +38,10 @@ namespace Bohc.TypeSystem
 		{
 			throw new NotImplementedException();
 		}
+
+		public override int getSizeof(Bohc.General.Platform pf)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

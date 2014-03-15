@@ -17,6 +17,11 @@ namespace Bohc.Generation.Llvm
 		{
 			return "[" + count.ToString() + " x " + type.ToString() + "]";
 		}
+
+		public override int size(General.Platform p)
+		{
+			throw new NotImplementedException();
+		}
 	}
 }
 

@@ -277,5 +277,42 @@ namespace Bohc.TypeSystem
 		{
 			return true;
 		}
+
+		public override int getSizeof(Bohc.General.Platform pf)
+		{
+			if (pf.longType() == Primitive.Int)
+			{
+				return 32;
+			}
+			return 64;
+		}
+
+		private void pad(ref int s, int w)
+		{
+			while ((s % w) != 0)
+			{
+				++s;
+			}
+		}
+
+		public int getSizeofValue(General.Platform pf)
+		{
+			int size = pf.longType().Size;
+			int max = size;
+			foreach (Field f in Fields.Where(x => !x.Modifiers.HasFlag(Modifiers.Static)))
+			{
+				pad(ref size, f.Type.getAlign(pf));
+				int ns = f.Type.getSizeofBytes(pf);
+				max = Math.Max(max, ns);
+				size += ns;
+			}
+			pad(ref size, max);
+			return size * 8;
+		}
+
+		public int getSizeofValueBytes(General.Platform pf)
+		{
+			return getSizeofValue(pf) / 8;
+		}
 	}
 }
