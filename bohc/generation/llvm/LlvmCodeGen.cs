@@ -948,14 +948,10 @@ namespace Bohc.Generation.Llvm
 			{
 				return false;
 			}
-			if (lambda.Count == 1)
-			{
-				return true;
-			}
 
 			foreach (Variable enc in lambda)
 			{
-				if (!getmods(enc).HasFlag(Modifiers.Final))
+				if (!getmods(enc).HasFlag(Modifiers.Final) && enc.EnclosedBy.Count == 1)
 				{
 					return false;
 				}
