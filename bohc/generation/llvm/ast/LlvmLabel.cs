@@ -7,6 +7,7 @@ namespace Bohc.Generation.Llvm
 	{
 		public string id;
 		public List<LlvmLabel> preds = new List<LlvmLabel>();
+		public Llvm ll;
 
 		public LlvmLabel()
 		{

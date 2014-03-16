@@ -17,13 +17,13 @@ namespace Bohc.Generation.Llvm
 		public Llvm(LlvmFunction func)
 		{
 			this.func = func;
-			tempvc.Push(new int[1] { 1 });
+			builder = new LlvmBuilder(this);
 		}
 
-		public static Stack<int[]> tempvc = new Stack<int[]>();
+		public int nums = 1;
 
 		public readonly LlvmFunction func;
-		private LlvmBuilder builder = new LlvmBuilder();
+		private LlvmBuilder builder;
 
 		private LlvmBuilder AddIndent()
 		{
@@ -35,6 +35,11 @@ namespace Bohc.Generation.Llvm
 			return builder.ToString();
 		}
 
+		public string expand()
+		{
+			return builder.expand();
+		}
+
 		public void AddComment(string com)
 		{
 			builder.Append("; ").AppendLine(com);
@@ -42,7 +47,7 @@ namespace Bohc.Generation.Llvm
 
 		private LlvmValue AddBinOpRes(string op, LlvmValue left, LlvmValue right)
 		{
-			LlvmTemp result = new LlvmTemp(left.Type());
+			LlvmTemp result = new LlvmTemp(left.Type(), this);
 			AddIndent().Append(result).Append(" = ").Append(op).Append(" ")
 				.Append(left.Type()).Append(" ")
 					.Append(left).Append(", ").AppendLine(right);
@@ -141,13 +146,17 @@ namespace Bohc.Generation.Llvm
 
 		public void AddAlloca(LlvmValue result, LlvmType type)
 		{
-			AddIndent().Append(result).Append(" = alloca ").AppendLine(type);
+			builder.Insert(0, Environment.NewLine);
+			builder.Insert(0, type);
+			builder.Insert(0, " = alloca ");
+			builder.Insert(0, result);
+			builder.Insert(0, "\t");
 		}
 
 		public LlvmValue AddLoad(LlvmValue val)
 		{
 			LlvmPointer ptr = (LlvmPointer)val.Type();
-			LlvmTemp result = new LlvmTemp(ptr.t);
+			LlvmTemp result = new LlvmTemp(ptr.t, this);
 			AddIndent().Append(result).Append(" = load ").Append(ptr).Append(" ").AppendLine(val);
 			return result;
 		}
@@ -162,7 +171,7 @@ namespace Bohc.Generation.Llvm
 		public LlvmValue AddCall(LlvmValue f, IEnumerable<LlvmValue> parameters)
 		{
 			LlvmFunctionPtrType function = (LlvmFunctionPtrType)f.Type();
-			LlvmTemp result = function.ret.ToString() == "void" ? null : new LlvmTemp(function.ret);
+			LlvmTemp result = function.ret.ToString() == "void" ? null : new LlvmTemp(function.ret, this);
 			AddIndent();
 			if (function.ret.ToString() != "void")
 			{
@@ -189,7 +198,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddCall(LlvmFunction function, IEnumerable<LlvmValue> parameters)
 		{
-			LlvmTemp result = function.ret.ToString() == "void" ? null : new LlvmTemp(function.ret);
+			LlvmTemp result = function.ret.ToString() == "void" ? null : new LlvmTemp(function.ret, this);
 			AddIndent();
 			if (function.ret.ToString() != "void")
 			{
@@ -216,13 +225,41 @@ namespace Bohc.Generation.Llvm
 
 		private LlvmLabel lbl = new LlvmLabel();
 
+		private class StringFallthrough : LlvmValue
+		{
+			private LlvmLabel l;
+			public StringFallthrough(LlvmLabel l)
+			{
+				this.l = l;
+			}
+
+			public override LlvmType Type()
+			{
+				throw new NotImplementedException();
+			}
+
+			private string str;
+			private bool used = false;
+			public override void use()
+			{
+				if (used)
+					return;
+				used = true;
+				l.id = (str = (l.ll.nums - 1).ToString());
+			}
+
+			public override string ToString()
+			{
+				return "; <label>:" + str;
+			}
+		}
+
 		private void Terminator(LlvmLabel l)
 		{
-			l.id = tempvc.Peek()[0]++.ToString();
+			l.ll = this;
 			lbl = l;
 
-			builder.AppendLine();
-			AddComment("<label>:" + l.id);
+			builder.AppendLine(new LlvmUseDummy(this)).AppendLine(new StringFallthrough(l));
 		}
 
 		public LlvmLabel GetLabel()
@@ -249,7 +286,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddIcmp(Icmp cmp, LlvmValue left, LlvmValue right)
 		{
-			LlvmTemp result = new LlvmTemp(new LlvmPrimitive("i1"));
+			LlvmTemp result = new LlvmTemp(new LlvmPrimitive("i1"), this);
 			AddIndent().Append(result).Append(" = icmp ")
 				.Append(cmp.ToString().ToLowerInvariant()).Append(" ").Append(left.Type()).Append(" ")
 					.Append(left).Append(", ").AppendLine(right);
@@ -258,7 +295,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddFcmp(Fcmp cmp, LlvmValue left, LlvmValue right)
 		{
-			LlvmTemp result = new LlvmTemp(new LlvmPrimitive("i1"));
+			LlvmTemp result = new LlvmTemp(new LlvmPrimitive("i1"), this);
 			AddIndent().Append(result).Append(" = fcmp ")
 				.Append(cmp.ToString().ToLowerInvariant()).Append(" ").Append(left.Type()).Append(" ")
 					.Append(left).Append(", ").AppendLine(right);
@@ -267,7 +304,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue InlinePtrToInt(LlvmValue ui, LlvmType to)
 		{
-			LlvmBuilder sb = new LlvmBuilder();
+			LlvmBuilder sb = new LlvmBuilder(this);
 			return new LlvmInline(to, sb.Append("ptrtoint ")
 				.Append(ui.Type()).Append(" ").Append(ui)
 			                      .Append(" to ").AppendLine(to));
@@ -275,7 +312,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue InlineIntToPtr(LlvmValue ui, LlvmType to)
 		{
-			LlvmBuilder sb = new LlvmBuilder();
+			LlvmBuilder sb = new LlvmBuilder(this);
 			return new LlvmInline(to, sb.Append("inttoptr (")
 			                      .Append(ui.Type()).Append(" ").Append(ui)
 			                      .Append(") to ").AppendLine(to));
@@ -283,7 +320,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue InlineBitcast(LlvmValue ui, LlvmType to)
 		{
-			LlvmBuilder sb = new LlvmBuilder();
+			LlvmBuilder sb = new LlvmBuilder(this);
 			return new LlvmInline(to, sb.Append("bitcast (")
 			                      .Append(ui.Type()).Append(" ").Append(ui)
 			                      .Append(") to ").Append(to));
@@ -291,7 +328,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddPtrToInt(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = ptrtoint ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -299,7 +336,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddIntToPtr(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = inttoptr ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -307,7 +344,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddUiToFp(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = uitofp ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -315,7 +352,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddSiToFp(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = sitofp ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -323,7 +360,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddFpToUi(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = fptoui ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -331,7 +368,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddFpToSi(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = fptosi ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -339,7 +376,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddZext(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = zext ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -347,7 +384,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddSext(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = sext ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -355,7 +392,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddTrunc(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = trunc ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -363,7 +400,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddFext(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = fext ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -371,7 +408,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddFtrunc(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = ftrunc ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -379,7 +416,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddBitcast(LlvmValue ui, LlvmType to)
 		{
-			LlvmTemp result = new LlvmTemp(to);
+			LlvmTemp result = new LlvmTemp(to, this);
 			AddIndent().Append(result).Append(" = bitcast ")
 				.Append(ui.Type()).Append(" ").Append(ui).Append(" to ").AppendLine(to);
 			return result;
@@ -387,7 +424,7 @@ namespace Bohc.Generation.Llvm
 
 		public LlvmValue AddPhi(LlvmType ty, params Tuple<LlvmValue, LlvmLabel>[] pairs)
 		{
-			LlvmTemp result = new LlvmTemp(ty);
+			LlvmTemp result = new LlvmTemp(ty, this);
 			AddIndent().Append(result).Append(" = phi ")
 				.Append(result.Type()).Append(" ");
 			foreach (Tuple<LlvmValue, LlvmLabel> pair in pairs)
@@ -432,7 +469,7 @@ namespace Bohc.Generation.Llvm
 			}
 			sb.Remove(sb.Length - 2, 2);
 
-			LlvmBuilder other = new LlvmBuilder();
+			LlvmBuilder other = new LlvmBuilder(this);
 			return new LlvmInline(new LlvmPointer(t), other.Append("getelementptr inbounds (")
 				.Append(value.Type()).Append(" ")
 					.Append(value).Append(sb).Append(")"));
@@ -475,7 +512,7 @@ namespace Bohc.Generation.Llvm
 			}
 			sb.Remove(sb.Length - 2, 2);
 
-			LlvmTemp result = new LlvmTemp(new LlvmPointer(t));
+			LlvmTemp result = new LlvmTemp(new LlvmPointer(t), this);
 			AddIndent().Append(result).Append(" = getelementptr inbounds ")
 				.Append(value.Type()).Append(" ").Append(value).AppendLine(sb);
 			return result;
@@ -513,7 +550,7 @@ namespace Bohc.Generation.Llvm
 			}
 			sb.Remove(sb.Length - 2, 2);
 
-			LlvmTemp result = new LlvmTemp(t);
+			LlvmTemp result = new LlvmTemp(t, this);
 			AddIndent().Append(result).Append(" = extractvalue ")
 				.Append(value.Type()).Append(" ").Append(value).AppendLine(sb);
 			return result;
@@ -523,8 +560,6 @@ namespace Bohc.Generation.Llvm
 		{
 			StringBuilder sb = new StringBuilder();
 			sb.Append(", ");
-
-			sb.Append(set.Type().ToString()).Append(" ").Append(set.ToString()).Append(", ");
 
 			LlvmType t = value.Type();
 			foreach (int idx in indices)
@@ -553,9 +588,9 @@ namespace Bohc.Generation.Llvm
 			}
 			sb.Remove(sb.Length - 2, 2);
 
-			LlvmTemp result = new LlvmTemp(value.Type());
+			LlvmTemp result = new LlvmTemp(value.Type(), this);
 			AddIndent().Append(result).Append(" = insertvalue ")
-				.Append(value.Type()).Append(" ").Append(value).AppendLine(sb);
+				.Append(value.Type()).Append(" ").Append(value).Append(", ").Append(set.Type()).Append(" ").Append(set).AppendLine(sb);
 			return result;
 		}
 

@@ -19,7 +19,7 @@ namespace Bohc.TypeSystem
 
 		// 0 if not in lambda, 1 if in lambda, 2 if in lambda in lambda, etc.
 		public int LamdaLevel = 0;
-		public bool Enclosed = false;
+		public List<List<Variable>> EnclosedBy = new List<List<Variable>>();
 
 		public bool NullChecked = false;
 

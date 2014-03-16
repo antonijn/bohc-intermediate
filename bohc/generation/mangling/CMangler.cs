@@ -208,7 +208,7 @@ namespace Bohc.Generation.Mangling
 		public string getVarUsageName(Variable variable, int lambdaStack)
 		{
 			Local loc = variable as Local;
-			if (variable.Enclosed)
+			if (variable.EnclosedBy.Count > 0)
 			{
 				if (variable.LamdaLevel == lambdaStack)
 				{

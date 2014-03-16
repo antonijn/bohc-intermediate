@@ -79,8 +79,6 @@ namespace Bohc.Generation.Llvm
 
 		public void AddImplementation(Llvm llvm)
 		{
-			Llvm.tempvc.Pop();
-
 			impls.Append("define ").Append((llvm.func.linkage != LlvmLinkage.None) ? 
 			                               llvm.func.linkage.ToString().ToLowerInvariant() + " " : "")
 				.Append(llvm.func.ret.ToString())
@@ -94,7 +92,7 @@ namespace Bohc.Generation.Llvm
 				impls.Remove(impls.Length - 2, 2);
 			}
 			impls.AppendLine(") {");
-			impls.Append(llvm.ToString());
+			impls.Append(llvm.expand());
 			impls.AppendLine("}");
 		}
 	}

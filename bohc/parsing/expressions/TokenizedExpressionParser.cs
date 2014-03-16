@@ -129,7 +129,7 @@ namespace Bohc.Parsing
 			{
 				if (local is Local && local.LamdaLevel < lambdaStack.Count && !lambdaStack.Peek().Contains(local))
 				{
-					local.Enclosed = true;
+					local.EnclosedBy.Add(lambdaStack.Peek());
 					lambdaStack.Peek().Add(local);
 				}
 				expr = new ExprVariable(local, null);

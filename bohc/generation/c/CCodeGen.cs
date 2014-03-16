@@ -157,7 +157,7 @@ namespace Bohc.Generation.C
 			int i = 0;
 			foreach (Lambda l in Lambda.lambdas)
 			{
-				//figureOutEnclosed(l);
+				//figureOutEnclosedBy.Count > 0(l);
 
 				string ctxName = "lmbd_ctx_" + lambdaCtxNames.Count;
 				lambdaCtxNames[l] = ctxName;
@@ -1270,7 +1270,7 @@ namespace Bohc.Generation.C
 
 		private void addFnHeapParamClose(StringBuilder builder, IEnumerable<Variable> parameters)
 		{
-			if (parameters.Where(x => x.Enclosed).Count() > 0)
+			if (parameters.Where(x => x.EnclosedBy.Count > 0).Count() > 0)
 			{
 				--indentation;
 				builder.AppendLine("}");
@@ -1279,13 +1279,13 @@ namespace Bohc.Generation.C
 
 		private void addFnHeapParams(StringBuilder builder, IEnumerable<Variable> parameters)
 		{
-			if (parameters.Where(x => x.Enclosed).Count() > 0)
+			if (parameters.Where(x => x.EnclosedBy.Count > 0).Count() > 0)
 			{
 				builder.AppendLine("{");
 
 				++indentation;
 
-				foreach (Variable param in parameters.Where(x => x.Enclosed))
+				foreach (Variable param in parameters.Where(x => x.EnclosedBy.Count > 0))
 				{
 					addIndent(builder);
 
@@ -2589,7 +2589,7 @@ namespace Bohc.Generation.C
 		private void addVarDec(StringBuilder builder, VarDeclaration vdec)
 		{
 			// REMEMBER
-			// Enclosed variable are ALWAYS heap allocated
+			// EnclosedBy.Count > 0 variable are ALWAYS heap allocated
 			// ALWAYS
 			// If they're already reference types, the reference shall be heap-allocated as well
 
@@ -2608,7 +2608,7 @@ namespace Bohc.Generation.C
 			}
 
 			builder.Append(mangler.getCTypeName(vdec.refersto.Type));
-			if (vdec.refersto.Enclosed && !((Local)vdec.refersto).Modifiers.HasFlag(Modifiers.Static))
+			if (vdec.refersto.EnclosedBy.Count > 0 && !((Local)vdec.refersto).Modifiers.HasFlag(Modifiers.Static))
 			{
 				builder.Append("*");
 			}
@@ -2620,7 +2620,7 @@ namespace Bohc.Generation.C
 			builder.Append(" ");
 			builder.Append(mangler.getVarName(vdec.refersto));
 
-			if (vdec.refersto.Enclosed && !((Local)vdec.refersto).Modifiers.HasFlag(Modifiers.Static))
+			if (vdec.refersto.EnclosedBy.Count > 0 && !((Local)vdec.refersto).Modifiers.HasFlag(Modifiers.Static))
 			{
 				builder.Append(" = boh_gc_alloc(sizeof(");
 				builder.Append(mangler.getCTypeName(vdec.refersto.Type));

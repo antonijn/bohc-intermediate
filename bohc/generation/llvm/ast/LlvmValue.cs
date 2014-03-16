@@ -9,6 +9,10 @@ namespace Bohc.Generation.Llvm
 		public LlvmValue()
 		{
 		}
+
+		public virtual void use()
+		{
+		}
 	}
 }
 

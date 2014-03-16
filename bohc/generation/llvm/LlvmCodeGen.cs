@@ -204,11 +204,10 @@ namespace Bohc.Generation.Llvm
 
 			foreach (Variable p in parameters)
 			{
-				LlvmValue tmp = new LlvmTemp(new LlvmPointer(type(p.Type)));
-				if (p.Enclosed && !(p is Parameter && ((Parameter)p).Modifiers.HasFlag(Modifiers.Final)))
+				LlvmValue tmp = new LlvmTemp(new LlvmPointer(type(p.Type)), llvm);
+				if (p.EnclosedBy.Count > 0)
 				{
-					tmp = llvm.AddCall(aqua_alloc(), new[] { addSizeof(llvm, type(p.Type)) });
-					tmp = llvm.AddBitcast(tmp, new LlvmPointer(type(p.Type)));
+					tmp = alloc_ctxvar(llvm, p);
 				}
 				else
 				{
@@ -634,12 +633,12 @@ namespace Bohc.Generation.Llvm
 		private void addBody(Llvm llvm, Body body)
 		{
 			//LlvmValue temp = llvm.AddCall(llvm_stacksave(), Enumerable.Empty<LlvmValue>());
-			foreach (Local l in body.locals.Where(x => !(x.Enclosed && !x.Modifiers.HasFlag(Modifiers.Final))))
+			/*foreach (Local l in body.locals.Where(x => !(x.Enclosed && !x.Modifiers.HasFlag(Modifiers.Final))))
 			{
 				LlvmValue v = new LlvmTemp(new LlvmPointer(type(l.Type)));
 					llvm.AddAlloca(v, type(l.Type));
 				locals[l] = v;
-			}
+			}*/
 			addSimpleBody(llvm, body);
 			//llvm.AddCall(llvm_stackrestore(), new[] { temp });
 		}
@@ -770,15 +769,15 @@ namespace Bohc.Generation.Llvm
 			if (vd.initial != null)
 			{
 				LlvmValue l = null;
-				if (vd.refersto.Enclosed && !vd.refersto.Modifiers.HasFlag(Modifiers.Final))
+				if (vd.refersto.EnclosedBy.Count > 0)
 				{
-					l = llvm.AddCall(aqua_alloc(), new[] { addSizeof(llvm, type(vd.refersto.Type)) });
-					l = llvm.AddBitcast(l, new LlvmPointer(type(vd.refersto.Type)));
+					l = alloc_ctxvar(llvm, vd.refersto);
 					locals[vd.refersto] = l;
 				}
 				else
 				{
-					l = locals[vd.refersto];
+					l = new LlvmTemp(new LlvmPointer(type(vd.refersto.Type)), llvm);
+					llvm.AddAlloca(l, type(vd.refersto.Type));
 				}
 				LlvmValue r = addConversion(llvm, vd.initial, vd.refersto.Type);
 				llvm.AddStore(l, r);
@@ -820,7 +819,7 @@ namespace Bohc.Generation.Llvm
 			addStatement(llvm, trys.body);
 			tries.Pop();
 			llvm.AddBranch(c, c);
-			LlvmTemp tmp = new LlvmTemp(new LlvmPointer(new LlvmPrimitive(Primitive.Byte.LlvmName)));
+			LlvmTemp tmp = new LlvmTemp(new LlvmPointer(new LlvmPrimitive(Primitive.Byte.LlvmName)), llvm);
 			llvm.AddLandingPad(tmp, trys.fin != null);
 			foreach (CatchStatement ca in trys.catches)
 			{
@@ -919,7 +918,7 @@ namespace Bohc.Generation.Llvm
 				return res;
 			}
 
-			return new LlvmTemp(new LlvmPrimitive("asdf"));
+			return new LlvmTemp(new LlvmPrimitive("asdf"), llvm);
 		}
 
 		private bool addSpecificExpr<T>(Llvm llvm, Expression expr, Func<Llvm, T, LlvmValue> a, out LlvmValue res)
@@ -940,6 +939,176 @@ namespace Bohc.Generation.Llvm
 			// TODO: proper
 			return platform.longType();
 		}
+
+		#region lambdas
+
+		private bool isctx_packed(List<Variable> lambda, LlvmInlineStruct ctxty)
+		{
+			if (ctxty.size(platform) > platform.longType().getSizeofBytes(platform))
+			{
+				return false;
+			}
+			if (lambda.Count == 1)
+			{
+				return true;
+			}
+
+			foreach (Variable enc in lambda)
+			{
+				if (!getmods(enc).HasFlag(Modifiers.Final))
+				{
+					return false;
+				}
+			}
+
+			return true;
+		}
+
+		private LlvmValue alloc_ctxvar(Llvm llvm, Variable v)
+		{
+			if (getmods(v).HasFlag(Modifiers.Final))
+			{
+				LlvmTemp tmp = new LlvmTemp(new LlvmPointer(type(v.Type)), llvm);
+				llvm.AddAlloca(tmp, type(v.Type));
+				return tmp;
+			}
+
+			if (v.EnclosedBy.Count == 1)
+			{
+				LlvmValue c = acquirectx(llvm, v.EnclosedBy.Single());
+				return llvm.AddGetElementPtr(c, 0, v.EnclosedBy.Single().IndexOf(v));
+			}
+
+			return llvm.AddBitcast(llvm.AddCall(aqua_alloc(), new[] { addSizeof(llvm, type(v.Type)) }), new LlvmPointer(type(v.Type)));
+		}
+
+		private LlvmInlineStruct ctxty(List<Variable> lambda)
+		{
+			LlvmInlineStruct ctx = new LlvmInlineStruct();
+			ctx.members = new Dictionary<string, LlvmType>();
+			int i = 0;
+			foreach (Variable v in lambda)
+			{
+				if (v.EnclosedBy.Count == 1 || getmods(v).HasFlag(Modifiers.Final))
+				{
+					ctx.members[i.ToString()] = type(v.Type);
+				}
+				else
+				{
+					ctx.members[i.ToString()] = new LlvmPointer(type(v.Type));
+				}
+				++i;
+			}
+			return ctx;
+		}
+
+		private Dictionary<List<Variable>, LlvmValue> lctxs = new Dictionary<List<Variable>, LlvmValue>();
+		private LlvmValue acquirectx(Llvm llvm, List<Variable> lambda)
+		{
+			if (lctxs.ContainsKey(lambda))
+			{
+				return lctxs[lambda];
+			}
+
+			if (lambda.Count == 0)
+			{
+				return new LlvmUndef(new LlvmPointer(new LlvmPrimitive("i8")));
+			}
+
+			LlvmInlineStruct ty = ctxty(lambda);
+			LlvmValue tmp = null;
+			if (isctx_packed(lambda, ty))
+			{
+				tmp = new LlvmTemp(new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))), llvm);
+				llvm.AddAlloca(tmp, new LlvmPointer(new LlvmPrimitive("i8")));
+				tmp = llvm.AddBitcast(tmp, new LlvmPointer(ty));
+			}
+			else
+			{
+				tmp = llvm.AddCall(aqua_alloc(), new[] { addSizeof(llvm, ty) });
+				tmp = llvm.AddBitcast(tmp, new LlvmPointer(ty));
+			}
+			lctxs[lambda] = tmp;
+			return tmp;
+		}
+
+		private LlvmValue prepctx(Llvm llvm, List<Variable> lambda)
+		{
+			LlvmValue ctx = acquirectx(llvm, lambda);
+			if (lambda.Count == 0)
+			{
+				return ctx;
+			}
+
+			int i = 0;
+			foreach (Variable v in lambda)
+			{
+				if (getmods(v).HasFlag(Modifiers.Final))
+				{
+					LlvmValue tmp = addExprVariable(llvm, new ExprVariable(v, null));
+					llvm.AddStore(llvm.AddGetElementPtr(ctx, 0, i), tmp);
+				}
+				else if (v.EnclosedBy.Count != 1)
+				{
+					llvm.AddStore(llvm.AddGetElementPtr(ctx, 0, i), addExprVariableLvalue(llvm, new ExprVariable(v, null)));
+				}
+				++i;
+			}
+			if (isctx_packed(lambda, ((LlvmInlineStruct)((LlvmPointer)ctx.Type()).t)))
+			{
+				LlvmValue tmp = llvm.AddBitcast(ctx, new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))));
+				return llvm.AddLoad(tmp);
+			}
+			return llvm.AddBitcast(ctx, new LlvmPointer(new LlvmPrimitive("i8")));
+		}
+
+		private LlvmValue retrievectx(Llvm llvm, Lambda lambda, LlvmValue _this)
+		{
+			LlvmInlineStruct ctx = ctxty(lambda.enclosed);
+			if (isctx_packed(lambda.enclosed, ctx))
+			{
+				LlvmValue tmp = new LlvmTemp(new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))), llvm);
+				llvm.AddAlloca(tmp, new LlvmPointer(new LlvmPrimitive("i8")));
+				llvm.AddStore(tmp, _this);
+				tmp = llvm.AddBitcast(tmp, new LlvmPointer(ctx));
+				return tmp;
+			}
+			return llvm.AddBitcast(_this, new LlvmPointer(ctx));
+		}
+
+		private int lmbdacount = 0;
+		private int lambdalevel = 0;
+		private Stack<LlvmValue> lambdacontexts = new Stack<LlvmValue>();
+		private Stack<List<Variable>> lambdacontextmems = new Stack<List<Variable>>();
+		private LlvmValue addLambda(Llvm llvm, Lambda l)
+		{
+			LlvmValue ctx = prepctx(llvm, l.enclosed);
+
+			LlvmFunction f = new LlvmFunction(type(l.type.RetType), "@anon." + lmbdacount++,
+				new[] { new LlvmParam("%this", new LlvmPointer(new LlvmPrimitive("i8"))) }
+				.Concat(l.lambdaParams.Select(x => new LlvmParam("%" + x.Identifier, type(x.Type)))).ToList(), LlvmLinkage.Private, false);
+			Llvm ll = new Llvm(f);
+
+			++lambdalevel;
+			lambdacontexts.Push(retrievectx(ll, l, f.parameters.First()));
+			lambdacontextmems.Push(l.enclosed);
+			addFunction(l.body, l.lambdaParams, ll);
+			lambdacontextmems.Pop();
+			lambdacontexts.Pop();
+			--lambdalevel;
+
+			module.AddImplementation(ll);
+
+			LlvmValue tmp = new LlvmUndef(type(l.type));
+			if (!(ctx is LlvmUndef))
+			{
+				tmp = llvm.AddInsertValue(tmp, ctx, 0);
+			}
+			tmp = llvm.AddInsertValue(tmp, f, 1);
+			return tmp;
+		}
+
+		#endregion
 
 		private LlvmValue addNativeExpression(Llvm llvm, NativeFunctionCall nfcall, bool lvalue)
 		{
@@ -1002,90 +1171,22 @@ namespace Bohc.Generation.Llvm
 			return Modifiers.None;
 		}
 
-		private int lambdacnt = 0;
-		private int lambdalevel = 0;
-		private Stack<LlvmParam> lmbdctxts = new Stack<LlvmParam>();
-		private LlvmValue addLambda(Llvm llvm, Lambda l)
-		{
-			Body b = l.body;
-			if (b == null)
-			{
-				b = new Body(null);
-				if (l.type.RetType.Name != "void")
-				{
-					b.Statements.Add(new ReturnStatement(l.expression));
-				}
-				else
-				{
-					b.Statements.Add(new ExpressionStatement(l.expression));
-				}
-			}
 
-			LlvmType ptype = new LlvmPointer(new LlvmPrimitive("i8"));
-			LlvmInlineStruct str = null;
-			if (l.enclosed.Count != 0)
-			{
-				str = new LlvmInlineStruct();
-				str.members = l.enclosed.ToDictionary(x => "%" + x.Identifier, x => getmods(x).HasFlag(Modifiers.Final) ? (LlvmType)type(x.Type) : (LlvmType)new LlvmPointer(type(x.Type)));
-				ptype = new LlvmPointer(str);
-			}
-			LlvmParam ctx = new LlvmParam("%this", ptype);
-			LlvmFunction lfunc = new LlvmFunction(type(l.type.RetType), "@anon." + lambdacnt++.ToString(),
-				                     new[] { ctx }.Concat(l.lambdaParams.Select(x => new LlvmParam("%" + x.Identifier,
-					                     type(x.Type)))).ToList(), LlvmLinkage.Internal, true);
-			LlvmValue fval = lfunc;
-
-			Llvm ll = new Llvm(lfunc);
-			lmbdctxts.Push(ctx);
-			currentFRetTypes.Push(l.type.RetType);
-			++lambdalevel;
-			addFunction(b, l.lambdaParams, ll);
-			--lambdalevel;
-			lmbdctxts.Pop();
-			currentFRetTypes.Pop();
-			module.AddImplementation(ll);
-
-			LlvmValue ctxallocb = null;
-			if (l.enclosed.Count != 0)
-			{
-				ctxallocb = llvm.AddCall(aqua_alloc(), new [] { addSizeof(llvm, str) });
-				LlvmValue ctxalloc = llvm.AddBitcast(ctxallocb, new LlvmPointer(str));
-				for (int i = 0; i < l.enclosed.Count; ++i)
-				{
-					Variable enc = l.enclosed[i];
-					llvm.AddStore(llvm.AddGetElementPtr(ctxalloc, 0, i), addExpression(llvm, new ExprVariable(enc, null), !getmods(enc).HasFlag(Modifiers.Final)));
-				}
-				fval = llvm.AddBitcast(lfunc, ((LlvmInlineStruct)type(l.type)).members.Last().Value);
-			}
-
-			LlvmValue v = new LlvmUndef(type(l.type));
-			if (ctxallocb != null)
-			{
-				v = llvm.AddInsertValue(v, ctxallocb, 0);
-			}
-			v = llvm.AddInsertValue(v, fval, 1);
-			return v;
-		}
 
 		private LlvmValue addExprVariableLvalue(Llvm llvm, ExprVariable v)
 		{
 			if (v.refersto is Local)
 			{
-				if (((Local)v.refersto).LamdaLevel < lambdalevel)
+				Local l = v.refersto as Local;
+				if (l.LamdaLevel < lambdalevel)
 				{
-					LlvmValue th = lmbdctxts.Peek();
-					LlvmValue tmp = llvm.AddGetElementPtr(th, new LlvmValue[]
-					                      {
-						new LlvmLiteral(new LlvmPrimitive("i32"), "0"),
-						new LlvmLiteral(new LlvmPrimitive("i32"), 
-								((LlvmInlineStruct)((LlvmPointer)th.Type()).t)
-						                .Offset("%" + v.refersto.Identifier).ToString())
-					});
-					if (((Local)v.refersto).Modifiers.HasFlag(Modifiers.Final))
+					LlvmValue ctx = lambdacontexts.Peek();
+					ctx = llvm.AddGetElementPtr(ctx, 0, lambdacontextmems.Peek().IndexOf(l));
+					if (v.refersto.EnclosedBy.Count > 1 && !getmods(v.refersto).HasFlag(Modifiers.Final))
 					{
-						return tmp;
+						ctx = llvm.AddLoad(ctx);
 					}
-					return llvm.AddLoad(tmp);
+					return ctx;
 				}
 				return locals[v.refersto];
 			}

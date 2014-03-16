@@ -680,7 +680,7 @@ namespace Bohc.Parsing
 				Bohc.TypeSystem.Parameter param = v as Bohc.TypeSystem.Parameter;
 				Boh.Exception.require<Exceptions.ParserException>(param == null || !param.Modifiers.HasFlag(Bohc.TypeSystem.Modifiers.Ref),
 					"ref parameters may not be used inside lambdas");
-				v.Enclosed = true;
+				//v.Enclosed = true;
 				enclosedVars.Peek().Add(v);
 			}
 			last = new ExprVariable(v, null);
@@ -843,7 +843,7 @@ namespace Bohc.Parsing
 				TypeSystem.Variable tv = ((Bohc.TypeSystem.Class)file.type).This;
 				if (lambdaStack > tv.LamdaLevel)
 				{
-					tv.Enclosed = true;
+					//tv.Enclosed = true;
 					enclosedVars.Peek().Add(tv);
 				}
 			}
@@ -884,7 +884,7 @@ namespace Bohc.Parsing
 				TypeSystem.Variable tv = ((Bohc.TypeSystem.Class)file.type).This;
 				if (lambdaStack > tv.LamdaLevel)
 				{
-					tv.Enclosed = true;
+					//tv.Enclosed = true;
 					enclosedVars.Peek().Add(tv);
 				}
 			}

@@ -176,6 +176,7 @@
     <Compile Include="generation\llvm\ast\LlvmValue.cs" />
     <Compile Include="generation\llvm\ast\LlvmVar.cs" />
     <Compile Include="generation\llvm\ast\LlvmZeroinitializer.cs" />
+    <Compile Include="generation\llvm\ast\LlvmUseDummy.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="boh_internal.h">
