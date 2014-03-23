@@ -127,7 +127,7 @@ namespace Bohc.Parsing
 			Variable local = vars.SingleOrDefault(x => x.Identifier == to.value);
 			if (local != null)
 			{
-				if (local is Local && local.LamdaLevel < lambdaStack.Count && !lambdaStack.Peek().Contains(local))
+				if ((local is Local || local is Parameter) && local.LamdaLevel < lambdaStack.Count && !lambdaStack.Peek().Contains(local))
 				{
 					local.EnclosedBy.Add(lambdaStack.Peek());
 					lambdaStack.Peek().Add(local);
@@ -231,6 +231,7 @@ namespace Bohc.Parsing
 				lps.Add(lp);
 			}
 
+			t.next();
 			analyzeLambda(ref expr, t, vars, opprec, ctx, ret, lps.ToArray());
 		}
 
@@ -263,6 +264,12 @@ namespace Bohc.Parsing
 					Expression[] parameters = getParameters(t, vars, ctx).ToArray();
 					Function f = Function.GetCompatibleFunction(ctx.Owner.File, vars, ((Class)ctx.Owner).Super.Constructors, ctx, parameters);
 					expr = new FunctionCall(f, expr, parameters);
+					return true;
+				}
+				else
+				{
+					Expression[] parameters = getParameters(t, vars, ctx).ToArray();
+					expr = new FunctionVarCall(expr, parameters);
 					return true;
 				}
 			}

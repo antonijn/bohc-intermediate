@@ -44,6 +44,7 @@ namespace Bohc.TypeSystem
 		public static readonly Class Obj;
 		public static readonly Class Str = (Class)TypeSystem.Type.GetExisting(BohLang, "String", null);
 		public static readonly Class Type = (Class)TypeSystem.Type.GetExisting(BohLang, "Type", null);
+		public static readonly Class Ex = (Class)TypeSystem.Type.GetExisting(BohLang, "Exception", null);
 
 		// TODO: check that package is Boh.std
 		public static readonly GenericType Ptr;

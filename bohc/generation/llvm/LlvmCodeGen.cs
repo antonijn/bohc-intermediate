@@ -53,11 +53,47 @@ namespace Bohc.Generation.Llvm
 			List<LlvmParam> parameters = new List<LlvmParam>();
 			parameters.Add(new LlvmParam("%des", new LlvmPointer(new LlvmPrimitive("i8"))));
 			aquathrownullex = new LlvmFunction(new LlvmPrimitive("void"),
-			                             "@aqua_throw_null_ptr_ex",
+				"@aqua.throw_null_ptr_ex",
 			                             parameters,
-			                             LlvmLinkage.None, false);
+			                             LlvmLinkage.Common, false);
 			module.AddDeclaration(aquathrownullex);
 			return aquathrownullex;
+		}
+
+		private LlvmFunction llvmehsjljsetjmp = null;
+		private LlvmFunction llvm_eh_sjlj_setjmp()
+		{
+			if (llvmehsjljsetjmp != null)
+			{
+				return llvmehsjljsetjmp;
+			}
+
+			List<LlvmParam> parameters = new List<LlvmParam>();
+			parameters.Add(new LlvmParam("%setjmp_buf", new LlvmPointer(new LlvmPrimitive("i8"))));
+			llvmehsjljsetjmp = new LlvmFunction(new LlvmPrimitive("i32"),
+				"@llvm.eh.sjlj.setjmp",
+				parameters,
+				LlvmLinkage.Common, false);
+			module.AddDeclaration(llvmehsjljsetjmp);
+			return llvmehsjljsetjmp;
+		}
+
+		private LlvmFunction llvmehsjljlongjmp = null;
+		private LlvmFunction llvm_eh_sjlj_longjmp()
+		{
+			if (llvmehsjljlongjmp != null)
+			{
+				return llvmehsjljlongjmp;
+			}
+
+			List<LlvmParam> parameters = new List<LlvmParam>();
+			parameters.Add(new LlvmParam("%setjmp_buf", new LlvmPointer(new LlvmPrimitive("i8"))));
+			llvmehsjljlongjmp = new LlvmFunction(new LlvmPrimitive("void"),
+				"@llvm.eh.sjlj.longjmp",
+				parameters,
+				LlvmLinkage.Common, false);
+			module.AddDeclaration(llvmehsjljlongjmp);
+			return llvmehsjljlongjmp;
 		}
 
 		private LlvmFunction aquaalloc = null;
@@ -71,9 +107,9 @@ namespace Bohc.Generation.Llvm
 			List<LlvmParam> parameters = new List<LlvmParam>();
 			parameters.Add(new LlvmParam("%size", new LlvmPrimitive("i64")));
 			aquaalloc = new LlvmFunction(new LlvmPointer(new LlvmPrimitive("i8")),
-			                             "@aqua_alloc",
+				"@aqua.alloc",
 			                             parameters,
-										LlvmLinkage.None, false);
+										LlvmLinkage.Common, false);
 			module.AddDeclaration(aquaalloc);
 			return aquaalloc;
 		}
@@ -91,7 +127,7 @@ namespace Bohc.Generation.Llvm
 			llvmstacksave = new LlvmFunction(new LlvmPointer(new LlvmPrimitive("i8")),
 			                             "@llvm.stacksave",
 			                             parameters,
-			                             LlvmLinkage.None, false);
+			                             LlvmLinkage.Common, false);
 			module.AddDeclaration(llvmstacksave);
 			return llvmstacksave;
 		}
@@ -108,7 +144,7 @@ namespace Bohc.Generation.Llvm
 			llvmstackrestore = new LlvmFunction(new LlvmPrimitive("void"),
 			                             "@llvm.stackrestore",
 			                             parameters,
-			                             LlvmLinkage.None, false);
+			                             LlvmLinkage.Common, false);
 			module.AddDeclaration(llvmstackrestore);
 			return llvmstackrestore;
 		}
@@ -122,7 +158,7 @@ namespace Bohc.Generation.Llvm
 			LlvmFunction func = new LlvmFunction(new LlvmPrimitive("void"), mangler.getFieldInitName(ty),
 			                                   new List<LlvmParam> { new LlvmParam("%this", 
 				                                    ty.IsReferenceType() ? type(ty) : (LlvmType)new LlvmPointer(type(ty))) },
-			LlvmLinkage.None, true);
+			LlvmLinkage.Common, true);
 			fieldinits[ty] = func;
 			if (!ty.IsExtern())
 			{
@@ -133,8 +169,7 @@ namespace Bohc.Generation.Llvm
 				{
 					llvm.AddCall(fieldinit(ty.Super), new [] { llvm.AddBitcast(self, type(ty.Super)) });
 				}
-				foreach (Field f in ty.Fields.Where(x => !x.Modifiers.HasFlag(Modifiers.Static))
-				         .Where(x => !x.Modifiers.HasFlag(Modifiers.Pf_Desktop32)))
+				foreach (Field f in ty.Fields.Where(x => !x.Modifiers.HasFlag(Modifiers.Static)))
 				{
 					LlvmValue sptr = llvm.AddGetElementPtr(self, new LlvmValue[]
 					                      {
@@ -170,7 +205,7 @@ namespace Bohc.Generation.Llvm
 			                                     parameters,
 			                                     f.Modifiers.HasFlag(Modifiers.Private) &&
 			                                     !f.Modifiers.HasFlag(Modifiers.Native) ?
-			                                     LlvmLinkage.Internal : LlvmLinkage.None,
+			                                     LlvmLinkage.Internal : LlvmLinkage.Common,
 			                                     !f.Modifiers.HasFlag(Modifiers.Native));
 			functions[f] = func;
 			if (!f.Owner.IsExtern() && !f.Modifiers.HasFlag(Modifiers.Native))
@@ -204,14 +239,14 @@ namespace Bohc.Generation.Llvm
 
 			foreach (Variable p in parameters)
 			{
-				LlvmValue tmp = new LlvmTemp(new LlvmPointer(type(p.Type)), llvm);
+				LlvmValue tmp = null;
 				if (p.EnclosedBy.Count > 0)
 				{
 					tmp = alloc_ctxvar(llvm, p);
 				}
 				else
 				{
-					llvm.AddAlloca(tmp, type(p.Type));
+					tmp = llvm.AddAlloca(type(p.Type));
 				}
 				llvm.AddStore(tmp,
 					llvm.func.parameters.Single(x => x.ToString() == "%" + p.Identifier));
@@ -263,7 +298,7 @@ namespace Bohc.Generation.Llvm
 				parameters,
 			                                     f.Modifiers.HasFlag(Modifiers.Private) &&
 			                                     !f.Modifiers.HasFlag(Modifiers.Native) ?
-			                                     LlvmLinkage.Internal : LlvmLinkage.None,
+			                                     LlvmLinkage.Internal : LlvmLinkage.Common,
 			                                     !f.Modifiers.HasFlag(Modifiers.Native));
 			functions[f] = func;
 			if (!f.Owner.IsExtern() && !f.Modifiers.HasFlag(Modifiers.Native))
@@ -292,6 +327,10 @@ namespace Bohc.Generation.Llvm
 					if (((Class)f.Owner).Super != null)
 					{
 						llvm.AddCall(function(((Class)f.Owner).Super.StaticConstr), new [] { new LlvmUndef(new LlvmPointer(new LlvmPrimitive("i8"))) });
+					}
+					foreach (Field fi in ((Class)f.Owner).Fields.Where(x => x.Modifiers.HasFlag(Modifiers.Static) && !(x.Initial is Literal)))
+					{
+						llvm.AddStore(addExpression(llvm, new ExprVariable(fi, null), true), addExpression(llvm, fi.Initial == null ? fi.Type.DefaultVal() : fi.Initial));
 					}
 				}
 				int temp = lambdalevel;
@@ -406,7 +445,7 @@ namespace Bohc.Generation.Llvm
 			LlvmGlobal g;
 			module.AddGlobal(g = new LlvmGlobal(
 				c.IsExtern() ? LlvmLinkage.External : (c.Modifiers.HasFlag(Modifiers.Private) ?
-			                                       LlvmLinkage.Internal : LlvmLinkage.None),
+			                                       LlvmLinkage.Internal : LlvmLinkage.Common),
 				LlvmGlobalFlags.Global, "@vtable." + mangler.getCName(c) + ".instance",
 				str, c.IsExtern() ? null : new LlvmStructInit(str, getVtableInit(c).ToArray())));
 			vtableglobals[c] = g;
@@ -538,8 +577,8 @@ namespace Bohc.Generation.Llvm
 				return svars[sf];
 			}
 			LlvmGlobal v = new LlvmGlobal(sf.Modifiers.HasFlag(Modifiers.Private) ? 
-			                              LlvmLinkage.Internal : (sf.Owner.IsExtern() ? LlvmLinkage.External : LlvmLinkage.None),
-			                             LlvmGlobalFlags.Global, mangler.getVarName(sf), type(sf.Type), null);
+			                              LlvmLinkage.Internal : (sf.Owner.IsExtern() ? LlvmLinkage.External : LlvmLinkage.Common),
+				LlvmGlobalFlags.Global, mangler.getVarName(sf), type(sf.Type), (sf.Initial is Literal) ? (LlvmValue)new LlvmLiteral(type(sf.Type), sf.Initial.ToString()) : new LlvmUndef(type(sf.Type)));
 			module.AddGlobal(v);
 			svars[sf] = v;
 			return v;
@@ -579,15 +618,15 @@ namespace Bohc.Generation.Llvm
 						                                     {
 							new LlvmParam("%argc", new LlvmPrimitive("i32")),
 							new LlvmParam("%argv", new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))))
-						}, LlvmLinkage.None, false);
+						}, LlvmLinkage.Common, false);
 						LlvmFunction aqua_init = new LlvmFunction(type(StdType.Array.GetTypeFor(new[] { StdType.Str }, null)),
-							                         "@aqua_init", new List<LlvmParam>
+							"@aqua.init", new List<LlvmParam>
 						{ new LlvmParam("%argc", new LlvmPrimitive("i32")),
 							new LlvmParam("%argv", new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))))
 						}, LlvmLinkage.External, false);
 						module.AddDeclaration(aqua_init);
 						LlvmFunction aqua_exit = new LlvmFunction(new LlvmPrimitive("void"),
-							"@aqua_exit", new List<LlvmParam>
+							"@aqua.exit", new List<LlvmParam>
 							{ new LlvmParam("%code", new LlvmPrimitive("i32")) }, LlvmLinkage.External, false);
 						module.AddDeclaration(aqua_exit);
 
@@ -656,6 +695,7 @@ namespace Bohc.Generation.Llvm
 			if (addSpecificStat<BreakStatement>(llvm, stat, addBreak)) { return; }
 			if (addSpecificStat<ContinueStatement>(llvm, stat, addContinue)) { return; }
 			if (addSpecificStat<VarDeclaration>(llvm, stat, addVarDec)) { return; }
+			if (addSpecificStat<TryStatement>(llvm, stat, addTryStat)) { return; }
 			if (addSpecificStat<Scope>(llvm, stat, (l, e) => addBody(l, e.body))) { return; }
 		}
 
@@ -772,15 +812,14 @@ namespace Bohc.Generation.Llvm
 				if (vd.refersto.EnclosedBy.Count > 0)
 				{
 					l = alloc_ctxvar(llvm, vd.refersto);
-					locals[vd.refersto] = l;
 				}
 				else
 				{
-					l = new LlvmTemp(new LlvmPointer(type(vd.refersto.Type)), llvm);
-					llvm.AddAlloca(l, type(vd.refersto.Type));
+					l = llvm.AddAlloca(type(vd.refersto.Type));
 				}
 				LlvmValue r = addConversion(llvm, vd.initial, vd.refersto.Type);
 				llvm.AddStore(l, r);
+				locals[vd.refersto] = l;
 			}
 		}
 
@@ -811,20 +850,58 @@ namespace Bohc.Generation.Llvm
 			throw new NotImplementedException();
 		}
 
+		private LlvmStruct aqua_exenvs;
+		private LlvmStruct aqua_exenvstruct(Llvm llvm)
+		{
+			if (aqua_exenvs != null)
+			{
+				return aqua_exenvs;
+			}
+			aqua_exenvs = new LlvmStruct("%struct.aqua.exenv");
+			aqua_exenvs.members = new Dictionary<string, LlvmType> {
+				{ "buf", new LlvmPointer(new LlvmPrimitive("i8")) },
+				{ "ex", type(StdType.Ex) }
+			};
+			module.AddStruct(aqua_exenvs);
+			return aqua_exenvs;
+		}
+
+		private LlvmGlobal aqua_exenvv;
+		private LlvmGlobal aqua_exenv(Llvm llvm)
+		{
+			if (aqua_exenvv != null)
+			{
+				return aqua_exenvv;
+			}
+			aqua_exenvv = new LlvmGlobal(LlvmLinkage.External, LlvmGlobalFlags.Global | LlvmGlobalFlags.Thread_Local, "@aqua.exenv", aqua_exenvstruct(llvm), null);
+			module.AddGlobal(aqua_exenvv);
+			return aqua_exenvv;
+		}
+
 		private void addTryStat(Llvm llvm, TryStatement trys)
 		{
-			LlvmLabel c = new LlvmLabel();
-			LlvmTry t = new LlvmTry(c);
-			tries.Push(t);
+			LlvmGlobal g = aqua_exenv(llvm);
+			LlvmValue jmpbufptri8ptrptr = llvm.AddGetElementPtr(g, 0, 0);
+			LlvmValue jmpbufptr = llvm.AddBitcast(jmpbufptri8ptrptr, new LlvmPointer(new LlvmArrayType(5, type(platform.longType()))));
+			LlvmValue backup = llvm.AddLoad(jmpbufptr);
+
+			LlvmLabel catches = new LlvmLabel();
+
+			LlvmValue tmp = llvm.AddCall(llvm_eh_sjlj_setjmp(), new[] { llvm.AddLoad(jmpbufptri8ptrptr) });
+
 			addStatement(llvm, trys.body);
-			tries.Pop();
-			llvm.AddBranch(c, c);
-			LlvmTemp tmp = new LlvmTemp(new LlvmPointer(new LlvmPrimitive(Primitive.Byte.LlvmName)), llvm);
-			llvm.AddLandingPad(tmp, trys.fin != null);
-			foreach (CatchStatement ca in trys.catches)
-			{
-				addCatch(llvm, tmp, ca);
-			}
+
+			// restore exception environment
+			llvm.AddStore(jmpbufptr, backup);
+
+			tmp = llvm.AddIcmp(Icmp.Ne, tmp, new LlvmLiteral(new LlvmPrimitive("i32"), "0"));
+
+			LlvmLabel cont = new LlvmLabel();
+			llvm.AddBranch(tmp, catches, catches, cont);
+
+			// TODO: catch blocks
+
+			llvm.AddBranch(cont, cont);
 		}
 
 		private void addCatch(Llvm llvm, LlvmTemp tmp, CatchStatement c)
@@ -964,8 +1041,7 @@ namespace Bohc.Generation.Llvm
 		{
 			if (getmods(v).HasFlag(Modifiers.Final))
 			{
-				LlvmTemp tmp = new LlvmTemp(new LlvmPointer(type(v.Type)), llvm);
-				llvm.AddAlloca(tmp, type(v.Type));
+				LlvmValue tmp = llvm.AddAlloca(type(v.Type));
 				return tmp;
 			}
 
@@ -1015,8 +1091,7 @@ namespace Bohc.Generation.Llvm
 			LlvmValue tmp = null;
 			if (isctx_packed(lambda, ty))
 			{
-				tmp = new LlvmTemp(new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))), llvm);
-				llvm.AddAlloca(tmp, new LlvmPointer(new LlvmPrimitive("i8")));
+				tmp = llvm.AddAlloca(new LlvmPointer(new LlvmPrimitive("i8")));
 				tmp = llvm.AddBitcast(tmp, new LlvmPointer(ty));
 			}
 			else
@@ -1063,8 +1138,7 @@ namespace Bohc.Generation.Llvm
 			LlvmInlineStruct ctx = ctxty(lambda.enclosed);
 			if (isctx_packed(lambda.enclosed, ctx))
 			{
-				LlvmValue tmp = new LlvmTemp(new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))), llvm);
-				llvm.AddAlloca(tmp, new LlvmPointer(new LlvmPrimitive("i8")));
+				LlvmValue tmp = llvm.AddAlloca(new LlvmPointer(new LlvmPrimitive("i8")));
 				llvm.AddStore(tmp, _this);
 				tmp = llvm.AddBitcast(tmp, new LlvmPointer(ctx));
 				return tmp;
@@ -1171,24 +1245,23 @@ namespace Bohc.Generation.Llvm
 
 		private LlvmValue addExprVariableLvalue(Llvm llvm, ExprVariable v)
 		{
+			if (v.refersto.LamdaLevel < lambdalevel && (v.refersto is Local || v.refersto is Parameter))
+			{
+				LlvmValue ctx = lambdacontexts.Peek();
+				ctx = llvm.AddGetElementPtr(ctx, 0, lambdacontextmems.Peek().IndexOf(v.refersto));
+				if (v.refersto.EnclosedBy.Count > 1 && !getmods(v.refersto).HasFlag(Modifiers.Final))
+				{
+					ctx = llvm.AddLoad(ctx);
+				}
+				return ctx;
+			}
+
 			if (v.refersto is Local)
 			{
-				Local l = v.refersto as Local;
-				if (l.LamdaLevel < lambdalevel)
-				{
-					LlvmValue ctx = lambdacontexts.Peek();
-					ctx = llvm.AddGetElementPtr(ctx, 0, lambdacontextmems.Peek().IndexOf(l));
-					if (v.refersto.EnclosedBy.Count > 1 && !getmods(v.refersto).HasFlag(Modifiers.Final))
-					{
-						ctx = llvm.AddLoad(ctx);
-					}
-					return ctx;
-				}
 				return locals[v.refersto];
 			}
 			if (v.refersto is Parameter)
 			{
-				Parameter p = v.refersto as Parameter;
 				if (((Parameter)v.refersto).Modifiers.HasFlag(Modifiers.Ref))
 				{
 					return llvm.func.parameters.Single(x => x.ToString() == "%" + v.refersto.Identifier);
@@ -1281,6 +1354,10 @@ namespace Bohc.Generation.Llvm
 			if (to is Struct)
 			{
 				return addExpression(llvm, e, true);
+			}
+			if (to is Primitive)
+			{
+				return addExpression(llvm, e);
 			}
 
 			LlvmValue expr = addConversion(llvm, e, to);

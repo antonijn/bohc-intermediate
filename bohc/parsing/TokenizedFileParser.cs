@@ -710,8 +710,19 @@ namespace Bohc.Parsing
 					                new Constructor(mf, (TypeSystem.Class)f.type, new List<Parameter>(), null)
 					                : new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
 					parseMethodParamsTCS(func, t, '(', ')');
-					t.next();
-					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+					if (t.get().value == ";")
+					{
+						if (!mf.HasFlag(Modifiers.Native) && !mf.HasFlag(Modifiers.Abstract))
+						{
+							t.get().error(emanager, "only native/abstract methods may not define bodies");
+						}
+						t.next();
+					}
+					else
+					{
+						t.next();
+						func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+					}
 					if (Platform.IsPlatform(mf, pf))
 					{
 						((Class)f.type).AddMember(func);

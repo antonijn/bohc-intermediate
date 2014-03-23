@@ -144,13 +144,28 @@ namespace Bohc.Generation.Llvm
 			return AddBinOpRes("xor", left, right);
 		}
 
-		public void AddAlloca(LlvmValue result, LlvmType type)
+		public LlvmValue AddAlloca(LlvmType type, int cnt)
 		{
+			LlvmValue v = new LlvmTemp(new LlvmPointer(type), this);
+			builder.Insert(0, Environment.NewLine);
+			builder.Insert(0, cnt);
+			builder.Insert(0, ", i32 ");
+			builder.Insert(0, type);
+			builder.Insert(0, " = alloca ");
+			builder.Insert(0, v);
+			builder.Insert(0, "\t");
+			return v;
+		}
+
+		public LlvmValue AddAlloca(LlvmType type)
+		{
+			LlvmValue v = new LlvmTemp(new LlvmPointer(type), this);
 			builder.Insert(0, Environment.NewLine);
 			builder.Insert(0, type);
 			builder.Insert(0, " = alloca ");
-			builder.Insert(0, result);
+			builder.Insert(0, v);
 			builder.Insert(0, "\t");
+			return v;
 		}
 
 		public LlvmValue AddLoad(LlvmValue val)
@@ -506,6 +521,10 @@ namespace Bohc.Generation.Llvm
 				{
 					LlvmInlineStruct str = (LlvmInlineStruct)t;
 					t = str.members.Values.ToArray()[int.Parse(((LlvmLiteral)idx).ToString())];
+				}
+				else if (t is LlvmArrayType)
+				{
+					t = ((LlvmArrayType)t).type;
 				}
 
 				sb.Append(idx.Type()).Append(" ").Append(idx).Append(", ");

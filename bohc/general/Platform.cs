@@ -87,7 +87,7 @@ namespace Bohc.General
 
 			if (isPlatform(Pf_Linux))
 			{
-				sb.Append("linux-gnu");
+				sb.Append("unknown-linux-gnu");
 			}
 			else if (isPlatform(Pf_Osx))
 			{

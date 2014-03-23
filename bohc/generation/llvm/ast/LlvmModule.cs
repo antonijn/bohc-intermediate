@@ -29,7 +29,7 @@ namespace Bohc.Generation.Llvm
 
 		public void AddDeclaration(LlvmFunction f)
 		{
-			decls.Append("declare ").Append((f.linkage != LlvmLinkage.None) ? 
+			decls.Append("declare ").Append((f.linkage != LlvmLinkage.Common) ? 
 			                                f.linkage.ToString().ToLowerInvariant() + " " : "")
 				.Append(f.ret.ToString())
 				.Append(" ").Append(f.id).Append("(");
@@ -63,8 +63,12 @@ namespace Bohc.Generation.Llvm
 			/*globvars.Append(g.linkage.ToString().ToLowerInvariant()).Append(" ").Append(g.Type().ToString())
 				.Append(" ").AppendLine(g.id);*/
 
-			globvars.Append(g.id).Append(" = ").Append(g.linkage.ToString().ToLowerInvariant()).Append(" ")
-				.Append(g.flags.ToString().Replace(",", "").ToLowerInvariant()).Append(" ")
+			globvars.Append(g.id).Append(" = ");
+			if (g.linkage != LlvmLinkage.Common)
+			{
+				globvars.Append(g.linkage.ToString().ToLowerInvariant()).Append(" ");
+			}
+			globvars.Append(g.flags.ToString().Replace(",", "").ToLowerInvariant()).Append(" ")
 				.Append(((LlvmPointer)g.Type()).t.ToString());
 			if (g.initial != null)
 			{
@@ -79,7 +83,7 @@ namespace Bohc.Generation.Llvm
 
 		public void AddImplementation(Llvm llvm)
 		{
-			impls.Append("define ").Append((llvm.func.linkage != LlvmLinkage.None) ? 
+			impls.Append("define ").Append((llvm.func.linkage != LlvmLinkage.Common) ? 
 			                               llvm.func.linkage.ToString().ToLowerInvariant() + " " : "")
 				.Append(llvm.func.ret.ToString())
 					.Append(" ").Append(llvm.func.id).Append("(");

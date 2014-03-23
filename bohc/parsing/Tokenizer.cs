@@ -396,7 +396,7 @@ namespace Bohc.Parsing
 		private int lexId(string str, int i, int linenum, out Token res)
 		{
 			StringBuilder sb = new StringBuilder();
-			for (; i < str.Length && isIdValidChar(str[i]); ++i)
+			for (; i < str.Length && isIdValidChar(str[i]) || (sb.ToString().StartsWith("llvm") && str[i] == '.'); ++i)
 			{
 				sb.Append(str[i]);
 			}

@@ -35,9 +35,41 @@ namespace Bohc
 
 	public class Program
 	{
+	private static String ltoa(long l, int bas) {
+		bool sign = l < 0;
+		if (sign) {
+			l = -l;
+		}
+
+		int digits;
+		int neg = 1;
+		for (digits = 0; l >= neg; ++digits) {
+			neg *= bas;
+		}
+
+		char[] chars = new char[digits + (sign ? 1 : 0)];
+		for (; digits > 0; --digits) {
+			byte b = (byte)(l % bas);
+			l /= bas;
+			if (b >= bas) {
+				b = (byte)('a' + b);
+			} else {
+				b = (byte)('0' + b);
+			}
+			chars[digits - (sign ? 0 : 1)] = (char)b;
+		}
+		if (sign) {
+			chars[0] = '-';
+		}
+
+		return new String(chars);
+	}
 
 		public static void Main(string[] args)
 		{
+			Console.WriteLine(ltoa(-1234, 10));
+			Console.WriteLine(ltoa(1000, 10));
+
 #if DEBUG
 
 			args = new string[]

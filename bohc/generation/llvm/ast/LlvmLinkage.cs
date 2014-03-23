@@ -4,7 +4,7 @@ namespace Bohc.Generation.Llvm
 {
 	public enum LlvmLinkage
 	{
-		None,
+		Common,
 		Internal,
 		External,
 		Private,

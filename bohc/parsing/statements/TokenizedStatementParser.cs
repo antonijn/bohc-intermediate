@@ -111,9 +111,15 @@ namespace Bohc.Parsing.Statements
 				return(stat);
 			}
 
+			Token first = t.get();
 			TokenStream ts = t.until(";", new Tuple<string, string>("{", "}"));
 			t.prior();
 			Expression e = expressions.analyze(ts, vars.SelectMany(x => x), func);
+			Token last = ts.get();
+			if (e == null)
+			{
+				new TokenRange(first, last, null).error(getFp().getEM(), "invalid expression");
+			}
 			return(new ExpressionStatement(e));
 		}
 

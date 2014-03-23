@@ -281,7 +281,7 @@ namespace Bohc.TypeSystem
 		public XElement XElement;
 		public bool IsExtern()
 		{
-			return XElement != null;
+			return XElement != null || (this is Primitive); // TODO: if it's the stdlib, primitives aren't extern
 		}
 	}
 }
