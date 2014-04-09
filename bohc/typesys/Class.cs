@@ -97,6 +97,17 @@ namespace Bohc.TypeSystem
 			}
 		}
 
+		public void AddMember(IMember f)
+		{
+			if (f is IFunction)
+			{
+				AddMember((IFunction)f);
+			}
+			else
+			{
+				AddMember((Field)f);
+			}
+		}
 		public void AddMember(StaticConstructor f)
 		{
 			StaticConstr = f;

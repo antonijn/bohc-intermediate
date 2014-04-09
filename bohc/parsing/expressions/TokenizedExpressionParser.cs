@@ -279,7 +279,7 @@ namespace Bohc.Parsing
 			t.prior();
 
 			ExprType type = expr as ExprType;
-			if (type != null && opprec != UnaryOperation.TYPEOF)
+			if (type != null && opprec != UnaryOperation.TYPEOF && opprec != UnaryOperation.DEFAULT)
 			{
 				// a typecast has operator precedence 8, hence the 8
 				// TODO: or is it 7?
@@ -391,6 +391,9 @@ namespace Bohc.Parsing
 		{
 			Token to = t.get();
 
+			GenericFunction[] gfunctions = (owner is Class)
+			                               ? ((Class)owner).GenFuncs.Where(x => x.Identifier == to.value).ToArray()
+			                               : new GenericFunction[0];
 			IEnumerable<Function> functions = owner.GetFunctions(to.value, ctx.Owner)
 				.Where(x => (maybeStatic && x.Modifiers.HasFlag(Modifiers.Static) ||
 				        (maybeInstance && !x.Modifiers.HasFlag(Modifiers.Static)))).ToArray();
@@ -419,6 +422,21 @@ namespace Bohc.Parsing
 
 				Expression[] parameters = getParameters(t, vars, ctx).ToArray();
 				Function f = Function.GetCompatibleFunction(ctx.Owner.File, vars, functions, ctx, parameters);
+				expr = new FunctionCall(f, expr, parameters);
+				t.prior();
+				return;
+			}
+			if (next.value == "<" && gfunctions.Length > 0)
+			{
+				t.next();
+
+				TypeSystem.Type[] types = getParameters(t, vars, ctx, '>').Select(x => ((ExprType)x).type).ToArray();
+				Function[] funcs = gfunctions.Where(x => x.TypeNames.Length == types.Length)
+					.Select(x => getSp().getFp().getNewFunction(x, types))
+					.Where(x => x != null).ToArray();
+
+				Expression[] parameters = getParameters(t, vars, ctx).ToArray();
+				Function f = Function.GetCompatibleFunction(ctx.Owner.File, vars, funcs, ctx, parameters);
 				expr = new FunctionCall(f, expr, parameters);
 				t.prior();
 				return;
@@ -520,7 +538,7 @@ namespace Bohc.Parsing
 				t.prior();
 				// TODO: check for '{'
 				expr = new ConstructorCall(((Class)StdType.Array.GetTypeFor(new[] { ty }, getSp().getFp()))
-					.Constructors.Single(x => x.Parameters.Count == parameters.Length),
+					.Constructors.Single(x => x.Parameters.Count == 1 && x.Parameters.Single().Type is Primitive && ((Primitive)x.Parameters.Single().Type).IsInt()),
 					parameters);
 			}
 			else
@@ -549,6 +567,10 @@ namespace Bohc.Parsing
 
 			if (to.value == ".")
 			{
+				if (opprec == UnaryOperation.TYPEOF || opprec == UnaryOperation.DEFAULT)
+				{
+					return OpBreakStat.BREAK;
+				}
 				analyzeDot(ref expr, t, vars, opprec, ctx);
 				return OpBreakStat.CONTINUE;
 			}

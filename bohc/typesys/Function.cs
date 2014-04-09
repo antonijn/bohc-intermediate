@@ -16,6 +16,8 @@ namespace Bohc.TypeSystem
 {
 	public class Function : IFunction
 	{
+		public GenericFunction GenericOrigin;
+
 		public readonly Bohc.TypeSystem.Type Owner;
 		public readonly Modifiers Modifiers;
 		public readonly Type ReturnType;

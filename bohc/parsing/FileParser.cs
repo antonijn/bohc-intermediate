@@ -37,6 +37,11 @@ namespace Bohc.Parsing
 			this.pf = pf;
 		}
 
+		public TypeSystem.Function getNewFunction(GenericFunction gf, TypeSystem.Type[] types)
+		{
+			throw new NotImplementedException();
+		}
+
 		public TypeSystem.Type getNewType(GenericType gt, TypeSystem.Type[] types, Action<TypeSystem.Type> reg, Action<TypeSystem.Type> regdone)
 		{
 			throw new System.Exception();

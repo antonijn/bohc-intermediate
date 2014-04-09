@@ -27,6 +27,31 @@ namespace Bohc.Parsing
 			tsp = new TokenizedStatementParser(this);
 		}
 
+		public Dictionary<GenericFunction, Dictionary<int, Function>> generfuncs = new Dictionary<GenericFunction, Dictionary<int, Function>>();
+		public Function getNewFunction(GenericFunction gf, TypeSystem.Type[] types)
+		{
+			if (!generfuncs.ContainsKey(gf))
+			{
+				generfuncs[gf] = new Dictionary<int, Function>();
+			}
+			int arrhash = TypeSystem.GenericType.GetArrHash(types);
+			if (generfuncs[gf].ContainsKey(arrhash))
+			{
+				return generfuncs[gf][arrhash];
+			}
+			TokenStream ts = (TokenStream)gf.ParseInfo;
+			for (int i = 0; i < types.Length; ++i)
+			{
+				ts = ts.replace(gf.TypeNames[i], types[i].FullName());
+				ts.next();
+			}
+			ts.next();
+			Function f = (Function)parseClassMemberTCS(gf.Owner.File, ts, types);
+			generfuncs[gf][arrhash] = f;
+			f.Body = tsp.parseBody(f.BodyStr, f, null, gf.Owner.File);
+			return f;
+		}
+
 		private IEnumerable<Token> tokensForPackageReverse(Package p, int c, int l, string line, string fname)
 		{
 			while (p != Package.Global)
@@ -46,6 +71,19 @@ namespace Bohc.Parsing
 			yield return new Token(TokenType.IDENTIFIER, t.Name, c, l, line, fname);
 		}
 
+		private string getGenericSuffix(TypeSystem.Type[] types)
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.Append("`0");
+			foreach (TypeSystem.Type t in types)
+			{
+				sb.Append("`1");
+				sb.Append(t.FullName().Replace('.', '`'));
+			}
+			sb.Append("`2");
+			return sb.ToString();
+		}
+
 		public TypeSystem.Type getNewType(GenericType gt, TypeSystem.Type[] what, Action<TypeSystem.Type> reg, Action<TypeSystem.Type> regdone)
 		{
 			string codestr = ParserTools.remDupW((string)gt.File.parserinfo).Replace(" ,", ",").Replace(", ", ",");
@@ -62,13 +100,7 @@ namespace Bohc.Parsing
 
 			StringBuilder byWhat = new StringBuilder();
 			byWhat.Append(gt.Name);
-			byWhat.Append("`0");
-			foreach (TypeSystem.Type t in what)
-			{
-				byWhat.Append("`1");
-				byWhat.Append(t.FullName().Replace('.', '`'));
-			}
-			byWhat.Append("`2");
+			byWhat.Append(getGenericSuffix(what));
 
 			codestr = codestr.Replace(replaceWhat.ToString(), byWhat.ToString());
 
@@ -651,130 +683,170 @@ namespace Bohc.Parsing
 			}
 		}
 
+		// if types isn't null, it contains a list of the types implemented in the generic type
+		private IMember parseClassMemberTCS(File f, TokenStream t, TypeSystem.Type[] opaqueTypes = null)
+		{
+			TokenStream backupts = t.fork();
+			Token to = t.get();
+			if (to.value == "}")
+			{
+				return null;
+			}
+			if (to.value != "private" && to.value != "protected" && to.value != "public")
+			{
+				to.error(emanager, "unexpected token '{0}', expected access modifier", to.value);
+			}
+			Modifiers mf = ModifierHelper.GetModifierFromString(to.value);
+			while (t.next() && t.get().isType(TokenType.MODIFIER))
+			{
+				mf |= ModifierHelper.GetModifierFromString(t.get().value);
+			}
+			TypeSystem.Type ty = Primitive.Void;
+			bool isConstr = false;
+			if (!(isConstr = t.get().value == "this"))
+			{
+				t.prior();
+				TokenRange tyr = readTypeName(emanager, t);
+				ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, this);
+				t.next();
+			}
+			if (t.peek(1).value == ";")
+			{
+				string id = t.get().value;
+				t.next();
+				if (Platform.IsPlatform(mf, pf))
+				{
+					return(new Field(mf, id, ty, (Class)f.type, null));
+				}
+			}
+			else if (t.peek(1).value == "=")
+			{
+				string id = t.get().value;
+				t.next();
+				t.next();
+				TokenStream init = t.until(";");
+				t.prior();
+				if (Platform.IsPlatform(mf, pf))
+				{
+					return(new Field(mf, id, ty, (Class)f.type, init));
+				}
+			}
+			else if (t.peek(1).value == "<")
+			{
+				if (opaqueTypes != null)
+				{
+					// mangle generic name
+					string id = t.get().value + getGenericSuffix(opaqueTypes);
+					t.next();
+					t.next();
+					t.until(">", new Tuple<string, string>("<", ">"));
+					//t.next();
+					t.prior();
+					Function thefunc = new Function((Class)f.type, mf, ty, id, new List<Parameter>(), new object());
+					parseMethodParamsTCS(thefunc, t, '(', ')');
+					t.next();
+					thefunc.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+					t.prior();
+					return (thefunc);
+				}
+				else
+				{
+					string id = t.get().value;
+					List<string> genpars = new List<string>();
+					t.next();
+					while (t.get().value != ">" & t.next())
+					{
+						genpars.Add(t.get().value);
+						t.next();
+					}
+					// advance token stream
+					t.until("}", 1, new Tuple<string, string>("{", "}"));
+					// use backup stream as actual info
+					backupts.next();
+					object pinfo = backupts.until("}", 1, new Tuple<string, string>("{", "}"));
+					GenericFunction gf = new GenericFunction(id, mf, genpars.ToArray(), pinfo, (TypeSystem.Class)f.type);
+					t.prior();
+					return(gf);
+				}
+			}
+			else if (t.peek(1).value == "(")
+			{
+				Function func = isConstr ? new Constructor(mf, (TypeSystem.Class)f.type, new List<Parameter>(), null) : new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
+				parseMethodParamsTCS(func, t, '(', ')');
+				if (t.get().value == ";")
+				{
+					if (!mf.HasFlag(Modifiers.Native) && !mf.HasFlag(Modifiers.Abstract))
+					{
+						t.get().error(emanager, "only native/abstract methods may not define bodies");
+					}
+					t.next();
+				}
+				else
+				{
+					t.next();
+					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+				}
+				t.prior();
+				if (Platform.IsPlatform(mf, pf))
+				{
+					return (func);
+				}
+				return null;
+			}
+			else if (t.peek(1).value == "[")
+			{
+				if (t.get().value != "this")
+				{
+					t.get().error(emanager, "indexers must be called 'this'");
+				}
+				Indexer func = new Indexer((TypeSystem.Type)f.type, mf, ty, new List<Parameter>(), null);
+				parseMethodParamsTCS(func, t, '[', ']');
+				if (t.get().value != "(")
+				{
+					t.get().error(emanager, "expected '('");
+				}
+				Parameter assign = null;
+				t.next();
+				if (t.get().value != ")")
+				{
+					Modifiers amf = Modifiers.None;
+					t.prior();
+					while (t.next() && t.get().isType(TokenType.MODIFIER))
+					{
+						amf |= ModifierHelper.GetModifierFromString(t.get().value);
+					}
+					t.prior();
+					TokenRange atyr = readTypeName(emanager, t);
+					TypeSystem.Type aty = TypeSystem.Type.GetExisting(f.getContext(), atyr.str, this);
+					t.next();
+					assign = new Parameter(func, amf, t.get().value, aty);
+					t.next();
+				}
+				t.next();
+				t.next();
+				func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
+				func.Assignment = assign;
+				t.prior();
+				if (Platform.IsPlatform(mf, pf))
+				{
+					return(func);
+				}
+			}
+			else
+			{
+				t.peek(1).error(emanager, "unexpected token '{0}'", t.peek(1).value);
+			}
+			return null;
+		}
+
 		private void parseClassTCS(File f, TokenStream t)
 		{
 			while (t.next())
 			{
-				Token to = t.get();
-				if (to.value == "}")
+				IMember im = parseClassMemberTCS(f, t);
+				if (im != null)
 				{
-					break;
-				}
-				if (to.value != "private" && to.value != "protected" && to.value != "public")
-				{
-					to.error(emanager, "unexpected token '{0}', expected access modifier", to.value);
-				}
-
-				Modifiers mf = ModifierHelper.GetModifierFromString(to.value);
-				while (t.next() && t.get().isType(TokenType.MODIFIER))
-				{
-					mf |= ModifierHelper.GetModifierFromString(t.get().value);
-				}
-
-				TypeSystem.Type ty = Primitive.Void;
-				bool isConstr = false;
-
-				if (!(isConstr = t.get().value == "this"))
-				{
-					t.prior();
-
-					TokenRange tyr = readTypeName(emanager, t);
-					ty = TypeSystem.Type.GetExisting(f.getContext(), tyr.str, this);
-					t.next();
-				}
-
-				if (t.peek(1).value == ";")
-				{
-					if (Platform.IsPlatform(mf, pf))
-					{
-						((Class)f.type).Fields.Add(new Field(mf, t.get().value, ty, (Class)f.type, null));
-					}
-					t.next();
-				}
-				else if (t.peek(1).value == "=")
-				{
-					string id = t.get().value;
-					t.next();
-					t.next();
-					TokenStream init = t.until(";");
-					t.prior();
-
-					if (Platform.IsPlatform(mf, pf))
-					{
-						((Class)f.type).Fields.Add(new Field(mf, id, ty, (Class)f.type, init));
-					}
-				}
-				else if (t.peek(1).value == "(")
-				{
-					Function func = isConstr ? 
-					                new Constructor(mf, (TypeSystem.Class)f.type, new List<Parameter>(), null)
-					                : new Function((TypeSystem.Type)f.type, mf, ty, t.get().value, new List<Parameter>(), new object());
-					parseMethodParamsTCS(func, t, '(', ')');
-					if (t.get().value == ";")
-					{
-						if (!mf.HasFlag(Modifiers.Native) && !mf.HasFlag(Modifiers.Abstract))
-						{
-							t.get().error(emanager, "only native/abstract methods may not define bodies");
-						}
-						t.next();
-					}
-					else
-					{
-						t.next();
-						func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
-					}
-					if (Platform.IsPlatform(mf, pf))
-					{
-						((Class)f.type).AddMember(func);
-					}
-					t.prior();
-				}
-				else if (t.peek(1).value == "[")
-				{
-					if (t.get().value != "this")
-					{
-						t.get().error(emanager, "indexers must be called 'this'");
-					}
-					Indexer func = new Indexer((TypeSystem.Type)f.type, mf, ty, new List<Parameter>(), null);
-					parseMethodParamsTCS(func, t, '[', ']');
-					if (t.get().value != "(")
-					{
-						t.get().error(emanager, "expected '('");
-					}
-
-					Parameter assign = null;
-
-					t.next();
-					if (t.get().value != ")")
-					{
-						Modifiers amf = Modifiers.None;
-
-						t.prior();
-						while (t.next() && t.get().isType(TokenType.MODIFIER))
-						{
-							amf |= ModifierHelper.GetModifierFromString(t.get().value);
-						}
-
-						t.prior();
-						TokenRange atyr = readTypeName(emanager, t);
-						TypeSystem.Type aty = TypeSystem.Type.GetExisting(f.getContext(), atyr.str, this);
-						t.next();
-						assign = new Parameter(func, amf, t.get().value, aty);
-						t.next();
-					}
-					t.next();
-					t.next();
-					func.BodyStr = t.until("}", new Tuple<string, string>("{", "}"));
-					func.Assignment = assign;
-					if (Platform.IsPlatform(mf, pf))
-					{
-						((Class)f.type).AddMember(func);
-					}
-					t.prior();
-				}
-				else
-				{
-					t.peek(1).error(emanager, "unexpected token '{0}'", t.peek(1).value);
+					((Class)f.type).AddMember(im);
 				}
 			}
 			if (((Class)f.type).Constructors.Count == 0)

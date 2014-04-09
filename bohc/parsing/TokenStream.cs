@@ -19,6 +19,18 @@ namespace Bohc.Parsing
 			this._size = length;
 		}
 
+		public TokenStream replace(string x, string y)
+		{
+			return new TokenStream(tokens.Select(z =>
+				{
+					if (z.value == x)
+					{
+						z.value = y;
+					}
+					return z;
+				}), _offset, length);
+		}
+
 		public TokenStream fork()
 		{
 			return new TokenStream(tokens, _offset, length);
@@ -52,7 +64,7 @@ namespace Bohc.Parsing
 			return _offset >= 0;
 		}
 
-		public TokenStream until(string str, params Tuple<string, string>[] scopetokens)
+		public TokenStream until(string str, int allow, params Tuple<string, string>[] scopetokens)
 		{
 			Dictionary<string, int> scopes = new Dictionary<string, int>();
 			foreach (var st in scopetokens)
@@ -63,7 +75,7 @@ namespace Bohc.Parsing
 			{
 				Token t = peek(i);
 
-				if (t.value == str && !scopes.Any(x => x.Value > 0))
+				if (t.value == str && !scopes.Any(x => x.Value > allow))
 				{
 					TokenStream result = read(0, i);
 					next();
@@ -88,6 +100,12 @@ namespace Bohc.Parsing
 
 			// TODO: panic
 			throw new Exception();
+		}
+
+		// allow is the minimum scope at which to stop reading
+		public TokenStream until(string str, params Tuple<string, string>[] scopetokens)
+		{
+			return until(str, 0, scopetokens);
 		}
 
 		public TokenStream read(int offs, int c)
