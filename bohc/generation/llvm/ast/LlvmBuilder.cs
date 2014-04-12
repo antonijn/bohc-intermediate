@@ -40,6 +40,11 @@ namespace Bohc.Generation.Llvm
 			objects.Insert(i, o);
 		}
 
+		public override string ToString()
+		{
+			return expand();
+		}
+
 		public string expand()
 		{
 			foreach (LlvmValue o in objects.OfType<LlvmValue>())

@@ -16,6 +16,7 @@ namespace Bohc.Parsing.Statements
 			: base(body)
 		{
 			this.vardecl = vardecl;
+			++vardecl.refersto.usageCount;
 			this.expr = expr;
 		}
 	}

@@ -622,7 +622,8 @@ namespace Bohc.Generation.Llvm
 						LlvmFunction aqua_init = new LlvmFunction(type(StdType.Array.GetTypeFor(new[] { StdType.Str }, null)),
 							"@aqua.init", new List<LlvmParam>
 						{ new LlvmParam("%argc", new LlvmPrimitive("i32")),
-							new LlvmParam("%argv", new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8"))))
+								new LlvmParam("%argv", new LlvmPointer(new LlvmPointer(new LlvmPrimitive("i8")))),
+								new LlvmParam("%v", new LlvmPointer(new LlvmPrimitive("i8")))
 						}, LlvmLinkage.External, false);
 						module.AddDeclaration(aqua_init);
 						LlvmFunction aqua_exit = new LlvmFunction(new LlvmPrimitive("void"),
@@ -632,7 +633,7 @@ namespace Bohc.Generation.Llvm
 
 						Llvm ll = new Llvm(main);
 						LlvmValue args = ll.AddCall(aqua_init,
-							new[] { main.parameters.First(), main.parameters.Last() });
+							new[] { main.parameters.First(), main.parameters.Last(), addNullTermCharPtrLiteral(ll, "dev") });
 						ll.AddCall(function(f), f.Parameters.Count == 0 ?
 							new LlvmValue[]
 							{
@@ -860,7 +861,7 @@ namespace Bohc.Generation.Llvm
 			aqua_exenvs = new LlvmStruct("%struct.aqua.exenv");
 			aqua_exenvs.members = new Dictionary<string, LlvmType> {
 				{ "buf", new LlvmPointer(new LlvmPrimitive("i8")) },
-				{ "ex", type(StdType.Ex) }
+				{ "ex", type(StdType.Obj) }
 			};
 			module.AddStruct(aqua_exenvs);
 			return aqua_exenvs;
@@ -881,25 +882,55 @@ namespace Bohc.Generation.Llvm
 		private void addTryStat(Llvm llvm, TryStatement trys)
 		{
 			LlvmGlobal g = aqua_exenv(llvm);
-			LlvmValue jmpbufptri8ptrptr = llvm.AddGetElementPtr(g, 0, 0);
+			LlvmValue jmpbufptri8ptrptr = llvm.AddLoad(llvm.AddGetElementPtr(g, 0, 0));
 			LlvmValue jmpbufptr = llvm.AddBitcast(jmpbufptri8ptrptr, new LlvmPointer(new LlvmArrayType(5, type(platform.longType()))));
 			LlvmValue backup = llvm.AddLoad(jmpbufptr);
 
 			LlvmLabel catches = new LlvmLabel();
 
-			LlvmValue tmp = llvm.AddCall(llvm_eh_sjlj_setjmp(), new[] { llvm.AddLoad(jmpbufptri8ptrptr) });
+			LlvmValue tmp = llvm.AddCall(llvm_eh_sjlj_setjmp(), new[] { jmpbufptri8ptrptr });
+			tmp = llvm.AddIcmp(Icmp.Ne, tmp, new LlvmLiteral(new LlvmPrimitive("i32"), "0"));
+
+			LlvmLabel cont = new LlvmLabel();
+			LlvmLabel tryb = new LlvmLabel();
+			llvm.AddBranch(tmp, tryb, catches, tryb);
 
 			addStatement(llvm, trys.body);
 
 			// restore exception environment
 			llvm.AddStore(jmpbufptr, backup);
-
-			tmp = llvm.AddIcmp(Icmp.Ne, tmp, new LlvmLiteral(new LlvmPrimitive("i32"), "0"));
-
-			LlvmLabel cont = new LlvmLabel();
-			llvm.AddBranch(tmp, catches, catches, cont);
+			llvm.AddBranch(cont, catches);
 
 			// TODO: catch blocks
+			if (trys.catches.Count > 0)
+			{
+				// restore exception environment
+				llvm.AddStore(jmpbufptr, backup);
+
+				LlvmValue ex = llvm.AddGetElementPtr(g, 0, 1);
+				ex = llvm.AddLoad(ex);
+				LlvmValue vtab = llvm.AddGetElementPtr(ex, 0, 0);
+				vtab = llvm.AddLoad(vtab);
+				LlvmValue fun = llvm.AddGetElementPtr(vtab, 0, 1 + StdType.Obj.Functions.FindIndex(x => x.Identifier == "getType"));
+				fun = llvm.AddLoad(fun);
+				LlvmValue ty = llvm.AddCall(fun, new[] { ex });
+
+				LlvmLabel fallthrough = new LlvmLabel();
+
+				foreach (CatchStatement cs in trys.catches)
+				{
+					LlvmValue typ = addUnOp(llvm, new UnaryOperation(new ExprType(cs.param.Type), UnaryOperation.TYPEOF));
+					LlvmValue eq = llvm.AddIcmp(Icmp.Eq, ty, typ);
+					LlvmLabel enter = new LlvmLabel();
+					llvm.AddBranch(eq, enter, enter, fallthrough);
+
+					locals[cs.param] = llvm.AddBitcast(llvm.AddGetElementPtr(g, 0, 1), new LlvmPointer(type(cs.param.Type)));
+
+					addStatement(llvm, cs.body);
+
+					llvm.AddBranch(cont, fallthrough);
+				}
+			}
 
 			llvm.AddBranch(cont, cont);
 		}
@@ -1343,7 +1374,7 @@ namespace Bohc.Generation.Llvm
 				return;
 			}
 
-			nulllabelstack.Peek().id = llvm.GetLabel().id;
+			llvm.AddUnreachable(nulllabelstack.Peek());
 			LlvmValue str = llvm.AddPhi(d.Last().Value.Type(), d.Select(x => new Tuple<LlvmValue, LlvmLabel>(x.Value, x.Key)).ToArray());
 			llvm.AddCall(aqua_throw_null_ex(), new[] { str });
 			llvm.AddUnreachable(new LlvmLabel());
@@ -1696,6 +1727,7 @@ namespace Bohc.Generation.Llvm
 			}
 			else if (unop.operation == UnaryOperation.TYPEOF)
 			{
+				return new LlvmUndef(type(StdType.Type));
 				throw new NotImplementedException();
 			}
 			else if (unop.operation == UnaryOperation.SIZEOF)
@@ -1773,7 +1805,7 @@ namespace Bohc.Generation.Llvm
 					{
 						return llvm.AddIcmp(Icmp.Eq, addExpression(llvm, binop.left), addExpression(llvm, binop.right));
 					}
-					return llvm.AddFcmp(Fcmp.Oeq, addExpression(llvm, binop.left), addExpression(llvm, binop.right));
+					return llvm.AddFcmp(Fcmp.Oeq, addExpression(llvm, binop.left), addConversion(llvm, binop.right, pl));
 				}
 
 				if (binop.left.getType() is FunctionRefType)
@@ -1986,8 +2018,12 @@ namespace Bohc.Generation.Llvm
 					return new LlvmLiteral(type(to), "null");
 				}
 
-				// TODO: proper conversion
-				return new LlvmLiteral(type(to), addExpression(llvm, expression).ToString());
+				string s = addExpression(llvm, expression).ToString();
+				if (((Primitive)to).IsFloat() && !s.Contains('.'))
+				{
+					s = s + ".0";
+				}
+				return new LlvmLiteral(type(to), s);
 			}
 
 			Primitive frp = fr as Primitive;
