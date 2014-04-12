@@ -6,7 +6,6 @@ using System.Diagnostics;
 using System.Xml.Linq;
 
 using Bohc.Generation;
-using Bohc.Generation.C;
 using Bohc.Generation.Mangling;
 
 using Bohc.Parsing;

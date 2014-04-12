@@ -27,14 +27,12 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="boh\Exception.cs" />
-    <Compile Include="generation\mangling\CMangler.cs" />
     <Compile Include="exceptions\CodeGenException.cs" />
     <Compile Include="exceptions\ParserException.cs" />
     <Compile Include="generation\ICodeGen.cs" />
     <Compile Include="generation\mangling\DebugMangler.cs" />
     <Compile Include="generation\mangling\IMangler.cs" />
     <Compile Include="parsing\expressions\ConstructorCall.cs" />
-    <Compile Include="parsing\expressions\DefaultExpressionParser.cs" />
     <Compile Include="parsing\expressions\ExprEnumerator.cs" />
     <Compile Include="parsing\expressions\Expression.cs" />
     <Compile Include="parsing\expressions\ExprType.cs" />
@@ -59,7 +57,6 @@
     <Compile Include="parsing\statements\CatchStatement.cs" />
     <Compile Include="parsing\statements\ContinueStatement.cs" />
     <Compile Include="parsing\statements\DefaultLabel.cs" />
-    <Compile Include="parsing\statements\DefaultStatementParser.cs" />
     <Compile Include="parsing\statements\DoWhileStatement.cs" />
     <Compile Include="parsing\statements\ElseStatement.cs" />
     <Compile Include="parsing\statements\EmptyStatement.cs" />
@@ -112,17 +109,12 @@
     <Compile Include="typesys\GenericType.cs" />
     <Compile Include="typesys\Primitive.cs" />
     <Compile Include="typesys\Variable.cs" />
-    <Compile Include="generation\c\CCodeGen.cs" />
-    <Compile Include="generation\cs\CSCodeGen.cs" />
-    <Compile Include="generation\mangling\CSMangler.cs" />
     <Compile Include="typesys\NativeFunction.cs" />
     <Compile Include="parsing\expressions\NativeFunctionCall.cs" />
-    <Compile Include="generation\asm\IIntermediateGenerator.cs" />
     <Compile Include="general\Project.cs" />
     <Compile Include="general\IParserStrategy.cs" />
     <Compile Include="general\DefaultParserStrategy.cs" />
     <Compile Include="parsing\IFileParser.cs" />
-    <Compile Include="parsing\FileParser.cs" />
     <Compile Include="general\ICompilerStrategy.cs" />
     <Compile Include="general\DefaultCompilerStrategy.cs" />
     <Compile Include="typesys\Indexer.cs" />
@@ -219,7 +211,6 @@
   </ProjectExtensions>
   <ItemGroup />
   <ItemGroup>
-    <Folder Include="generation\asm\" />
     <Folder Include="general\" />
     <Folder Include="generation\llvm\" />
     <Folder Include="generation\llvm\ast\" />

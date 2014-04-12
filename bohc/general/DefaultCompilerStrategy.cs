@@ -4,7 +4,6 @@ using System.Linq;
 
 using Bohc.Generation;
 using Bohc.Generation.Mangling;
-using Bohc.Generation.C;
 
 namespace Bohc.General
 {

@@ -486,6 +486,20 @@ namespace Bohc.Generation.Llvm
 			                     .Where(x => x.Modifiers.HasFlag(Modifiers.Virtual) || x.Modifiers.HasFlag(Modifiers.Abstract)));
 		}
 
+		public class FEqualComp : IEqualityComparer<Function>
+		{
+			public bool Equals(Function f0, Function f1)
+			{
+				return f0.Identifier == f1.Identifier &&
+					f0.Parameters.Select(x => x.Type).SequenceEqual(f1.Parameters.Select(x => x.Type));
+			}
+
+			public int GetHashCode(Function f)
+			{
+				return f.GetHashCode();
+			}
+		}
+
 		private IEnumerable<LlvmValue> addVtableInit(Class c, IEnumerable<Function> overriden)
 		{
 			Class super = c.Super;
@@ -493,7 +507,7 @@ namespace Bohc.Generation.Llvm
 			{
 				foreach (LlvmValue v in addVtableInit(super, overriden.Union(
 					c.Super.Functions.Where(x => x.Modifiers.HasFlag(Modifiers.Override)),
-					new C.CCodeGen.FEqualComp())))
+					new FEqualComp())))
 				{
 					yield return v;
 				}
@@ -505,7 +519,7 @@ namespace Bohc.Generation.Llvm
 				Function overridenf = null;
 				try
 				{
-					overridenf = overriden.Single(x => new C.CCodeGen.FEqualComp().Equals(x, f));
+					overridenf = overriden.Single(x => new FEqualComp().Equals(x, f));
 				}
 				catch
 				{
